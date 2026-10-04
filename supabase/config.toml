@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# Supabase local development configuration
+# Municipality of Mabini, Batangas — Franchising & Tricycle Driver System
+#
+# Applied by the Supabase CLI (`supabase start`, `supabase db reset`,
+# `supabase functions serve`). The same migrations are deployed to the
+# Supabase Cloud project linked with `supabase link`.
+# ---------------------------------------------------------------------------
+
+project_id = "sbtf-system"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+# 10 MiB is enforced again in the mobile upload path (image compression).
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+# Additional redirect targets for email confirmation / password recovery.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/confirm",
+  "http://localhost:3000/reset-password",
+  "https://*.vercel.app/auth/confirm",
+  "https://*.vercel.app/reset-password"
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Email verification is required for driver self-registration.
+enable_confirmations = true
+# Local development uses Inbucket (http://localhost:54324) instead of a real SMTP.
+double_confirm_changes = true
+secure_password_change = true
+max_frequency = "1s"
+otp_length = 6
+otp_expiry = 900
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+
+# --- Edge Functions ---------------------------------------------------------
+# AI decision support: must only be callable by an authenticated staff/admin.
+[functions.ai-decision-support]
+verify_jwt = true
+
+# Admin user provisioning: service-role work, caller role re-verified in code.
+[functions.admin-users]
+verify_jwt = true
+
+# Scheduled renewal reminders: invoked by pg_cron / Supabase scheduled
+# functions with a shared secret header instead of a JWT.
+[functions.renewal-reminders]
+verify_jwt = false
+
+[analytics]
+enabled = false
