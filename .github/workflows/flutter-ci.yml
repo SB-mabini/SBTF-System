@@ -1,0 +1,93 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/flutter-ci.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/flutter-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  detect:
+    name: Detect Flutter project
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # The mobile application is built in Phase 3 of the project plan. Until
+      # apps/mobile contains a Flutter project the remaining jobs are skipped
+      # instead of failing on a missing pubspec.yaml.
+      - id: check
+        run: |
+          if [ -f apps/mobile/pubspec.yaml ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Flutter project not present::apps/mobile/pubspec.yaml does not exist yet; skipping analysis and build."
+          fi
+
+  analyze:
+    name: Analyze, format check, tests
+    needs: detect
+    if: needs.detect.outputs.present == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit + widget tests
+        run: flutter test
+
+  build-apk:
+    name: Build debug APK
+    needs: [detect, analyze]
+    if: needs.detect.outputs.present == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+        env:
+          # Only the publishable values are injected; the anon key is safe to
+          # ship inside the application because RLS enforces access.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

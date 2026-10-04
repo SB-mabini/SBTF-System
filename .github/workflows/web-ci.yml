@@ -1,0 +1,75 @@
+name: Web CI
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "apps/web/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Typecheck, lint, unit tests, build
+    runs-on: ubuntu-latest
+    # The npm workspace is hoisted: the lock file and node_modules live at the
+    # repository root, so install there and address the app through the
+    # workspace scripts.
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm --workspace @sbtf/web run typecheck
+
+      - name: Lint
+        run: npm --workspace @sbtf/web run lint
+
+      - name: Unit tests
+        run: npm --workspace @sbtf/web run test:run
+
+      - name: Production build
+        run: npm --workspace @sbtf/web run build
+        env:
+          # The build is rendered in preview mode so that no page attempts to
+          # reach a database during static generation. The production
+          # configuration is supplied by the deployment platform.
+          NEXT_PUBLIC_DEMO_MODE: "true"
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+  sql:
+    name: Validate migrations, seed and pgTAP suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Static validation only: it proves every statement parses with the real
+      # PostgreSQL grammar. Executing the migrations and the pgTAP suites
+      # requires a Supabase project or a local stack (see docs/deployment.md).
+      - name: Validate SQL
+        run: npm run validate:sql

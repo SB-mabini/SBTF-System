@@ -1,0 +1,23 @@
+{
+  "name": "sbtf-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web and Mobile-Based Franchising and Tricycle Driver Registration System with Descriptive and Prescriptive Analytics and Decision Support for the Municipality of Mabini, Batangas",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "seed:generate": "python3 scripts/generate_seed.py",
+    "validate:sql": "node scripts/validate-sql.mjs",
+    "test:rls": "supabase test db supabase/tests",
+    "web:dev": "npm --workspace @sbtf/web run dev",
+    "web:build": "npm --workspace @sbtf/web run build",
+    "web:test": "npm --workspace @sbtf/web run test:run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "libpg-query": "^18.1.5"
+  }
+}
