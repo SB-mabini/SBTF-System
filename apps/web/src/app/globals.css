@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   SBTF System — design system
+   Inspired by the identity of the Sangguniang Bayan ng Mabini, Batangas.
+   Deep purple leads; red and gold are accents only (roughly 12% / 5% of the
+   interface). Surfaces stay white on a soft grey page background so that data —
+   not decoration — dominates.
+   =========================================================================== */
+
+@theme {
+  /* Brand — deep purple */
+  --color-primary-50: #f2f0f8;
+  --color-primary-100: #e3dff0;
+  --color-primary-200: #c6bfe1;
+  --color-primary-300: #a49acd;
+  --color-primary-400: #7a6cb0;
+  --color-primary-500: #54438c;
+  --color-primary-600: #3d2d72;
+  --color-primary-700: #271564;
+  --color-primary-800: #1e1050;
+  --color-primary-900: #150a38;
+
+  --color-primary: #271564;
+  --color-primary-foreground: #ffffff;
+
+  /* Secondary — red (rejections, destructive actions, critical warnings) */
+  --color-secondary-50: #fdf2f1;
+  --color-secondary-100: #fbe3e1;
+  --color-secondary-500: #d4271d;
+  --color-secondary-600: #b31f16;
+  --color-secondary-700: #8d1710;
+  --color-secondary: #d4271d;
+
+  /* Accent — gold (pending states, small highlights) */
+  --color-accent-50: #fef9e9;
+  --color-accent-100: #fdf1cd;
+  --color-accent-500: #f2c749;
+  --color-accent-600: #d9a92a;
+  --color-accent-700: #a67c17;
+  --color-accent: #f2c749;
+
+  /* Neutrals */
+  --color-page: #f7f7f8;
+  --color-ink: #161213;
+  --color-muted: #6b7280;
+  --color-line: #e5e7eb;
+  --color-line-strong: #d1d5db;
+
+  /* Semantic pairs used across dashboards */
+  --color-success-50: #ecfdf3;
+  --color-success-600: #0f7a4a;
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #a67c17;
+  --color-danger-50: #fdf2f1;
+  --color-danger-600: #b31f16;
+  --color-info-50: #eef2ff;
+  --color-info-600: #3d2d72;
+
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-card: 0.625rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(22 18 19 / 0.04);
+  --shadow-raised: 0 4px 12px -2px rgb(22 18 19 / 0.08);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* 15px body */
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Accessible, unobtrusive scrollbars for data tables */
+  ::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* Card: white surface, hairline border, minimal shadow */
+  .sbtf-card {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .sbtf-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8125rem; /* 13px tables */
+  }
+
+  .sbtf-table thead th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--color-line);
+    background: #fbfbfc;
+    white-space: nowrap;
+  }
+
+  .sbtf-table tbody td {
+    padding: 0.75rem 0.875rem;
+    border-bottom: 1px solid var(--color-line);
+    vertical-align: middle;
+  }
+
+  .sbtf-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .sbtf-table tbody tr:hover {
+    background: #fafafb;
+  }
+
+  .sbtf-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: 0.375rem;
+  }
+
+  .sbtf-input {
+    width: 100%;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    background: #ffffff;
+    color: var(--color-ink);
+  }
+
+  .sbtf-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .sbtf-input:disabled {
+    background: #f3f4f6;
+    color: var(--color-muted);
+  }
+
+  .sbtf-hint {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+  }
+}
