@@ -19,5 +19,8 @@
   },
   "dependencies": {
     "libpg-query": "^18.1.5"
+  },
+  "devDependencies": {
+    "supabase": "^2.119.0"
   }
 }
