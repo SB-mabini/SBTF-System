@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { VerifyCertificate } from "@/components/verify-certificate";
 import { Spinner } from "@/components/ui";
 import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
+import { BrandMark } from "@/components/layout/brand-mark";
 
 export const metadata = {
   title: "Verify a franchise certificate — SBTF System",
@@ -21,9 +22,7 @@ export default function VerifyPage() {
     <div className="min-h-screen bg-page">
       <header className="bg-primary text-white">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-5">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-white/10 text-sm font-semibold">
-            SBTF
-          </span>
+          <BrandMark priority />
           <div className="leading-tight">
             <p className="text-sm font-semibold">Franchise certificate verification</p>
             <p className="text-[0.6875rem] text-white/70">

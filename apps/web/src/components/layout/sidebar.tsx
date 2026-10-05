@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { can, type Capability } from "@/lib/permissions";
+import { BrandMark } from "@/components/layout/brand-mark";
 import type { UserRole } from "@/types/database";
 
 interface NavItem {
@@ -60,9 +61,7 @@ export function Sidebar({
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-white lg:flex">
       <div className="flex h-16 items-center gap-2.5 border-b border-line px-5">
-        <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-[0.8125rem] font-semibold text-white">
-          SBTF
-        </span>
+        <BrandMark size="sm" priority />
         <div className="leading-tight">
           <p className="text-[0.8125rem] font-semibold text-ink">SBTF System</p>
           <p className="text-[0.6875rem] text-muted">Mabini, Batangas</p>
