@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
+import { BrandMark } from "@/components/layout/brand-mark";
 
 /**
  * Layout for the unauthenticated screens: sign-in, password recovery and the
@@ -13,9 +14,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-page">
       <header className="border-b border-line bg-primary text-white">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-4">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-white/10 text-sm font-semibold">
-            SBTF
-          </span>
+          <BrandMark priority />
           <div className="leading-tight">
             <p className="text-sm font-semibold">{SYSTEM_TITLE}</p>
             <p className="text-[0.6875rem] text-white/70">

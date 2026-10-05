@@ -16,6 +16,10 @@ export const metadata: Metadata = {
     "Franchising and Tricycle Driver Registration System with Descriptive and Prescriptive Analytics and Decision Support for the Municipality of Mabini, Batangas.",
   applicationName: "SBTF System",
   robots: { index: false, follow: false },
+  icons: {
+    icon: [{ url: "/logo.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/logo.jpg", type: "image/jpeg" }],
+  },
 };
 
 export const viewport: Viewport = {

@@ -56,7 +56,6 @@ create policy "documents bucket: owner or franchising staff may read"
 drop policy if exists "documents bucket: owners may upload to their own folder" on storage.objects;
 create policy "documents bucket: owners may upload to their own folder"
   on storage.objects for insert to authenticated
-  using (bucket_id = 'franchise-documents')
   with check (
     bucket_id = 'franchise-documents'
     and public.current_profile_id() is not null

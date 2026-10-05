@@ -9,6 +9,7 @@
   "scripts": {
     "seed:generate": "python3 scripts/generate_seed.py",
     "validate:sql": "node scripts/validate-sql.mjs",
+    "db:check": "node scripts/db-check.mjs",
     "test:rls": "supabase test db supabase/tests",
     "web:dev": "npm --workspace @sbtf/web run dev",
     "web:build": "npm --workspace @sbtf/web run build",
@@ -19,5 +20,8 @@
   },
   "dependencies": {
     "libpg-query": "^18.1.5"
+  },
+  "devDependencies": {
+    "supabase": "^2.119.0"
   }
 }
