@@ -24,6 +24,13 @@ This adds `android/` and `ios/` without touching `lib/` or `test/`. The
 generated folders are git-ignored where appropriate; commit the pieces your
 build pipeline needs.
 
+> **Flutter ≥ 3.47 note.** Flutter's built-in Kotlin breaks plugins that
+> still use the legacy Kotlin Gradle Plugin (`file_picker` among them). The
+> flutter tool adds `android.builtInKotlin=false` and `android.newDsl=false`
+> to `android/gradle.properties` automatically on the first interactive
+> build; CI sets them explicitly after generating the platform. Keep them
+> until every plugin has migrated to built-in Kotlin.
+
 ## 2. Run
 
 Configuration is injected at build time with `--dart-define`. Only publishable

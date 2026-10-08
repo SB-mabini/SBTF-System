@@ -110,6 +110,20 @@ jobs:
       - name: Generate Android platform
         run: flutter create --platforms=android --org ph.gov.mabini .
 
+      # Flutter 3.47 introduced built-in Kotlin, but several of this app's
+      # plugins still ship with the legacy Kotlin Gradle Plugin (file_picker
+      # fails at :checkDebugAarMetadata without this). The documented
+      # migration path for not-yet-migrated projects
+      # (flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin) is
+      # to keep legacy mode via these two gradle.properties flags. The flutter
+      # tool adds them automatically on interactive builds; android/ is
+      # generated here on the fly, so set them explicitly.
+      - name: Keep legacy Kotlin Gradle mode
+        run: |
+          props=android/gradle.properties
+          grep -q '^android.builtInKotlin=' "$props" || echo 'android.builtInKotlin=false' >> "$props"
+          grep -q '^android.newDsl=' "$props" || echo 'android.newDsl=false' >> "$props"
+
       - run: flutter pub get
 
       - name: Build debug APK
