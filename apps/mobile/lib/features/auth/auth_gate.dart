@@ -59,18 +59,14 @@ class AuthGate extends ConsumerWidget {
               emailConfirmed: emailConfirmed,
               profile: profile,
             );
-            return _screenFor(context, decision, email: session?.user?.email);
+            return _screenFor(decision, email: session?.user?.email);
           },
         );
       },
     );
   }
 
-  Widget _screenFor(
-    BuildContext context,
-    SessionDecision decision, {
-    String? email,
-  }) {
+  Widget _screenFor(SessionDecision decision, {String? email}) {
     switch (decision) {
       case SessionDecision.requireLogin:
         return const LoginScreen();

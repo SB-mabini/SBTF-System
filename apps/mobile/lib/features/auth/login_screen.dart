@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       }
-    } catch (error) {
+    } catch (_) {
       setState(() {
         _loading = false;
         _error = 'Could not sign in. Check your connection and try again.';
