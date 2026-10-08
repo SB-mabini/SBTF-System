@@ -31,7 +31,7 @@ final authStateChangesProvider = StreamProvider<AuthState>((ref) {
 final profileProvider = FutureProvider<Profile?>((ref) async {
   final client = ref.watch(supabaseClientProvider);
   final authState = ref.watch(authStateChangesProvider);
-  final user = authState.valueOrNull?.session?.user ?? client.auth.currentUser;
+  final user = authState.value?.session?.user ?? client.auth.currentUser;
   if (user == null) return null;
 
   final row = await client
