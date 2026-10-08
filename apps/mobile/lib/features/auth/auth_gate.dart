@@ -39,7 +39,7 @@ class AuthGate extends ConsumerWidget {
       data: (state) {
         final session = state.session;
         final hasSession = session != null;
-        final emailConfirmed = session?.user?.emailConfirmedAt != null;
+        final emailConfirmed = session?.user.emailConfirmedAt != null;
 
         final profileAsync = ref.watch(profileProvider);
 
@@ -59,7 +59,7 @@ class AuthGate extends ConsumerWidget {
               emailConfirmed: emailConfirmed,
               profile: profile,
             );
-            return _screenFor(decision, email: session?.user?.email);
+            return _screenFor(decision, email: session?.user.email);
           },
         );
       },
