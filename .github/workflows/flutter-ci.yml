@@ -66,7 +66,29 @@ jobs:
       # deprecation hints) stay advisory until the sources get a formatting
       # pass on a machine with the SDK — see the step above.
       - name: Static analysis
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos 2>&1 | tee analyze-output.txt
+
+      # TEMPORARY DIAGNOSTIC: this sandbox cannot download Actions logs, so a
+      # failing analysis posts its output as a commit comment where it can be
+      # read. Remove this step once the analyzer is green.
+      - name: Publish analyzer output on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### flutter analyze failed'
+            echo
+            echo '```'
+            tail -c 60000 analyze-output.txt
+            echo '```'
+          } > body.md
+          jq -n --rawfile b body.md '{body: $b}' > comment.json
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -d @comment.json
 
       - name: Unit + widget tests
         run: flutter test
