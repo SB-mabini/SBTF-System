@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { UserActions } from "@/components/users/user-actions";
+import { UsersToolbar } from "@/components/users/users-toolbar";
 import { FilterBar } from "@/components/filters";
 import {
   Badge,
@@ -53,6 +54,8 @@ export default async function AdminUsersPage({
         title="Users and roles"
         description="Every account in the system. Roles are stored in PostgreSQL and enforced by row level security; this page only reflects them."
       />
+
+      <UsersToolbar />
 
       <Suspense fallback={<Spinner label="Loading filters…" />}>
         <FilterBar
