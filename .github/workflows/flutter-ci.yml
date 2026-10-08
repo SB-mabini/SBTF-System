@@ -71,15 +71,8 @@ jobs:
       - name: Static analysis
         run: flutter analyze --no-fatal-infos
 
-      # Retried once on failure: shared GitHub runners occasionally show
-      # transient environment failures (package/VM-service hiccups). A
-      # deterministic failure fails twice.
       - name: Unit + widget tests
-        run: |
-          if ! flutter test; then
-            echo "::warning::flutter test failed on the first attempt — retrying once"
-            flutter test
-          fi
+        run: flutter test
 
   build-apk:
     name: Build debug APK
@@ -117,60 +110,13 @@ jobs:
         # own — the values must arrive as --dart-define. When the repository
         # secrets are not set (forks, previews) the defines are simply omitted
         # and the APK boots into the configuration screen.
-        #
-        # Retried once on failure: the Gradle dependency download from the
-        # Maven/Google mirrors is the step most prone to transient network
-        # errors on shared runners. A deterministic failure fails twice.
         run: |
           defines=""
           [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
           [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
-          if ! flutter build apk --debug $defines; then
-            echo "::warning::flutter build apk failed on the first attempt — retrying once"
-            flutter build apk --debug $defines
-          fi
+          flutter build apk --debug $defines
         env:
           # Only the publishable values are injected; the anon key is safe to
           # ship inside the application because RLS enforces access.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
-      # TEMPORARY diagnostic: surface the build output of the failing run as
-      # check-run annotations (::error commands), readable through the
-      # check-runs annotations API. Removed once the root cause is fixed.
-      - name: Post build diagnostics
-        if: failure()
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          emit() {
-            # Emit one multi-line annotation: % -> %25, newline -> %0A.
-            local body
-            body="$(head -c 5000 "$1" | sed -e 's/%/%25/g' | paste -sd'§' - | sed -e 's/§/%0A/g')"
-            printf '::error title=build-diag-%s::%s\n' "$2" "$body"
-          }
-          cat android/gradle.properties > /tmp/bd-props.txt 2>&1 || echo 'no gradle.properties' > /tmp/bd-props.txt
-          emit /tmp/bd-props.txt props
-          {
-            echo '### android/app/build.gradle(.kts)'
-            cat android/app/build.gradle 2>/dev/null || true
-            cat android/app/build.gradle.kts 2>/dev/null || true
-            echo '### android/settings.gradle(.kts)'
-            cat android/settings.gradle 2>/dev/null || true
-            cat android/settings.gradle.kts 2>/dev/null || true
-          } > /tmp/bd-gradle.txt
-          emit /tmp/bd-gradle.txt gradle
-          {
-            echo '### resolved plugin versions (pubspec.lock)'
-            grep -A 2 -E 'file_picker|mobile_scanner|flutter_image_compress|supabase_flutter' pubspec.lock | head -n 40
-          } > /tmp/bd-versions.txt
-          emit /tmp/bd-versions.txt versions
-          set +e
-          defines=""
-          [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
-          [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
-          flutter build apk --debug $defines > /tmp/build-diag.txt 2>&1
-          set -e
-          sed -n '/FAILURE: Build failed/,+70p' /tmp/build-diag.txt > /tmp/bd-error.txt
-          emit /tmp/bd-error.txt error

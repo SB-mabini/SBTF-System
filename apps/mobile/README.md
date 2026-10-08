@@ -55,8 +55,9 @@ CI (`.github/workflows/flutter-ci.yml`) runs, on every push that touches
 `apps/mobile`:
 
 1. `flutter pub get`
-2. `dart format --output=none --set-exit-if-changed lib test`
-3. `flutter analyze`
+2. `dart format --output=none --set-exit-if-changed lib test` (advisory until
+   the sources get a machine-formatting pass on a machine with the SDK)
+3. `flutter analyze` (errors and warnings fatal; info lints advisory)
 4. `flutter test`
 5. `flutter build apk --debug` (with `SUPABASE_URL` / `SUPABASE_ANON_KEY` secrets)
 
