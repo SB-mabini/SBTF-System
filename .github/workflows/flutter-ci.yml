@@ -89,6 +89,28 @@ jobs:
             flutter test
           fi
 
+      # TEMPORARY diagnostic: surface the test output of the failing run as
+      # check-run annotations (::error commands), readable through the
+      # check-runs annotations API. Removed once the root cause is fixed.
+      - name: Post test diagnostics
+        if: failure()
+        run: |
+          set +e
+          {
+            echo '### flutter --version'
+            flutter --version 2>&1
+            echo '### flutter test'
+            flutter test
+            echo "exit=$?"
+          } > /tmp/test-diag.txt 2>&1
+          set -e
+          tail -n 80 /tmp/test-diag.txt > /tmp/test-diag-tail.txt
+          while IFS= read -r line; do
+            esc="${line//'%'/'%25'}"
+            esc="${esc//$'\r'/'%0D'}"
+            printf '::error title=test-diag::%s\n' "$esc"
+          done < /tmp/test-diag-tail.txt
+
   build-apk:
     name: Build debug APK
     needs: [detect, analyze]
