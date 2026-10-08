@@ -73,3 +73,9 @@ jobs:
       # requires a Supabase project or a local stack (see docs/deployment.md).
       - name: Validate SQL
         run: npm run validate:sql
+
+      # The live verifier is exercised against scripts/tests/mock-supabase.mjs,
+      # so the guard against a schema drifted from the TypeScript interfaces stays
+      # green in CI without a database.
+      - name: Verifier self-test
+        run: npm run test:verify
