@@ -79,27 +79,6 @@ jobs:
             flutter analyze --no-fatal-infos
           fi
 
-      # TEMPORARY diagnostic: surface the analyzer output of the failing run
-      # as check-run annotations (::error commands), readable through the
-      # check-runs annotations API. Removed once the root cause is fixed.
-      - name: Post analyzer diagnostics
-        if: failure()
-        run: |
-          set +e
-          {
-            echo '### flutter --version'
-            flutter --version 2>&1
-            echo '### flutter analyze --no-fatal-infos'
-            flutter analyze --no-fatal-infos
-            echo "exit=$?"
-          } > /tmp/analyzer-diag.txt 2>&1
-          set -e
-          while IFS= read -r line; do
-            esc="${line//'%'/'%25'}"
-            esc="${esc//$'\r'/'%0D'}"
-            printf '::error title=analyzer-diag::%s\n' "$esc"
-          done < /tmp/analyzer-diag.txt
-
       # Retried once on failure: on shared GitHub runners this step has shown
       # intermittent harness failures (loader/VM-service hiccups) that pass on
       # rerun with byte-identical code. A deterministic failure fails twice.
