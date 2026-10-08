@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isDemoMode } from "@/lib/env";
+import { DatabaseNotReadyError, toDatabaseNotReadyError } from "@/lib/supabase/errors";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -9,7 +10,9 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/verify-email",
   "/verify",
+  "/api/verify",
   "/unauthorized",
+  "/setup-required",
   "/auth",
 ];
 
@@ -17,6 +20,12 @@ const PUBLIC_PATHS = [
  * Refreshes the Supabase session cookie and applies route-level navigation
  * rules. This is a usability layer only: the database re-checks every request
  * through RLS, so a bypassed redirect grants no data access.
+ *
+ * When the database itself is unusable — unreachable, not migrated, or refusing
+ * the session — the request is redirected to /setup-required instead of being
+ * bounced through /login. Without that branch an unreachable project makes
+ * `getUser()` return null on every request, so every route sends the visitor to
+ * /login and the console loops with nothing on screen to explain why.
  */
 export async function updateSession(
   request: NextRequest,
@@ -27,6 +36,11 @@ export async function updateSession(
   if (isDemoMode()) {
     return demoRouting(request, options.demoRole ?? "administrator");
   }
+
+  const path = request.nextUrl.pathname;
+  const isPublic = PUBLIC_PATHS.some(
+    (publicPath) => path === publicPath || path.startsWith(`${publicPath}/`),
+  );
 
   let response = NextResponse.next({ request });
 
@@ -45,14 +59,15 @@ export async function updateSession(
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data, error: userError } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some(
-    (publicPath) => path === publicPath || path.startsWith(`${publicPath}/`),
-  );
+  // A failure here is never a normal "not signed in": GoTrue answers 401 for an
+  // invalid session but a transport or schema failure is a broken environment.
+  const notReady = userError ? toDatabaseNotReadyError(userError) : null;
+  if (notReady && !isPublic) return setupRequired(request, notReady);
+  if (notReady && isPublic) return response;
+
+  const user = data?.user ?? null;
 
   if (!user && !isPublic && path !== "/") {
     const url = request.nextUrl.clone();
@@ -63,11 +78,17 @@ export async function updateSession(
 
   if (user) {
     // Role is read through RLS with the user's own token.
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role, account_status")
       .eq("auth_user_id", user.id)
       .maybeSingle();
+
+    // An errored profile read used to be swallowed as "no profile", which routed
+    // an active administrator to /unauthorized on every request. Classify it and
+    // send the visitor to the diagnosis page instead when it blocks rendering.
+    const profileNotReady = profileError ? toDatabaseNotReadyError(profileError) : null;
+    if (profileNotReady && !isPublic) return setupRequired(request, profileNotReady);
 
     const role = profile?.role ?? null;
     const blocked = profile && profile.account_status !== "active";
@@ -95,13 +116,23 @@ export async function updateSession(
 
     if (path === "/login") {
       const url = request.nextUrl.clone();
-      url.pathname = role === "administrator" ? "/admin" : role === "staff" ? "/staff" : "/unauthorized";
+      url.pathname =
+        role === "administrator" ? "/admin" : role === "staff" ? "/staff" : "/unauthorized";
       url.search = "";
       return NextResponse.redirect(url);
     }
   }
 
   return response;
+}
+
+/** Redirects to the diagnosis page, carrying the classified reason. */
+function setupRequired(request: NextRequest, error: DatabaseNotReadyError): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = "/setup-required";
+  url.search = "";
+  url.searchParams.set("reason", error.kind);
+  return NextResponse.redirect(url);
 }
 
 /** Preview-mode routing so the dashboard can be reviewed without an account. */

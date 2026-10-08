@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
+import { toDatabaseNotReadyError } from "@/lib/supabase/errors";
 import { REQUIRED_DOCUMENTS } from "@/lib/constants";
 import * as demo from "@/lib/data/demo-fixtures";
 import type {
@@ -110,19 +111,29 @@ export async function getSessionProfile(): Promise<SessionContext | null> {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+
+  // A failed session lookup used to be swallowed as "not signed in", which sent
+  // every page to /login even when the real problem was an unreachable project
+  // or a schema that was never applied. Blocking failures are re-thrown so the
+  // middleware can send the visitor to /setup-required instead of looping.
+  const sessionFailure = error ? toDatabaseNotReadyError(error) : null;
+  if (sessionFailure) throw sessionFailure;
+
+  const user = data?.user ?? null;
   if (!user) return null;
 
-  const { data, error } = await supabase
+  const { data: profileRow, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  if (error || !data) return null;
-  const profile = data as unknown as Profile;
+  const profileFailure = profileError ? toDatabaseNotReadyError(profileError) : null;
+  if (profileFailure) throw profileFailure;
+
+  if (!profileRow) return null;
+  const profile = profileRow as unknown as Profile;
   return { profile, role: profile.role };
 }
 

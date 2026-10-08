@@ -21,30 +21,10 @@ export function LoginForm() {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (isDemoMode()) {
-    return (
-      <div className="space-y-4">
-        <Alert tone="warning" title="Preview mode">
-          Supabase is not configured, so sign-in is disabled and the consoles run on bundled
-          sample data. Every write action is blocked.
-        </Alert>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Link
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-[0.8125rem] font-medium text-white hover:bg-primary-600"
-            href="/admin?as=admin"
-          >
-            Preview administrator console
-          </Link>
-          <Link
-            className="inline-flex items-center justify-center rounded-lg border border-line-strong bg-white px-3.5 py-2 text-[0.8125rem] font-medium text-ink hover:bg-page"
-            href="/staff?as=staff"
-          >
-            Preview staff console
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // Preview mode never replaces the form: a hidden sign-in reads as "not
+  // implemented". The real form is rendered underneath the banner, disabled, so
+  // it is visibly the same screen a connected deployment serves.
+  const demo = isDemoMode();
 
   async function signIn(event: React.FormEvent) {
     event.preventDefault();
@@ -113,6 +93,13 @@ export function LoginForm() {
 
   return (
     <form className="space-y-4" onSubmit={signIn}>
+      {demo ? (
+        <Alert tone="warning" title="Preview mode">
+          Supabase is not connected, so sign-in is shown but disabled. The consoles run on bundled
+          sample data and every write action is blocked. Use the preview links below instead.
+        </Alert>
+      ) : null}
+
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
 
@@ -123,6 +110,8 @@ export function LoginForm() {
           type="email"
           autoComplete="username"
           required
+          disabled={demo}
+          aria-disabled={demo}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="name@mabini.gov.ph"
@@ -138,6 +127,8 @@ export function LoginForm() {
             autoComplete="current-password"
             required
             minLength={8}
+            disabled={demo}
+            aria-disabled={demo}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
@@ -145,6 +136,7 @@ export function LoginForm() {
             type="button"
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:bg-page"
             onClick={() => setShowPassword((current) => !current)}
+            disabled={demo}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -152,16 +144,33 @@ export function LoginForm() {
         </div>
       </Field>
 
-      <Button type="submit" loading={loading} className="w-full">
+      <Button type="submit" loading={loading} disabled={demo} className="w-full">
         <LogIn className="h-4 w-4" />
         Sign in
       </Button>
 
-      <p className="text-center text-[0.8125rem]">
-        <Link className="text-primary hover:underline" href="/forgot-password">
-          Forgot your password?
-        </Link>
-      </p>
+      {demo ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Link
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-[0.8125rem] font-medium text-white hover:bg-primary-600"
+            href="/admin?as=admin"
+          >
+            Preview administrator console
+          </Link>
+          <Link
+            className="inline-flex items-center justify-center rounded-lg border border-line-strong bg-white px-3.5 py-2 text-[0.8125rem] font-medium text-ink hover:bg-page"
+            href="/staff?as=staff"
+          >
+            Preview staff console
+          </Link>
+        </div>
+      ) : (
+        <p className="text-center text-[0.8125rem]">
+          <Link className="text-primary hover:underline" href="/forgot-password">
+            Forgot your password?
+          </Link>
+        </p>
+      )}
     </form>
   );
 }
