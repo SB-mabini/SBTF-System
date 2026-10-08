@@ -56,7 +56,11 @@ class Profile {
 
   bool get isSuspended => accountStatus == 'suspended';
 
-  /// Initials for the avatar, derived from the display name.
+  /// Initials for the avatar, derived from the display name: the first
+  /// letters of the first two tokens. This mirrors the web console's
+  /// `initials()` (apps/web/src/lib/format.ts), so "Juan Dela Cruz" renders
+  /// "JD" in both clients — important for multi-word Filipino surnames,
+  /// where first + last token would wrongly yield "JC".
   String get initials {
     final tokens = fullName
         .trim()
@@ -65,7 +69,7 @@ class Profile {
         .toList();
     if (tokens.isEmpty) return '?';
     if (tokens.length == 1) return _firstChar(tokens.first).toUpperCase();
-    return (_firstChar(tokens.first) + _firstChar(tokens.last)).toUpperCase();
+    return (_firstChar(tokens.first) + _firstChar(tokens[1])).toUpperCase();
   }
 
   static String _firstChar(String value) => value.isEmpty ? '' : value[0];
