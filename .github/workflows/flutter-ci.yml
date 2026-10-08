@@ -134,3 +134,30 @@ jobs:
           # ship inside the application because RLS enforces access.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      # TEMPORARY diagnostic: surface the build output of the failing run as
+      # check-run annotations (::error commands), readable through the
+      # check-runs annotations API. Removed once the root cause is fixed.
+      - name: Post build diagnostics
+        if: failure()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set +e
+          defines=""
+          [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
+          [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+          flutter build apk --debug $defines > /tmp/build-diag.txt 2>&1
+          set -e
+          {
+            echo '### build failure excerpt'
+            grep -n -B 5 -A 25 -m 2 -iE 'what went wrong|execution failed|error:|FAILURE' /tmp/build-diag.txt | head -n 130
+            echo '### last lines'
+            tail -n 15 /tmp/build-diag.txt
+          } > /tmp/build-diag-short.txt
+          while IFS= read -r line; do
+            esc="${line//'%'/'%25'}"
+            esc="${esc//$'\r'/'%0D'}"
+            printf '::error title=build-diag::%s\n' "$esc"
+          done < /tmp/build-diag-short.txt
