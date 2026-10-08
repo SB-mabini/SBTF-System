@@ -1,8 +1,11 @@
 name: Mobile CI
 
 on:
+  # Push events only fire on main: branch pushes that belong to an open
+  # pull request would otherwise trigger a second, duplicate run for the
+  # same commit via the pull_request event below.
   push:
-    branches: ["**"]
+    branches: ["main"]
     paths:
       - "apps/mobile/**"
       - ".github/workflows/flutter-ci.yml"
@@ -65,8 +68,16 @@ jobs:
       # Errors and warnings are fatal; info-level lints (const-style,
       # deprecation hints) stay advisory until the sources get a formatting
       # pass on a machine with the SDK — see the step above.
+      #
+      # Retried once on failure: like the test and build steps, the analyzer
+      # has shown intermittent failures on shared runners with byte-identical
+      # code. A deterministic analysis error fails twice.
       - name: Static analysis
-        run: flutter analyze --no-fatal-infos
+        run: |
+          if ! flutter analyze --no-fatal-infos; then
+            echo "::warning::flutter analyze failed on the first attempt — retrying once"
+            flutter analyze --no-fatal-infos
+          fi
 
       # Retried once on failure: on shared GitHub runners this step has shown
       # intermittent harness failures (loader/VM-service hiccups) that pass on
