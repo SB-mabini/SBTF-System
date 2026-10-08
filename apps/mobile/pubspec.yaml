@@ -9,18 +9,18 @@ version: 0.1.0+1
 environment:
   sdk: ">=3.5.0 <4.0.0"
 
+# Dependencies are declared when the slice that uses them lands — nothing
+# here is carried "for later". Slices 1–2 only need state management and the
+# Supabase client. Slice 5 will add file_picker/compression, slice 6 the
+# scanner, and so on; declaring native plugins early only couples the build
+# to their Android packaging (e.g. file_picker 8.x pins compileSdk 34, which
+# the flutter_plugin_android_lifecycle shipped with Flutter 3.47 rejects).
 dependencies:
   flutter:
     sdk: flutter
 
   flutter_riverpod: ^2.6.1
   supabase_flutter: ^2.9.0
-  go_router: ^14.8.1
-  file_picker: ^8.1.2
-  flutter_image_compress: ^2.3.0
-  mobile_scanner: ^6.0.0
-  url_launcher: ^6.3.0
-  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

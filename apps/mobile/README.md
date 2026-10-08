@@ -24,12 +24,13 @@ This adds `android/` and `ios/` without touching `lib/` or `test/`. The
 generated folders are git-ignored where appropriate; commit the pieces your
 build pipeline needs.
 
-> **Flutter ≥ 3.47 note.** Flutter's built-in Kotlin breaks plugins that
-> still use the legacy Kotlin Gradle Plugin (`file_picker` among them). The
-> flutter tool adds `android.builtInKotlin=false` and `android.newDsl=false`
-> to `android/gradle.properties` automatically on the first interactive
-> build; CI sets them explicitly after generating the platform. Keep them
-> until every plugin has migrated to built-in Kotlin.
+> **Dependencies per slice.** `pubspec.yaml` declares only what the
+> implemented slices import. Native plugins planned for later slices
+> (`file_picker`, `flutter_image_compress`, `mobile_scanner`, `url_launcher`)
+> are added by the slice that needs them, so the build is never coupled to a
+> plugin's Android packaging before the code uses it — e.g. `file_picker` 8.x
+> pins `compileSdk 34`, which the `flutter_plugin_android_lifecycle` shipped
+> with Flutter ≥ 3.47 refuses at `:checkDebugAarMetadata`.
 
 ## 2. Run
 
