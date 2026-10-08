@@ -154,6 +154,11 @@ jobs:
           [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
           [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
           flutter build apk --debug $defines 2>&1 | tee build-output.txt
+        env:
+          # Only the publishable values are injected; the anon key is safe to
+          # ship inside the application because RLS enforces access.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       # TEMPORARY DIAGNOSTIC — same mechanism as in the analyze job.
       - name: Publish build output on failure
@@ -174,8 +179,3 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
             -d @comment.json
-        env:
-          # Only the publishable values are injected; the anon key is safe to
-          # ship inside the application because RLS enforces access.
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
