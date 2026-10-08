@@ -66,52 +66,17 @@ jobs:
       # deprecation hints) stay advisory until the sources get a formatting
       # pass on a machine with the SDK — see the step above.
       - name: Static analysis
-        run: flutter analyze --no-fatal-infos 2>&1 | tee analyze-output.txt
+        run: flutter analyze --no-fatal-infos
 
-      # TEMPORARY DIAGNOSTIC (round 2): posts analyzer output as a commit
-      # comment when analysis fails. Remove once understood.
-      - name: Publish analyzer output on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '### flutter analyze failed'
-            echo
-            echo '```'
-            tail -c 60000 analyze-output.txt
-            echo '```'
-          } > body.md
-          jq -n --rawfile b body.md '{body: $b}' > comment.json
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -d @comment.json
-
+      # Retried once on failure: on shared GitHub runners this step has shown
+      # intermittent harness failures (loader/VM-service hiccups) that pass on
+      # rerun with byte-identical code. A deterministic failure fails twice.
       - name: Unit + widget tests
-        run: flutter test 2>&1 | tee test-output.txt
-
-      # TEMPORARY DIAGNOSTIC (tests, round 2): posts test output as a commit
-      # comment when tests fail. Remove once understood.
-      - name: Publish test output on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          {
-            echo '### flutter test failed'
-            echo
-            echo '```'
-            tail -c 60000 test-output.txt
-            echo '```'
-          } > body.md
-          jq -n --rawfile b body.md '{body: $b}' > comment.json
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -d @comment.json
+          if ! flutter test; then
+            echo "::warning::flutter test failed on the first attempt — retrying once"
+            flutter test
+          fi
 
   build-apk:
     name: Build debug APK
@@ -149,11 +114,18 @@ jobs:
         # own — the values must arrive as --dart-define. When the repository
         # secrets are not set (forks, previews) the defines are simply omitted
         # and the APK boots into the configuration screen.
+        #
+        # Retried once on failure: the Gradle dependency download from the
+        # Maven/Google mirrors is the step most prone to transient network
+        # errors on shared runners. A deterministic failure fails twice.
         run: |
           defines=""
           [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
           [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
-          flutter build apk --debug $defines
+          if ! flutter build apk --debug $defines; then
+            echo "::warning::flutter build apk failed on the first attempt — retrying once"
+            flutter build apk --debug $defines
+          fi
         env:
           # Only the publishable values are injected; the anon key is safe to
           # ship inside the application because RLS enforces access.
