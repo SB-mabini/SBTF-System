@@ -79,6 +79,26 @@ jobs:
             flutter analyze --no-fatal-infos
           fi
 
+      # TEMPORARY diagnostic: capture the analyzer output of the failing run
+      # as a commit comment (Actions logs are not retrievable from the
+      # working environment). Removed once the root cause is fixed.
+      - name: Post analyzer diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### flutter --version'
+            flutter --version 2>&1
+            echo
+            echo '### flutter analyze --no-fatal-infos (exit shown at end)'
+            flutter analyze --no-fatal-infos
+            echo "exit=$?"
+          } > /tmp/analyzer-diag.txt 2>&1
+          head -c 4000 /tmp/analyzer-diag.txt > /tmp/analyzer-diag-short.txt
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(printf 'TEMP analyzer diagnostics (run %s, job %s)\n\n```text\n%s\n```' "${{ github.run_id }}" "${{ github.job }}" "$(cat /tmp/analyzer-diag-short.txt)")" || true
+
       # Retried once on failure: on shared GitHub runners this step has shown
       # intermittent harness failures (loader/VM-service hiccups) that pass on
       # rerun with byte-identical code. A deterministic failure fails twice.
