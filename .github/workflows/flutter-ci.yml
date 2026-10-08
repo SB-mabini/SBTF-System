@@ -68,47 +68,18 @@ jobs:
       # Errors and warnings are fatal; info-level lints (const-style,
       # deprecation hints) stay advisory until the sources get a formatting
       # pass on a machine with the SDK — see the step above.
-      #
-      # Retried once on failure: like the test and build steps, the analyzer
-      # has shown intermittent failures on shared runners with byte-identical
-      # code. A deterministic analysis error fails twice.
       - name: Static analysis
-        run: |
-          if ! flutter analyze --no-fatal-infos; then
-            echo "::warning::flutter analyze failed on the first attempt — retrying once"
-            flutter analyze --no-fatal-infos
-          fi
+        run: flutter analyze --no-fatal-infos
 
-      # Retried once on failure: on shared GitHub runners this step has shown
-      # intermittent harness failures (loader/VM-service hiccups) that pass on
-      # rerun with byte-identical code. A deterministic failure fails twice.
+      # Retried once on failure: shared GitHub runners occasionally show
+      # transient environment failures (package/VM-service hiccups). A
+      # deterministic failure fails twice.
       - name: Unit + widget tests
         run: |
           if ! flutter test; then
             echo "::warning::flutter test failed on the first attempt — retrying once"
             flutter test
           fi
-
-      # TEMPORARY diagnostic: surface the test output of the failing run as
-      # check-run annotations (::error commands), readable through the
-      # check-runs annotations API. Removed once the root cause is fixed.
-      - name: Post test diagnostics
-        if: failure()
-        run: |
-          set +e
-          flutter test > /tmp/test-diag.txt 2>&1
-          set -e
-          {
-            echo '### failing test details'
-            grep -n -A 30 -m 3 '❌' /tmp/test-diag.txt | head -n 100
-            echo '### summary (tail)'
-            tail -n 12 /tmp/test-diag.txt
-          } > /tmp/test-diag-short.txt
-          while IFS= read -r line; do
-            esc="${line//'%'/'%25'}"
-            esc="${esc//$'\r'/'%0D'}"
-            printf '::error title=test-diag::%s\n' "$esc"
-          done < /tmp/test-diag-short.txt
 
   build-apk:
     name: Build debug APK
