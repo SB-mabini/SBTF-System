@@ -1,0 +1,6 @@
+# Static analysis for the SBTF mobile application.
+#
+# flutter_lints provides the recommended rule set. CI runs `flutter analyze`
+# with this file, so anything it flags fails the build. Kept deliberately
+# minimal: extra rules are added only when the codebase already satisfies them.
+include: package:flutter_lints/flutter.yaml
