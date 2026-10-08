@@ -90,7 +90,28 @@ jobs:
             -d @comment.json
 
       - name: Unit + widget tests
-        run: flutter test
+        run: flutter test 2>&1 | tee test-output.txt
+
+      # TEMPORARY DIAGNOSTIC (tests, round 2): posts test output as a commit
+      # comment when tests fail. Remove once understood.
+      - name: Publish test output on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### flutter test failed'
+            echo
+            echo '```'
+            tail -c 60000 test-output.txt
+            echo '```'
+          } > body.md
+          jq -n --rawfile b body.md '{body: $b}' > comment.json
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -d @comment.json
 
   build-apk:
     name: Build debug APK
