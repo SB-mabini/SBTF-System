@@ -66,52 +66,10 @@ jobs:
       # deprecation hints) stay advisory until the sources get a formatting
       # pass on a machine with the SDK — see the step above.
       - name: Static analysis
-        run: flutter analyze --no-fatal-infos 2>&1 | tee analyze-output.txt
-
-      # TEMPORARY DIAGNOSTIC: this sandbox cannot download Actions logs, so a
-      # failing analysis posts its output as a commit comment where it can be
-      # read. Remove this step once the analyzer is green.
-      - name: Publish analyzer output on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '### flutter analyze failed'
-            echo
-            echo '```'
-            tail -c 60000 analyze-output.txt
-            echo '```'
-          } > body.md
-          jq -n --rawfile b body.md '{body: $b}' > comment.json
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -d @comment.json
+        run: flutter analyze --no-fatal-infos
 
       - name: Unit + widget tests
-        run: flutter test 2>&1 | tee test-output.txt
-
-      # TEMPORARY DIAGNOSTIC (tests) — same mechanism as above.
-      - name: Publish test output on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '### flutter test failed'
-            echo
-            echo '```'
-            tail -c 60000 test-output.txt
-            echo '```'
-          } > body.md
-          jq -n --rawfile b body.md '{body: $b}' > comment.json
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -d @comment.json
+        run: flutter test
 
   build-apk:
     name: Build debug APK
@@ -153,29 +111,9 @@ jobs:
           defines=""
           [ -n "$SUPABASE_URL" ] && defines="$defines --dart-define=SUPABASE_URL=$SUPABASE_URL"
           [ -n "$SUPABASE_ANON_KEY" ] && defines="$defines --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
-          flutter build apk --debug $defines 2>&1 | tee build-output.txt
+          flutter build apk --debug $defines
         env:
           # Only the publishable values are injected; the anon key is safe to
           # ship inside the application because RLS enforces access.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-
-      # TEMPORARY DIAGNOSTIC — same mechanism as in the analyze job.
-      - name: Publish build output on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo '### flutter build apk failed'
-            echo
-            echo '```'
-            tail -c 60000 build-output.txt
-            echo '```'
-          } > body.md
-          jq -n --rawfile b body.md '{body: $b}' > comment.json
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -d @comment.json
