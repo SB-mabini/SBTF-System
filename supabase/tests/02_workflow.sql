@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(49);
+select plan(62);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -356,6 +356,159 @@ select lives_ok(
   $$select public.rpc_driver_submit_application(
       pg_temp.payload((select toda from ids), pg_temp.docs((select driver2 from ids), 'c')))$$,
   'a second driver can submit an application'
+);
+
+-- ---------------------------------------------------------------------------
+-- 3a. Driver document replacement (migration 20260101091300)
+--
+-- The corrected-copy upload: when staff reject a document the applicant must be
+-- able to replace just that file. The replacement rides the existing
+-- trg_document_written trigger, so the audit trail and the application timeline
+-- are written by the trigger rather than by the function.
+-- ---------------------------------------------------------------------------
+-- Resolved once so the assertions below stay readable. The application filter
+-- excludes the approved reminder fixture created for section 6.
+create temporary table fx_repl as
+select
+  (select d.id
+     from public.franchise_documents d
+     join public.franchise_applications a on a.id = d.application_id
+    where a.applicant_id = (select driver2 from ids)
+      and a.application_number <> 'TEST-WF-R2'
+      and d.document_type = 'or_cr')    as target,
+  (select d.id
+     from public.franchise_documents d
+     join public.franchise_applications a on a.id = d.application_id
+    where a.applicant_id = (select driver2 from ids)
+      and a.application_number <> 'TEST-WF-R2'
+      and d.document_type = 'cedula')   as verified,
+  (select a.id
+     from public.franchise_applications a
+    where a.applicant_id = (select driver2 from ids)
+      and a.application_number <> 'TEST-WF-R2') as app;
+
+grant select on fx_repl to anon, authenticated;
+
+-- Fixture: staff verify one copy (which freezes it) and reject the copy the
+-- driver is about to replace, so the immutability rule can be exercised.
+select pg_temp.login((select staff_auth from fx));
+
+do $$
+begin
+  perform public.rpc_staff_verify_document((select verified from fx_repl), 'verified', null);
+  perform public.rpc_staff_verify_document(
+    (select target from fx_repl), 'rejected',
+    'The submitted OR/CR copy is unreadable; please upload a clearer scan.');
+end
+$$;
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select target from fx_repl),
+      (select driver2 from ids)::text || '/pending/replaced-or_cr.pdf')$$,
+  '42501', null,
+  'staff cannot replace a document on a driver application'
+);
+
+select pg_temp.login((select driver3_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select target from fx_repl),
+      (select driver3 from ids)::text || '/pending/replaced-or_cr.pdf')$$,
+  '42501', null,
+  'a driver cannot replace a document on another driver application'
+);
+
+select pg_temp.login((select driver_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select d.id from public.franchise_documents d
+         join public.franchise_applications a on a.id = d.application_id
+        where a.applicant_id = (select driver from ids) and d.document_type = 'or_cr'),
+      (select driver from ids)::text || '/pending/replaced-or_cr.pdf')$$,
+  'P0001', null,
+  'documents of an already decided application can no longer be replaced'
+);
+
+select pg_temp.login((select driver2_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select target from fx_repl), 'someone-else/pending/stolen.pdf')$$,
+  '42501', null,
+  'a replacement stored outside the caller storage folder is refused'
+);
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select target from fx_repl),
+      (select driver2 from ids)::text || '/pending/replaced-or_cr.exe',
+      'replaced-or_cr.exe', 250000, 'application/x-msdownload')$$,
+  'P0001', null,
+  'a replacement that is not a PDF, JPEG or PNG file is refused'
+);
+
+select throws_ok(
+  $$select public.rpc_driver_replace_document(
+      (select verified from fx_repl),
+      (select driver2 from ids)::text || '/pending/replaced-cedula.pdf')$$,
+  'P0001', null,
+  'a document staff already verified can no longer be replaced'
+);
+
+select lives_ok(
+  $$select public.rpc_driver_replace_document(
+      (select target from fx_repl),
+      (select driver2 from ids)::text || '/pending/replaced-or_cr.pdf',
+      'or-cr-replaced.pdf', 248000, 'application/pdf')$$,
+  'the driver replaces a rejected document with a corrected copy'
+);
+
+select is(
+  (select verification_status::text from public.franchise_documents
+    where id = (select target from fx_repl)),
+  'pending',
+  'the replacement resets the verification status to pending'
+);
+
+select ok(
+  (select verified_by is null and verified_at is null and remarks is null
+     from public.franchise_documents where id = (select target from fx_repl)),
+  'the previous verification decision and its remark are cleared by the replacement'
+);
+
+select is(
+  (select storage_path from public.franchise_documents
+    where id = (select target from fx_repl)),
+  (select driver2 from ids)::text || '/pending/replaced-or_cr.pdf',
+  'the replaced file is stored under the applicant own storage folder'
+);
+
+select is(
+  (select count(*)::int from public.activity_logs l
+    where l.action = 'document_replaced'
+      and l.target_type = 'franchise_document'
+      and l.target_id = (select target from fx_repl)),
+  1,
+  'the replacement is written to the audit trail exactly once'
+);
+
+select is(
+  (select count(*)::int from public.application_status_history h
+    where h.application_id = (select app from fx_repl) and h.event = 'document_replaced'),
+  2,
+  'the timeline records the new file and the verification reset'
+);
+
+-- Restore the fixture so the analytics assertions below read the same document
+-- state they would have seen without this section.
+select pg_temp.login((select staff_auth from fx));
+
+select lives_ok(
+  $$select public.rpc_staff_verify_document((select verified from fx_repl), 'pending', null)$$,
+  'staff can roll a verification back to pending'
 );
 
 select pg_temp.login((select staff_auth from fx));
