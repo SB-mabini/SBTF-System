@@ -26,6 +26,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Future<void> _resend() async {
     if (_demo) return;
+
+    final email = widget.email;
+    if (email == null || email.isEmpty) {
+      setState(() {
+        _error = 'No e-mail address is linked to this session, so nothing can '
+            'be resent. Return to sign in and try again.';
+      });
+      return;
+    }
+
     setState(() {
       _resending = true;
       _notice = null;
@@ -36,7 +46,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       final client = Supabase.instance.client;
       await client.auth.resend(
         type: OtpType.signup,
-        email: widget.email,
+        email: email,
       );
       setState(() {
         _resending = false;
