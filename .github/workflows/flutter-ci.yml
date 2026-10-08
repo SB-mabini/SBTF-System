@@ -96,20 +96,19 @@ jobs:
         if: failure()
         run: |
           set +e
-          {
-            echo '### flutter --version'
-            flutter --version 2>&1
-            echo '### flutter test'
-            flutter test
-            echo "exit=$?"
-          } > /tmp/test-diag.txt 2>&1
+          flutter test > /tmp/test-diag.txt 2>&1
           set -e
-          tail -n 80 /tmp/test-diag.txt > /tmp/test-diag-tail.txt
+          {
+            echo '### failing test details'
+            grep -n -A 30 -m 3 '❌' /tmp/test-diag.txt | head -n 100
+            echo '### summary (tail)'
+            tail -n 12 /tmp/test-diag.txt
+          } > /tmp/test-diag-short.txt
           while IFS= read -r line; do
             esc="${line//'%'/'%25'}"
             esc="${esc//$'\r'/'%0D'}"
             printf '::error title=test-diag::%s\n' "$esc"
-          done < /tmp/test-diag-tail.txt
+          done < /tmp/test-diag-short.txt
 
   build-apk:
     name: Build debug APK
