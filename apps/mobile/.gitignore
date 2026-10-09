@@ -8,6 +8,7 @@ build/
 .pub/
 
 # Generated platform folders.
+*.local.json
 android/.gradle/
 android/local.properties
 android/app/debug/
