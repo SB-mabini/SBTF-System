@@ -44,6 +44,9 @@ supabase/.branches/
 supabase/.temp/
 supabase/.env
 
+# Generated schema bundle (npm run db:bundle / db:bundle:seed)
+supabase/setup-all*.sql
+
 # Editors / OS
 .vscode/*
 !.vscode/settings.json

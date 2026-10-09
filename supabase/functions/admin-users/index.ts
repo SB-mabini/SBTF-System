@@ -21,6 +21,15 @@ type Action = "create_staff" | "deactivate" | "activate" | "send_password_reset"
 
 const ALLOWED_ROLES = ["administrator", "staff"] as const;
 
+/**
+ * Where Supabase Auth sends the holder after they follow a recovery link.
+ *
+ * Set SITE_URL as a function secret (`supabase secrets set SITE_URL=https://…`).
+ * It falls back to localhost so local development still produces a usable, if
+ * unusable-outside-the-machine, link.
+ */
+const SITE_URL = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
+
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
 
@@ -132,13 +141,22 @@ Deno.serve(async (request: Request) => {
       metadata: { email, role, created_by: "admin-users edge function" },
     });
 
-    // Send the Supabase Auth invitation / recovery e-mail.
-    const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
-    const { data: link } = await adminClient.auth.admin.generateLink({
+    // Build the password-setup link and hand it back to the console.
+    //
+    // generateLink only *creates* the link — it does not send anything. The
+    // delivery would be left to Supabase's built-in mailer, which on a project
+    // without SMTP is rate-limited and often only delivers to addresses already
+    // on the project team, so an invitation to a real municipal address silently
+    // never arrives. Rather than claim an e-mail was sent, the link is returned
+    // and the administrator passes it on through whatever channel the office
+    // actually uses.
+    const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${siteUrl}/reset-password` },
+      options: { redirectTo: `${SITE_URL}/reset-password` },
     });
+
+    const setupLink: string | null = link?.properties?.action_link ?? null;
 
     return json(
       {
@@ -146,9 +164,12 @@ Deno.serve(async (request: Request) => {
         user_id: created.user.id,
         email,
         role,
-        password_setup_link_generated: Boolean(link?.properties?.action_link),
-        message:
-          "Account created. The new user must set their password through the e-mailed link and can then sign in.",
+        setup_link: setupLink,
+        message: setupLink
+          ? "Account created. No e-mail is sent automatically — copy the setup link below and send it to the new user yourself. The link is single-use and expires; the account cannot sign in until the password is set through it."
+          : "Account created, but no setup link could be generated" +
+            (linkError ? ` (${linkError.message}).` : ".") +
+            " Tell the new user to use “Forgot your password?” on the sign-in page: Supabase Auth will issue the recovery link directly to them.",
       },
       201,
       origin,
@@ -211,22 +232,26 @@ Deno.serve(async (request: Request) => {
       return errorResponse("invalid_email", "An e-mail address is required.", 400, origin);
     }
 
-    const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
+    // Same contract as create_staff: the link is returned, not e-mailed. See the
+    // comment there for why.
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${siteUrl}/reset-password` },
+      options: { redirectTo: `${SITE_URL}/reset-password` },
     });
 
-    if (error) {
-      return errorResponse("reset_failed", error.message, 400, origin);
-    }
+    const resetLink: string | null = data?.properties?.action_link ?? null;
 
     return json(
       {
         ok: true,
-        link_generated: Boolean(data?.properties?.action_link),
-        message: "A password reset link has been generated and e-mailed by Supabase Auth.",
+        email,
+        reset_link: resetLink,
+        message: resetLink
+          ? "A new password reset link has been created. No e-mail is sent automatically — copy it and pass it to the account holder yourself. It is single-use and the previous link stops working once this one is used."
+          : "No reset link could be generated" +
+            (error ? ` (${error.message}).` : ".") +
+            " Tell the account holder to use “Forgot your password?” on the sign-in page instead.",
       },
       200,
       origin,

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { KeyRound, ShieldCheck, UserCheck, UserX } from "lucide-react";
 
 import { Alert, Badge, Button, Field } from "@/components/ui";
-import { ConfirmDialog, Modal } from "@/components/dialog";
+import { Modal } from "@/components/dialog";
+import { CopyLinkField } from "@/components/users/copy-link-field";
 import {
   sendPasswordResetAction,
   setAccountStatusAction,
@@ -35,6 +36,8 @@ export function UserActions({
   const [status, setStatus] = useState<AccountStatus>("inactive");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
 
   const isSelf = profile.id === currentProfileId;
   const readOnly = isDemoMode();
@@ -45,7 +48,6 @@ export function UserActions({
     if (result.ok) {
       setRoleOpen(false);
       setStatusOpen(false);
-      setResetOpen(false);
       startTransition(() => router.refresh());
     }
   }
@@ -68,7 +70,35 @@ export function UserActions({
 
   async function sendReset() {
     setBusy(true);
-    afterSuccess(await sendPasswordResetAction({ email: profile.email }));
+    setResetLink(null);
+    setResetNotice(null);
+    setMessage(null);
+
+    const result = await sendPasswordResetAction({ email: profile.email });
+    setBusy(false);
+
+    const link = result.details?.reset_link;
+
+    if (!result.ok) {
+      setMessage({ ok: false, text: result.message });
+      // The dialog stays open so the failure can be retried in place.
+      return;
+    }
+
+    setMessage({ ok: true, text: result.message });
+    setResetNotice(result.message);
+
+    if (typeof link === "string" && link.length > 0) {
+      setResetLink(link);
+      // The dialog deliberately stays open: the link is shown here and only here,
+      // it is never stored anywhere, so closing early would lose it.
+      return;
+    }
+
+    // The action succeeded but no link came back (generateLink failed). The
+    // message already explains the fallback, so the dialog closes.
+    setResetOpen(false);
+    startTransition(() => router.refresh());
   }
 
   return (
@@ -229,15 +259,73 @@ export function UserActions({
       </Modal>
 
       {/* Password reset */}
-      <ConfirmDialog
+      <Modal
         open={resetOpen}
-        title="Send a password reset link"
-        message={`Supabase Auth will e-mail a recovery link to ${profile.email}. The SBTF System never sees or stores the password.`}
-        confirmLabel="Send link"
-        loading={busy}
-        onConfirm={sendReset}
-        onCancel={() => setResetOpen(false)}
-      />
+        title="Create a password reset link"
+        description={`A single-use recovery link for ${profile.email}.`}
+        onClose={() => {
+          if (busy) return;
+          setResetOpen(false);
+          setResetLink(null);
+          setResetNotice(null);
+        }}
+        width={resetLink ? "lg" : "md"}
+        footer={
+          resetLink ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetOpen(false);
+                setResetLink(null);
+                setResetNotice(null);
+              }}
+            >
+              Done
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setResetOpen(false)} disabled={busy}>
+                Cancel
+              </Button>
+              <Button onClick={sendReset} loading={busy} disabled={readOnly}>
+                Create link
+              </Button>
+            </>
+          )
+        }
+      >
+        {resetLink ? (
+          <div className="space-y-3">
+            <Alert tone="success" title="Reset link created">
+              {resetNotice ??
+                "A new password reset link has been created. No e-mail is sent automatically — copy it and pass it to the account holder yourself."}
+            </Alert>
+
+            <CopyLinkField
+              label="Password reset link"
+              value={resetLink}
+              hint="Send this to the account holder through whatever channel the office uses. It is single-use, it is not stored in the system, and it expires; creating a new link invalidates the previous one."
+            />
+
+            <p className="text-[0.75rem] text-muted">
+              The SBTF System never sees or stores the password itself — only this one-time link is
+              returned here.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <span className="mt-0.5 rounded-md bg-primary-50 p-2 text-primary-700">
+              <KeyRound className="h-4 w-4" />
+            </span>
+            <p className="text-[0.875rem] text-ink">
+              A single-use recovery link will be generated for {profile.email}. No e-mail is sent
+              automatically — the link is shown here so you can pass it on yourself. If the account
+              holder can still sign in, they can use “Forgot your password?” on the sign-in page
+              instead.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

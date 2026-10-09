@@ -9,7 +9,12 @@
   "scripts": {
     "seed:generate": "python3 scripts/generate_seed.py",
     "validate:sql": "node scripts/validate-sql.mjs",
-    "db:check": "node scripts/db-check.mjs",
+    "db:check": "node scripts/check-supabase.mjs",
+    "db:check:legacy": "node scripts/db-check.mjs",
+    "db:verify": "node scripts/verify-live.mjs",
+    "test:verify": "node scripts/test-verify-live.mjs",
+    "db:bundle": "node scripts/bundle-sql.mjs",
+    "db:bundle:seed": "node scripts/bundle-sql.mjs --with-seed",
     "test:rls": "supabase test db supabase/tests",
     "web:dev": "npm --workspace @sbtf/web run dev",
     "web:build": "npm --workspace @sbtf/web run build",

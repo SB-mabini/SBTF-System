@@ -7,10 +7,30 @@
  */
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+/**
+ * Supabase renamed the anon key to the "publishable key" in newer projects while
+ * the old name kept working. Both names are accepted here so that a project
+ * created after the rename does not need a code change; the anon name wins when
+ * both are set, because it is the one the older dashboards still display.
+ */
+export const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  "";
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
+/**
+ * Preview mode is opt-in and must be spelled exactly.
+ *
+ * The comparison is deliberately strict: only the literal string "true" enables
+ * it. "1", "TRUE", "yes" and " true" all leave preview mode OFF. `NEXT_PUBLIC_*`
+ * values are inlined into the browser bundle at build time, so a loosely parsed
+ * flag is exactly how a production deployment ends up serving sample data with
+ * every write disabled and no obvious cause.
+ */
 export function isDemoMode(): boolean {
   return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 }

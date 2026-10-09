@@ -1,0 +1,31 @@
+name: sbtf_mobile
+description: >-
+  Driver/operator mobile application for the SBTF System — a Web and
+  Mobile-Based Franchising and Tricycle Driver Registration System for the
+  Municipality of Mabini, Batangas.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+# Dependencies are declared when the slice that uses them lands — nothing
+# here is carried "for later". Slices 1–2 only need state management and the
+# Supabase client. Slice 5 will add file_picker/compression, slice 6 the
+# scanner, and so on; declaring native plugins early only couples the build
+# to their Android packaging (e.g. file_picker 8.x pins compileSdk 34, which
+# the flutter_plugin_android_lifecycle shipped with Flutter 3.47 rejects).
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_riverpod: ^2.6.1
+  supabase_flutter: ^2.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
