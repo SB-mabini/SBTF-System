@@ -44,11 +44,18 @@ class Env {
     return hasUrl && hasKey;
   }
 
-  /// The configuration compiled from `--dart-define` values. This is the one the
-  /// app boots with; tests override it by assigning [current].
+  /// The configuration compiled from `--dart-define` values. If not provided at
+  /// build time, it defaults to the active project credentials.
   static const Env fromEnvironment = Env(
-    supabaseUrl: String.fromEnvironment('SUPABASE_URL'),
-    supabaseAnonKey: String.fromEnvironment('SUPABASE_ANON_KEY'),
+    supabaseUrl: String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: 'https://qdtmzgaxktebyhsxrgvf.supabase.co',
+    ),
+    supabaseAnonKey: String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkdG16Z2F4a3RlYnloc3hyZ3ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNzEwNzYsImV4cCI6MjEwNjY0NzA3Nn0.J3ctXpR42Th75ZihOJ-3XPLHuOFPdxB8B5EWXIEwwTg',
+    ),
     demoMode: String.fromEnvironment('SBTF_DEMO_MODE') == 'true',
   );
 }
