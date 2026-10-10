@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { SessionTimeout } from "@/components/session-timeout";
 import { listNotifications } from "@/lib/data";
 import type { SessionContext } from "@/lib/data";
 import { isDemoMode } from "@/lib/env";
@@ -50,6 +51,7 @@ export async function DashboardShell({
 
       {/* Live updates for notifications and application decisions. */}
       <RealtimeRefresher />
+      <SessionTimeout />
     </div>
   );
 }
