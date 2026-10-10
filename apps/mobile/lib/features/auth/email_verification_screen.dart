@@ -86,14 +86,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Icon(Icons.mark_email_read_outlined,
-                      size: 56, color: AppColors.primary),
+                      size: 40, color: AppColors.primary),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     widget.email == null || widget.email!.isEmpty
@@ -102,7 +102,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: AppColors.inkStrong,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -112,38 +112,74 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     'account is created, but you cannot sign in until the '
                     'address is confirmed.',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkMuted,
                       height: 1.4,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (_notice != null) ...[
-                    Text(
-                      _notice!,
-                      style: const TextStyle(color: AppColors.success),
-                      textAlign: TextAlign.center,
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.successTint,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppSpacing.unit),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outlined,
+                              color: AppColors.success, size: 20),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              _notice!,
+                              style: const TextStyle(
+                                  color: AppColors.success, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
                   if (_error != null) ...[
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: AppColors.danger),
-                      textAlign: TextAlign.center,
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.dangerTint,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppSpacing.unit),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: AppColors.danger, size: 20),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                  color: AppColors.danger, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
-                  FilledButton.icon(
+                  FilledButton(
                     onPressed: (_demo || _resending) ? null : _resend,
-                    icon: _resending
+                    child: _resending
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Icon(Icons.refresh),
-                    label: const Text('Resend confirmation e-mail'),
+                        : const Text('Resend confirmation e-mail'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   OutlinedButton(

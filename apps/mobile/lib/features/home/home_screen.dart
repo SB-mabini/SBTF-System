@@ -26,6 +26,9 @@ class HomeScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.dangerFill,
+            ),
             child: const Text('Sign out'),
           ),
         ],
@@ -59,7 +62,9 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: profileAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
           error: (error, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -69,7 +74,10 @@ class HomeScreen extends ConsumerWidget {
                   const Icon(Icons.error_outline,
                       size: 40, color: AppColors.danger),
                   const SizedBox(height: AppSpacing.xs),
-                  const Text('Could not load your profile.'),
+                  const Text(
+                    'Could not load your profile.',
+                    style: TextStyle(color: AppColors.inkMuted),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   OutlinedButton(
                     onPressed: () => ref.invalidate(profileProvider),
@@ -87,7 +95,7 @@ class HomeScreen extends ConsumerWidget {
                 initials: profile?.initials ?? '?',
                 active: profile?.isActive ?? false,
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               ..._featureTiles,
             ],
           ),
@@ -147,13 +155,13 @@ class _ProfileHeader extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppSpacing.unit * 1.5),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             child: Text(
               initials,
               style: const TextStyle(
@@ -177,14 +185,28 @@ class _ProfileHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  active
-                      ? 'Driver / operator · account active'
-                      : 'Driver / operator · account not active',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      active
+                          ? Icons.check_circle_outlined
+                          : Icons.pause_circle_outline,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        active
+                            ? 'Driver / operator · account active'
+                            : 'Driver / operator · account not active',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -210,28 +232,28 @@ class _FeatureTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.unit),
-        side: const BorderSide(color: AppColors.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
+      child: InkWell(
+        onTap: () {}, // InkWell adds the pressed state overlay
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.inkStrong,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
-            _SoonBadge(slice: slice),
-          ],
+              _SoonBadge(slice: slice),
+            ],
+          ),
         ),
       ),
     );
@@ -251,9 +273,9 @@ class _SoonBadge extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBF3E4),
+        color: AppColors.accentTint,
         borderRadius: BorderRadius.circular(AppSpacing.unit),
-        border: Border.all(color: AppColors.warning),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         'Soon · $slice',

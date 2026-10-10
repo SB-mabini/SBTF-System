@@ -23,8 +23,7 @@ void main() {
     final signIn = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(signIn.onPressed, isNull);
 
-    final register =
-        tester.widget<OutlinedButton>(find.byType(OutlinedButton));
+    final register = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     expect(register.onPressed, isNull);
   });
 }

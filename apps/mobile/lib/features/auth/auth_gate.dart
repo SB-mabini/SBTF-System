@@ -86,6 +86,8 @@ class AuthGate extends ConsumerWidget {
             icon: Icons.desktop_windows_outlined,
             title: 'Use the web console',
             message: decisionReason(decision),
+            tintColor: AppColors.dangerTint,
+            iconColor: AppColors.danger,
           ),
         );
       case SessionDecision.refuseSuspended:
@@ -94,6 +96,8 @@ class AuthGate extends ConsumerWidget {
             icon: Icons.block_outlined,
             title: 'Account suspended',
             message: decisionReason(decision),
+            tintColor: AppColors.dangerTint,
+            iconColor: AppColors.danger,
           ),
         );
       case SessionDecision.refuseInactive:
@@ -122,7 +126,7 @@ class _GateScaffold extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: child,
@@ -142,10 +146,16 @@ class _Loading extends StatelessWidget {
     return const Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CircularProgressIndicator(),
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
         SizedBox(height: AppSpacing.sm),
-        Text('Checking your session…',
-            style: TextStyle(color: AppColors.textSecondary)),
+        Text(
+          'Checking your session…',
+          style: TextStyle(color: AppColors.inkMuted, fontSize: 14),
+        ),
       ],
     );
   }
@@ -157,43 +167,59 @@ class _RefusalCard extends StatelessWidget {
     required this.title,
     required this.message,
     this.onRetry,
+    this.tintColor,
+    this.iconColor,
   });
 
   final IconData icon;
   final String title;
   final String message;
   final VoidCallback? onRetry;
+  final Color? tintColor;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 48, color: AppColors.textSecondary),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: tintColor ?? AppColors.greyFill,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 40, color: iconColor ?? AppColors.inkMuted),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.inkStrong,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          message,
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
-          textAlign: TextAlign.center,
-        ),
-        if (onRetry != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          OutlinedButton(
-            onPressed: onRetry,
-            child: const Text('Try again'),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.inkMuted,
+              fontSize: 14,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
           ),
+          if (onRetry != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: const Text('Try again'),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

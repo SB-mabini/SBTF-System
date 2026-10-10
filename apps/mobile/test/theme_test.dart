@@ -16,6 +16,6 @@ void main() {
     final theme = AppTheme.light;
     expect(theme.useMaterial3, isTrue);
     expect(theme.colorScheme.primary, AppColors.primary);
-    expect(theme.scaffoldBackgroundColor, AppColors.surface);
+    expect(theme.scaffoldBackgroundColor, AppColors.background);
   });
 }

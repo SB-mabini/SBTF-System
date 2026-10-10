@@ -15,7 +15,8 @@ void main() {
 
     // The exact run command is shown so it can be copied.
     expect(find.textContaining('--dart-define=SUPABASE_URL'), findsOneWidget);
-    expect(find.textContaining('--dart-define=SUPABASE_ANON_KEY'), findsOneWidget);
+    expect(
+        find.textContaining('--dart-define=SUPABASE_ANON_KEY'), findsOneWidget);
 
     expect(find.text('Copy run command'), findsOneWidget);
   });

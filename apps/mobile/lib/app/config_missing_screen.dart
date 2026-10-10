@@ -19,66 +19,91 @@ class ConfigMissingScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Configuration required')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.build_circle_outlined,
-                  size: 56, color: AppColors.warning),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'Supabase is not configured',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              const Text(
-                'This build has no Supabase project URL or publishable key, so '
-                'it cannot connect to the database. Pass both values at build '
-                'time with --dart-define. Only publishable values are needed; '
-                'the anon key is safe to ship because Row Level Security '
-                'enforces access.',
-                style: TextStyle(color: AppColors.textSecondary, height: 1.4),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.line),
-                  borderRadius: BorderRadius.circular(AppSpacing.unit),
-                ),
-                child: SelectableText(
-                  runCommand,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  const Icon(Icons.build_circle_outlined,
+                      size: 40, color: AppColors.inkMuted),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'Supabase is not configured',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.inkStrong,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text(
+                    'This build has no Supabase project URL or publishable key, '
+                    'so it cannot connect to the database. Pass both values at '
+                    'build time with --dart-define. Only publishable values are '
+                    'needed; the anon key is safe to ship because Row Level '
+                    'Security enforces access.',
+                    style: TextStyle(
+                      color: AppColors.inkMuted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.greyFill,
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(AppSpacing.unit),
+                    ),
+                    child: SelectableText(
+                      runCommand,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: AppColors.inkStrong,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: runCommand));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle_outlined,
+                                  color: Colors.white, size: 20),
+                              SizedBox(width: AppSpacing.xs),
+                              Text('Run command copied'),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined, size: 18),
+                    label: const Text('Copy run command'),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text(
+                    'Where to find the values:\n'
+                    '• SUPABASE_URL — Supabase Dashboard → Project Settings → API\n'
+                    '• SUPABASE_ANON_KEY — the publishable (anon) key on the same page',
+                    style: TextStyle(
+                      color: AppColors.inkMuted,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: runCommand));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Run command copied')),
-                  );
-                },
-                icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Copy run command'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const Text(
-                'Where to find the values:\n'
-                '• SUPABASE_URL — Supabase Dashboard → Project Settings → API\n'
-                '• SUPABASE_ANON_KEY — the publishable (anon) key on the same page',
-                style: TextStyle(color: AppColors.textSecondary, height: 1.5),
-              ),
-            ],
+            ),
           ),
         ),
       ),

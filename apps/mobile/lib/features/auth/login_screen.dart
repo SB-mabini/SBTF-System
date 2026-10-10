@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
@@ -103,6 +103,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: AppSpacing.sm),
+                    // --- Municipal identity block ---
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryTint,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.account_balance_outlined,
+                              size: 32, color: AppColors.primary),
+                          SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Municipality of Mabini',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Tricycle Franchising System',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.inkMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     if (_demo) ...[
                       const _DemoBanner(),
                       const SizedBox(height: AppSpacing.sm),
@@ -111,13 +145,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       _ErrorBanner(message: _error!),
                       const SizedBox(height: AppSpacing.sm),
                     ],
+                    // --- E-mail label above field ---
+                    const Text(
+                      'E-mail address',
+                      style: TextStyle(
+                        color: AppColors.inkStrong,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _emailController,
                       enabled: !_demo,
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      enableSuggestions: false,
                       decoration: const InputDecoration(
-                        labelText: 'E-mail address',
-                        prefixIcon: Icon(Icons.email_outlined),
+                        hintText: 'name@example.com',
+                        prefixIcon: Icon(Icons.email_outlined, size: 20),
                       ),
                       validator: (value) {
                         final email = value?.trim() ?? '';
@@ -128,40 +175,60 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.sm),
+                    // --- Password label above field ---
+                    const Text(
+                      'Password',
+                      style: TextStyle(
+                        color: AppColors.inkStrong,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     TextFormField(
                       controller: _passwordController,
                       enabled: !_demo,
                       obscureText: _obscure,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _signIn(),
                       decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                        suffixIcon: Semantics(
+                          label: _obscure ? 'Show password' : 'Hide password',
+                          child: IconButton(
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              size: 20,
+                            ),
+                            onPressed: _demo
+                                ? null
+                                : () => setState(() => _obscure = !_obscure),
                           ),
-                          onPressed: _demo
-                              ? null
-                              : () => setState(() => _obscure = !_obscure),
                         ),
                       ),
                       validator: (value) {
-                        if ((value ?? '').isEmpty) return 'Enter your password.';
+                        if ((value ?? '').isEmpty) {
+                          return 'Enter your password.';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    FilledButton.icon(
+                    FilledButton(
                       onPressed: (_demo || _loading) ? null : _signIn,
-                      icon: _loading
+                      child: _loading
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Icon(Icons.login),
-                      label: const Text('Sign in'),
+                          : const Text('Sign in'),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton(
@@ -193,19 +260,19 @@ class _DemoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBF3E4),
-        border: Border.all(color: AppColors.warning),
+        color: AppColors.accentTint,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppSpacing.unit),
       ),
       child: const Row(
         children: [
-          Icon(Icons.info_outline, color: AppColors.warning),
+          Icon(Icons.info_outline, color: AppColors.warning, size: 20),
           SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
               'Preview mode — Supabase is not connected, so sign-in is shown '
               'but disabled. The app runs without a database.',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style: TextStyle(color: AppColors.inkStrong, fontSize: 13),
             ),
           ),
         ],
@@ -224,13 +291,13 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBE9E9),
-        border: Border.all(color: AppColors.danger),
+        color: AppColors.dangerTint,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppSpacing.unit),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.danger),
+          const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
