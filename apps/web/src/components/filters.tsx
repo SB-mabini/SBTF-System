@@ -23,15 +23,21 @@ export interface FilterDefinition {
 export function FilterBar({
   definitions,
   searchKey = "q",
+  searchPlaceholder = "Application number, plate number, operator…",
   todos,
   showToda = false,
   showDateRange = false,
+  showQuickFilters = true,
+  quickFilters,
 }: {
   definitions?: FilterDefinition[];
   searchKey?: string;
+  searchPlaceholder?: string;
   todos?: Toda[];
   showToda?: boolean;
   showDateRange?: boolean;
+  showQuickFilters?: boolean;
+  quickFilters?: Array<{ key: string; value: string; label: string }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -90,7 +96,7 @@ export function FilterBar({
             <input
               id="filter-search"
               className="sbtf-input"
-              placeholder="Application number, plate number, operator…"
+              placeholder={searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -199,37 +205,58 @@ export function FilterBar({
       </div>
 
       {/* Status and type shortcuts keep the common cases one click away. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-        <span className="text-[0.75rem] text-muted">Quick filters:</span>
-        {statusOptions.slice(1).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => update({ status: option.value })}
-            className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
-              searchParams.get("status") === option.value
-                ? "border-primary-200 bg-primary-50 text-primary-700"
-                : "border-line text-muted hover:bg-page"
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-        {typeOptions.slice(1).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => update({ type: option.value })}
-            className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
-              searchParams.get("type") === option.value
-                ? "border-primary-200 bg-primary-50 text-primary-700"
-                : "border-line text-muted hover:bg-page"
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      {showQuickFilters ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+          <span className="text-[0.75rem] text-muted">Quick filters:</span>
+          {quickFilters ? (
+            quickFilters.map((qf) => (
+              <button
+                key={`${qf.key}-${qf.value}`}
+                type="button"
+                onClick={() => update({ [qf.key]: qf.value })}
+                className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
+                  searchParams.get(qf.key) === qf.value
+                    ? "border-primary-200 bg-primary-50 text-primary-700"
+                    : "border-line text-muted hover:bg-page"
+                }`}
+              >
+                {qf.label}
+              </button>
+            ))
+          ) : (
+            <>
+              {statusOptions.slice(1).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => update({ status: option.value })}
+                  className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
+                    searchParams.get("status") === option.value
+                      ? "border-primary-200 bg-primary-50 text-primary-700"
+                      : "border-line text-muted hover:bg-page"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {typeOptions.slice(1).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => update({ type: option.value })}
+                  className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
+                    searchParams.get("type") === option.value
+                      ? "border-primary-200 bg-primary-50 text-primary-700"
+                      : "border-line text-muted hover:bg-page"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

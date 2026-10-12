@@ -127,13 +127,23 @@ export async function createStaffUserAction(input: {
 }): Promise<ActionState> {
   if (isDemoMode()) return DEMO_WRITE_BLOCKED;
 
+  if (input.role !== "staff") {
+    return { ok: false, message: "Administrators can only create Staff accounts." };
+  }
+
   const email = input.email.trim().toLowerCase();
 
   if (!/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(email)) {
     return { ok: false, message: "Enter a valid official e-mail address." };
   }
-  if (input.firstName.trim().length < 1 || input.lastName.trim().length < 1) {
-    return { ok: false, message: "First and last name are required." };
+  if (input.firstName.trim().length < 2 || input.lastName.trim().length < 2) {
+    return { ok: false, message: "First and last name must each be at least 2 characters." };
+  }
+  if (input.contactNumber && input.contactNumber.trim().length > 0) {
+    const cleaned = input.contactNumber.replace(/[\s-]/g, "");
+    if (!/^09\d{9}$/.test(cleaned)) {
+      return { ok: false, message: "Contact number must be an 11-digit mobile number starting with 09 (e.g., 0917 123 4567)." };
+    }
   }
 
   const supabase = await createClient();

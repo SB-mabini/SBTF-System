@@ -60,6 +60,7 @@ export interface RecordFilters {
 export interface UserFilters {
   search?: string;
   role?: UserRole | "all";
+  roles?: UserRole[];
   status?: "active" | "inactive" | "suspended" | "all";
   todaId?: string;
   page?: number;
@@ -532,6 +533,8 @@ export async function listUsers(
 
   if (isDemoMode()) {
     const rows = demo.demoProfiles.filter((profile) => {
+      if (filters.roles && filters.roles.length > 0 && !filters.roles.includes(profile.role))
+        return false;
       if (filters.role && filters.role !== "all" && profile.role !== filters.role) return false;
       if (filters.status && filters.status !== "all" && profile.account_status !== filters.status)
         return false;
@@ -551,6 +554,7 @@ export async function listUsers(
 
   const supabase = await createClient();
   let query = supabase.from("profiles").select("*", { count: "exact" });
+  if (filters.roles && filters.roles.length > 0) query = query.in("role", filters.roles);
   if (filters.role && filters.role !== "all") query = query.eq("role", filters.role);
   if (filters.status && filters.status !== "all")
     query = query.eq("account_status", filters.status);
@@ -571,6 +575,22 @@ export async function listUsers(
     .range((page - 1) * pageSize, page * pageSize - 1);
 
   return { rows: (data ?? []) as unknown as Profile[], count: count ?? 0, page, pageSize };
+}
+
+export async function getUserCounts(): Promise<{ staff: number; operators: number }> {
+  if (isDemoMode()) {
+    const staff = demo.demoProfiles.filter((p) => p.role === "administrator" || p.role === "staff").length;
+    const operators = demo.demoProfiles.filter((p) => p.role === "driver").length;
+    return { staff, operators };
+  }
+
+  const supabase = await createClient();
+  const [{ count: staffCount }, { count: operatorCount }] = await Promise.all([
+    supabase.from("profiles").select("*", { count: "exact", head: true }).in("role", ["administrator", "staff"]),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "driver"),
+  ]);
+
+  return { staff: staffCount ?? 0, operators: operatorCount ?? 0 };
 }
 
 export async function getUserProfile(id: string): Promise<Profile | null> {

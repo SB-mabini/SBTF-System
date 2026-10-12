@@ -19,12 +19,10 @@ export function UsersToolbar() {
 
   return (
     <>
-      <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>
-          <UserPlus className="h-4 w-4" />
-          Create account
-        </Button>
-      </div>
+      <Button onClick={() => setOpen(true)}>
+        <UserPlus className="h-4 w-4" />
+        Add staff account
+      </Button>
       <CreateStaffDialog open={open} onClose={() => setOpen(false)} />
     </>
   );

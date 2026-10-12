@@ -1,4 +1,13 @@
+import path from "node:path";
+
 import type { NextConfig } from "next";
+
+// The npm workspace is hoisted: the lock file and node_modules live at the
+// repository root, two levels above this app. Pinning the Turbopack root keeps
+// module resolution inside the workspace, so a stray package.json in a parent
+// directory can never make Turbopack fail with "Could not find the Next.js
+// package (next/package.json)" — which surfaces as a 500 in the browser.
+const workspaceRoot = path.join(__dirname, "..", "..");
 
 // The sandbox/preview build runs inside an iframe on another host, so framing
 // protection is applied to production deployments only (or when embedding is
@@ -17,6 +26,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  turbopack: {
+    root: workspaceRoot,
+  },
   // Development servers are reached through the preview proxy, whose host must
   // be allowed for Next.js dev assets to load.
   allowedDevOrigins: ["**.e2b.app", "**.arena.ai"],

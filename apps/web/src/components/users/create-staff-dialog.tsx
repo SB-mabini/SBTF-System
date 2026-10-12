@@ -33,10 +33,16 @@ export function CreateStaffDialog({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [contactNumber, setContactNumber] = useState("");
-  const [role, setRole] = useState<"staff" | "administrator">("staff");
+  const role = "staff" as const;
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    contactNumber?: string;
+  }>({});
   const [message, setMessage] = useState<string | null>(null);
   const [setupLink, setSetupLink] = useState<string | null>(null);
 
@@ -53,25 +59,62 @@ export function CreateStaffDialog({
     setLastName("");
     setEmail("");
     setContactNumber("");
-    setRole("staff");
     setError(null);
+    setFieldErrors({});
     setMessage(null);
     setSetupLink(null);
     setBusy(false);
     onClose();
   }
 
+  function validate(): boolean {
+    const errors: typeof fieldErrors = {};
+
+    if (!firstName.trim()) {
+      errors.firstName = "First name is required.";
+    } else if (firstName.trim().length < 2) {
+      errors.firstName = "First name must be at least 2 characters.";
+    }
+
+    if (!lastName.trim()) {
+      errors.lastName = "Last name is required.";
+    } else if (lastName.trim().length < 2) {
+      errors.lastName = "Last name must be at least 2 characters.";
+    }
+
+    const emailTrimmed = email.trim().toLowerCase();
+    if (!emailTrimmed) {
+      errors.email = "Official e-mail address is required.";
+    } else if (!/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(emailTrimmed)) {
+      errors.email = "Enter a valid official e-mail address (e.g. name@mabini.gov.ph).";
+    }
+
+    if (contactNumber.trim()) {
+      const cleaned = contactNumber.replace(/[\s-]/g, "");
+      if (!/^09\d{9}$/.test(cleaned)) {
+        errors.contactNumber = "Must be an 11-digit mobile number starting with 09 (e.g. 0917 123 4567).";
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   async function submit() {
+    if (!validate()) {
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setMessage(null);
     setSetupLink(null);
 
     const result = await createStaffUserAction({
-      email,
-      firstName,
-      lastName,
-      contactNumber,
+      email: email.trim().toLowerCase(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      contactNumber: contactNumber.trim() || undefined,
       role,
     });
 
@@ -96,8 +139,8 @@ export function CreateStaffDialog({
   return (
     <Modal
       open={open}
-      title="Create a municipal account"
-      description="Staff and administrator accounts are created here. Drivers and operators register themselves in the mobile application."
+      title="Add staff account"
+      description="Create a municipal staff account for processing, verification, and records."
       onClose={handleClose}
       width="lg"
       footer={
@@ -112,7 +155,7 @@ export function CreateStaffDialog({
             </Button>
             <Button onClick={submit} loading={busy} disabled={readOnly}>
               <UserPlus className="h-4 w-4" />
-              Create account
+              Add staff account
             </Button>
           </>
         )
@@ -164,62 +207,87 @@ export function CreateStaffDialog({
             <Field label="First name" htmlFor="staff-first-name">
               <input
                 id="staff-first-name"
-                className="sbtf-input"
+                className={`sbtf-input ${fieldErrors.firstName ? "border-secondary-500 focus-visible:outline-secondary-500" : ""}`}
                 value={firstName}
                 autoComplete="off"
-                onChange={(event) => setFirstName(event.target.value)}
+                onChange={(event) => {
+                  setFirstName(event.target.value);
+                  setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+                }}
+                placeholder="e.g. Juan"
               />
+              {fieldErrors.firstName ? (
+                <p className="mt-1 text-[0.75rem] font-medium text-secondary-600">{fieldErrors.firstName}</p>
+              ) : null}
             </Field>
             <Field label="Last name" htmlFor="staff-last-name">
               <input
                 id="staff-last-name"
-                className="sbtf-input"
+                className={`sbtf-input ${fieldErrors.lastName ? "border-secondary-500 focus-visible:outline-secondary-500" : ""}`}
                 value={lastName}
                 autoComplete="off"
-                onChange={(event) => setLastName(event.target.value)}
+                onChange={(event) => {
+                  setLastName(event.target.value);
+                  setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
+                }}
+                placeholder="e.g. Dela Cruz"
               />
+              {fieldErrors.lastName ? (
+                <p className="mt-1 text-[0.75rem] font-medium text-secondary-600">{fieldErrors.lastName}</p>
+              ) : null}
             </Field>
           </div>
 
           <Field
             label="Official e-mail address"
             htmlFor="staff-email"
-            hint="The address the account signs in with. It must be one the office can reach."
+            hint="The address the staff account signs in with. It must be an address reachable by the municipal office."
           >
             <input
               id="staff-email"
-              className="sbtf-input"
+              className={`sbtf-input ${fieldErrors.email ? "border-secondary-500 focus-visible:outline-secondary-500" : ""}`}
               type="email"
               autoComplete="off"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
               placeholder="name@mabini.gov.ph"
             />
+            {fieldErrors.email ? (
+              <p className="mt-1 text-[0.75rem] font-medium text-secondary-600">{fieldErrors.email}</p>
+            ) : null}
           </Field>
 
           <Field label="Contact number (optional)" htmlFor="staff-contact">
             <input
               id="staff-contact"
-              className="sbtf-input"
+              className={`sbtf-input ${fieldErrors.contactNumber ? "border-secondary-500 focus-visible:outline-secondary-500" : ""}`}
               value={contactNumber}
               autoComplete="off"
-              onChange={(event) => setContactNumber(event.target.value)}
-              placeholder="09XX XXX XXXX"
+              onChange={(event) => {
+                setContactNumber(event.target.value);
+                setFieldErrors((prev) => ({ ...prev, contactNumber: undefined }));
+              }}
+              placeholder="0917 123 4567"
             />
+            {fieldErrors.contactNumber ? (
+              <p className="mt-1 text-[0.75rem] font-medium text-secondary-600">{fieldErrors.contactNumber}</p>
+            ) : null}
           </Field>
 
-          <Field label="Role" htmlFor="staff-role">
-            <select
-              id="staff-role"
-              className="sbtf-input"
-              value={role}
-              onChange={(event) => setRole(event.target.value as "staff" | "administrator")}
-            >
-              <option value="staff">Staff — processing, verification, decisions, records</option>
-              <option value="administrator">
-                Administrator — full oversight, users, settings, analytics
-              </option>
-            </select>
+          <Field
+            label="Role"
+            htmlFor="staff-role"
+            hint="Administrators can only create Staff accounts. New administrator accounts cannot be created here."
+          >
+            <div className="flex items-center justify-between rounded-lg border border-line bg-page px-3.5 py-2.5">
+              <span className="text-sm font-semibold text-primary-700">Staff</span>
+              <span className="text-[0.75rem] text-muted">
+                Processing, verification, decisions, and records
+              </span>
+            </div>
           </Field>
 
           <div className="rounded-lg bg-page px-3.5 py-3 text-[0.75rem] text-muted">
