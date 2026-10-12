@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, CheckCheck, Inbox } from "lucide-react";
+import { Bell, CheckCheck, Inbox, Trash2 } from "lucide-react";
 
 import { Alert, Button, Card, EmptyState } from "@/components/ui";
 import {
+  deleteAllNotificationsAction,
+  deleteNotificationAction,
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from "@/lib/actions/notifications";
@@ -57,6 +59,22 @@ export function NotificationList({
     if (result.ok) startTransition(() => router.refresh());
   }
 
+  async function remove(id: string) {
+    setBusy(`remove:${id}`);
+    const result = await deleteNotificationAction(id);
+    setBusy(null);
+    setMessage({ ok: result.ok, text: result.message });
+    if (result.ok) startTransition(() => router.refresh());
+  }
+
+  async function removeAll() {
+    setBusy("remove-all");
+    const result = await deleteAllNotificationsAction();
+    setBusy(null);
+    setMessage({ ok: result.ok, text: result.message });
+    if (result.ok) startTransition(() => router.refresh());
+  }
+
   if (notifications.length === 0) {
     return (
       <EmptyState
@@ -77,10 +95,16 @@ export function NotificationList({
             ? "Everything has been read."
             : `${unread.length} unread notification(s).`}
         </p>
-        <Button variant="outline" onClick={markAll} loading={busy === "all"} disabled={readOnly || unread.length === 0}>
-          <CheckCheck className="h-4 w-4" />
-          Mark all as read
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={markAll} loading={busy === "all"} disabled={readOnly || unread.length === 0}>
+            <CheckCheck className="h-4 w-4" />
+            Mark all as read
+          </Button>
+          <Button variant="outline" onClick={removeAll} loading={busy === "remove-all"} disabled={readOnly}>
+            <Trash2 className="h-4 w-4" />
+            Clear all
+          </Button>
+        </div>
       </div>
 
       <ul className="space-y-2">
@@ -145,6 +169,15 @@ export function NotificationList({
                         Mark as read
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      onClick={() => remove(notification.id)}
+                      loading={busy === `remove:${notification.id}`}
+                      disabled={readOnly}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -114,15 +114,17 @@ export function UserActions({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          disabled={isSelf || readOnly}
-          title={isSelf ? "You cannot change your own role" : undefined}
-          onClick={() => setRoleOpen(true)}
-        >
-          <ShieldCheck className="h-4 w-4" />
-          Assign role
-        </Button>
+        {profile.role === "driver" ? null : (
+          <Button
+            variant="outline"
+            disabled={isSelf || readOnly}
+            title={isSelf ? "You cannot change your own role" : undefined}
+            onClick={() => setRoleOpen(true)}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Assign role
+          </Button>
+        )}
 
         {profile.account_status === "active" ? (
           <Button

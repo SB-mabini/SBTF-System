@@ -53,3 +53,52 @@ export async function markAllNotificationsReadAction(): Promise<ActionState> {
     ? { ok: false, message: error.message }
     : { ok: true, message: "All notifications marked as read." };
 }
+
+export async function deleteNotificationAction(
+  notificationId: string,
+): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", notificationId);
+
+  revalidatePath("/staff/notifications");
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin");
+  revalidatePath("/staff");
+  return error ? { ok: false, message: error.message } : { ok: true, message: "Notification removed." };
+}
+
+export async function deleteAllNotificationsAction(): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (!profile) return { ok: false, message: "Profile not found." };
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("user_id", profile.id);
+
+  revalidatePath("/staff/notifications");
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin");
+  revalidatePath("/staff");
+  return error
+    ? { ok: false, message: error.message }
+    : { ok: true, message: "All notifications removed." };
+}
