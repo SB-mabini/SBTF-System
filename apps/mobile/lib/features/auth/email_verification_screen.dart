@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_banner.dart';
 
 /// Prompt shown after registration (or when a sign-in is attempted with an
 /// unconfirmed e-mail). The account exists but cannot sign in until the address
@@ -92,8 +93,22 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.mark_email_read_outlined,
-                      size: 40, color: AppColors.primary),
+                  Center(
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryTint,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.mark_email_read_outlined,
+                        size: 34,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     widget.email == null || widget.email!.isEmpty
@@ -119,53 +134,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (_notice != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.successTint,
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(AppSpacing.unit),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outlined,
-                              color: AppColors.success, size: 20),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              _notice!,
-                              style: const TextStyle(
-                                  color: AppColors.success, fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    AppBanner(tone: AppBannerTone.success, message: _notice!),
                     const SizedBox(height: AppSpacing.sm),
                   ],
                   if (_error != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.dangerTint,
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(AppSpacing.unit),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline,
-                              color: AppColors.danger, size: 20),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(
-                                  color: AppColors.danger, fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    AppBanner(tone: AppBannerTone.danger, message: _error!),
                     const SizedBox(height: AppSpacing.sm),
                   ],
                   FilledButton(

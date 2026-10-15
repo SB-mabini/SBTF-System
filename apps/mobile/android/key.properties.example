@@ -1,0 +1,15 @@
+# Release signing for the SBTF mobile app — copy this to `key.properties`
+# (same folder) and fill in the values, then generate the keystore.
+#
+# `key.properties` and every `*.jks`/`*.keystore` are git-ignored; never commit
+# them. See docs/mobile.md §5 for the full walkthrough.
+#
+# Generate a keystore (valid ~27 years):
+#   keytool -genkey -v -keystore upload-keystore.jks -storetype JKS \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# Paths are resolved relative to android/app (this file lives in android/).
+storePassword=REPLACE_ME
+keyPassword=REPLACE_ME
+keyAlias=upload
+storeFile=upload-keystore.jks

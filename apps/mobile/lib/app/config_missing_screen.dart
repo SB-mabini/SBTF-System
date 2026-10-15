@@ -59,7 +59,7 @@ class ConfigMissingScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.greyFill,
                       border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppSpacing.unit),
+                      borderRadius: AppRadius.box,
                     ),
                     child: SelectableText(
                       runCommand,

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brand colours mirrored from lib/core/theme.dart (AppColors.primary) so the
+     native launch window and the Flutter UI agree on the municipal purple. -->
+<resources>
+    <color name="brand_primary">#FF271564</color>
+    <color name="brand_primary_dark">#FF1B0F4E</color>
+</resources>

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_banner.dart';
 import 'email_verification_screen.dart';
 
 /// Self-registration for drivers and operators.
@@ -110,28 +111,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     if (_error != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: AppColors.dangerTint,
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(AppSpacing.unit),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline,
-                                color: AppColors.danger, size: 20),
-                            const SizedBox(width: AppSpacing.xs),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(
-                                    color: AppColors.danger, fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      AppBanner(tone: AppBannerTone.danger, message: _error!),
                       const SizedBox(height: AppSpacing.sm),
                     ],
                     const Text(
@@ -142,7 +122,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _firstNameController,
                       enabled: !_demo,
@@ -164,7 +144,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _lastNameController,
                       enabled: !_demo,
@@ -186,7 +166,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _contactController,
                       enabled: !_demo,
@@ -208,7 +188,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _emailController,
                       enabled: !_demo,
@@ -236,7 +216,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _passwordController,
                       enabled: !_demo,
@@ -272,7 +252,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _confirmController,
                       enabled: !_demo,

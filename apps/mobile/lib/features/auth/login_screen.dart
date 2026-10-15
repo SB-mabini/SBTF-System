@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_banner.dart';
 import 'email_verification_screen.dart';
 import 'otp_login_screen.dart';
 import 'registration_screen.dart';
@@ -86,6 +87,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (message.toLowerCase().contains('email not confirmed')) {
       return 'Your e-mail address has not been confirmed yet.';
     }
+    // Network / offline errors — Supabase wraps SocketException inside
+    // AuthException on Android, so the raw OS error leaks into the message.
+    if (message.toLowerCase().contains('socketexception') ||
+        message.toLowerCase().contains('failed host lookup') ||
+        message.toLowerCase().contains('no address associated') ||
+        message.toLowerCase().contains('clientexception')) {
+      return 'No internet connection. Please check your network and try again.';
+    }
     return message;
   }
 
@@ -104,33 +113,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: AppSpacing.sm),
-                    // --- Municipal identity block ---
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryTint,
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Column(
+                    const SizedBox(height: AppSpacing.xs),
+                    // --- Municipal identity lockup ---
+                    Center(
+                      child: Column(
                         children: [
-                          Icon(Icons.account_balance_outlined,
-                              size: 32, color: AppColors.primary),
-                          SizedBox(height: AppSpacing.xs),
-                          Text(
-                            'Municipality of Mabini',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: const BoxDecoration(
+                              gradient: AppGradients.hero,
+                              borderRadius: AppRadius.hero,
+                              boxShadow: AppShadows.card,
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_outlined,
+                              size: 32,
+                              color: Colors.white,
                             ),
                           ),
-                          SizedBox(height: 2),
-                          Text(
+                          const SizedBox(height: AppSpacing.sm),
+                          const Text(
+                            'Municipality of Mabini',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.inkStrong,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
                             'Tricycle Franchising System',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               color: AppColors.inkMuted,
                             ),
                           ),
@@ -139,11 +154,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     if (_demo) ...[
-                      const _DemoBanner(),
+                      const AppBanner(
+                        tone: AppBannerTone.warning,
+                        message: 'Preview mode — Supabase is not connected, so '
+                            'sign-in is shown but disabled. The app runs '
+                            'without a database.',
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_error != null) ...[
-                      _ErrorBanner(message: _error!),
+                      AppBanner(tone: AppBannerTone.danger, message: _error!),
                       const SizedBox(height: AppSpacing.sm),
                     ],
                     // --- E-mail label above field ---
@@ -155,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _emailController,
                       enabled: !_demo,
@@ -185,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.unit),
                     TextFormField(
                       controller: _passwordController,
                       enabled: !_demo,
@@ -259,65 +279,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DemoBanner extends StatelessWidget {
-  const _DemoBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.accentTint,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppSpacing.unit),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.info_outline, color: AppColors.warning, size: 20),
-          SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              'Preview mode — Supabase is not connected, so sign-in is shown '
-              'but disabled. The app runs without a database.',
-              style: TextStyle(color: AppColors.inkStrong, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.dangerTint,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppSpacing.unit),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppColors.danger, fontSize: 13),
-            ),
-          ),
-        ],
       ),
     );
   }

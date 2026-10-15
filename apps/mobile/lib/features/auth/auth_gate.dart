@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_error.dart';
 import '../../core/env.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -28,14 +29,20 @@ class AuthGate extends ConsumerWidget {
 
     return authState.when(
       loading: () => const _GateScaffold(child: _Loading()),
-      error: (error, _) => _GateScaffold(
-        child: _RefusalCard(
-          icon: Icons.error_outline,
-          title: 'Connection problem',
-          message: 'Could not reach the authentication service. '
-              'Check your connection and try again.',
-        ),
-      ),
+      error: (error, _) {
+        final failure = classifyAppError(error);
+        return _GateScaffold(
+          child: _RefusalCard(
+            icon: failure.blocking
+                ? Icons.wifi_off_outlined
+                : Icons.error_outline,
+            title: 'Connection problem',
+            message: failure.message,
+            hint: failure.hint,
+            onRetry: () => ref.invalidate(authStateChangesProvider),
+          ),
+        );
+      },
       data: (state) {
         final session = state.session;
         final hasSession = session != null;
@@ -45,14 +52,22 @@ class AuthGate extends ConsumerWidget {
 
         return profileAsync.when(
           loading: () => const _GateScaffold(child: _Loading()),
-          error: (error, _) => _GateScaffold(
-            child: _RefusalCard(
-              icon: Icons.error_outline,
-              title: 'Could not load your profile',
-              message: '$error',
-              onRetry: () => ref.invalidate(profileProvider),
-            ),
-          ),
+          error: (error, _) {
+            final failure = classifyAppError(error);
+            return _GateScaffold(
+              child: _RefusalCard(
+                icon: failure.blocking
+                    ? Icons.wifi_off_outlined
+                    : Icons.error_outline,
+                title: failure.blocking
+                    ? 'Service unavailable'
+                    : 'Could not load your profile',
+                message: failure.message,
+                hint: failure.hint,
+                onRetry: () => ref.invalidate(profileProvider),
+              ),
+            );
+          },
           data: (profile) {
             final decision = evaluateSession(
               hasSession: hasSession,
@@ -166,6 +181,7 @@ class _RefusalCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.hint,
     this.onRetry,
     this.tintColor,
     this.iconColor,
@@ -174,6 +190,11 @@ class _RefusalCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
+
+  /// An actionable follow-up shown under [message], mirroring the web
+  /// console's error hint.
+  final String? hint;
+
   final VoidCallback? onRetry;
   final Color? tintColor;
   final Color? iconColor;
@@ -185,7 +206,7 @@ class _RefusalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: tintColor ?? AppColors.greyFill,
         border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.card,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -211,6 +232,18 @@ class _RefusalCard extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          if (hint != null && hint!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              hint!,
+              style: const TextStyle(
+                color: AppColors.inkMuted,
+                fontSize: 13,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
           if (onRetry != null) ...[
             const SizedBox(height: AppSpacing.md),
             OutlinedButton(

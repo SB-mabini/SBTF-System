@@ -2,14 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/models/franchise_application.dart';
+import '../../core/models/profile.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/error_view.dart';
+import '../../core/widgets/section_header.dart';
+import '../application/application_form_screen.dart';
+import '../application/application_list_screen.dart';
+import '../certificate/certificate_list_screen.dart';
+import '../documents/document_manager_screen.dart';
+import '../notifications/notification_list_screen.dart';
 
 /// The landing screen for a signed-in driver/operator.
 ///
-/// Slices 1–2 deliver authentication and this shell only. Every feature tile is
-/// labelled honestly with the slice that will deliver it and a "soon" badge —
-/// none of them pretend to work yet.
+/// Slices 1–2 delivered authentication and this shell. Slice 3 (the
+/// new/renewal wizard), slice 4 (the application status tracker), slice 5 (the
+/// document manager), slice 6 (certificates, QR codes and the scanner) and slice
+/// 7 (notifications) are now live — every destination is reachable from the
+/// dashboard below. The hero card shows who is signed in and the notifications
+/// row carries the live unread count.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -48,6 +60,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
+    // Live unread count for the notifications row. A stream that cannot start
+    // (offline, or the table is missing) simply leaves the badge off.
+    final unread =
+        ref.watch(unreadNotificationCountStreamProvider).valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,151 +78,214 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: profileAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 40, color: AppColors.danger),
-                  const SizedBox(height: AppSpacing.xs),
-                  const Text(
-                    'Could not load your profile.',
-                    style: TextStyle(color: AppColors.inkMuted),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton(
-                    onPressed: () => ref.invalidate(profileProvider),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => CenteredScrollView(
+            child: ErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(profileProvider),
             ),
           ),
-          data: (profile) => ListView(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            children: [
-              _ProfileHeader(
-                name: profile?.fullName ?? 'Driver',
-                initials: profile?.initials ?? '?',
-                active: profile?.isActive ?? false,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ..._featureTiles,
-            ],
-          ),
+          data: (profile) => _dashboard(context, unread, profile),
         ),
       ),
     );
   }
 
-  List<Widget> get _featureTiles => const [
-        _FeatureTile(
+  Widget _dashboard(BuildContext context, int unread, Profile? profile) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.lg,
+      ),
+      children: [
+        _HeroCard(
+          name: profile?.fullName ?? 'Driver',
+          initials: profile?.initials ?? '?',
+          email: profile?.email,
+          active: profile?.isActive ?? false,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const SectionHeader('Services'),
+        _RecordTile(
           icon: Icons.note_add_outlined,
           title: 'New franchise application',
-          slice: 'Slice 3',
+          subtitle: 'Apply for a new tricycle franchise',
+          onTap: () => _openApplication(context, ApplicationType.newFranchise),
         ),
-        _FeatureTile(
+        const SizedBox(height: AppSpacing.xs),
+        _RecordTile(
           icon: Icons.autorenew_outlined,
           title: 'Renewal application',
-          slice: 'Slice 3',
+          subtitle: 'Renew an existing franchise',
+          onTap: () => _openApplication(context, ApplicationType.renewal),
         ),
-        _FeatureTile(
-          icon: Icons.track_changes_outlined,
-          title: 'My application status',
-          slice: 'Slice 4',
-        ),
-        _FeatureTile(
+        const SizedBox(height: AppSpacing.xs),
+        _RecordTile(
           icon: Icons.description_outlined,
           title: 'My documents',
-          slice: 'Slice 5',
+          subtitle: 'Manage your uploaded files',
+          onTap: () => _openDocuments(context),
         ),
-        _FeatureTile(
+        const SizedBox(height: AppSpacing.xs),
+        _RecordTile(
           icon: Icons.verified_outlined,
           title: 'Certificate & QR code',
-          slice: 'Slice 6',
+          subtitle: 'View your franchise certificate',
+          onTap: () => _openCertificates(context),
         ),
-        _FeatureTile(
+        const SizedBox(height: AppSpacing.md),
+        const SectionHeader('Track & updates'),
+        _RecordTile(
+          icon: Icons.track_changes_outlined,
+          title: 'My application status',
+          subtitle: 'Follow your submissions',
+          onTap: () => _openStatus(context),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _RecordTile(
           icon: Icons.notifications_outlined,
           title: 'Notifications',
-          slice: 'Slice 7',
+          subtitle: 'Decisions and reminders',
+          onTap: () => _openNotifications(context),
+          badge: unread > 0 ? _UnreadBadge(count: unread) : null,
         ),
-      ];
+      ],
+    );
+  }
+
+  void _openApplication(BuildContext context, String applicationType) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ApplicationFormScreen(applicationType: applicationType),
+      ),
+    );
+  }
+
+  void _openStatus(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const ApplicationListScreen(),
+      ),
+    );
+  }
+
+  void _openDocuments(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const DocumentManagerScreen(),
+      ),
+    );
+  }
+
+  void _openCertificates(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const CertificateListScreen(),
+      ),
+    );
+  }
+
+  void _openNotifications(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const NotificationListScreen(),
+      ),
+    );
+  }
 }
 
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
+/// The gradient identity card at the top of the dashboard: who is signed in,
+/// their contact address and account state.
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({
     required this.name,
     required this.initials,
     required this.active,
+    this.email,
   });
 
   final String name;
   final String initials;
+  final String? email;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
+    final email = this.email;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        gradient: AppGradients.hero,
+        borderRadius: AppRadius.hero,
+        boxShadow: AppShadows.raised,
       ),
-      child: Row(
+      child: Stack(
         children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: AppColors.surface,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
+          // A faint municipal seal watermark, purely decorative.
+          Positioned(
+            right: -24,
+            top: -24,
+            child: Icon(
+              Icons.account_balance,
+              size: 156,
+              color: Colors.white.withAlpha(12),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      active
-                          ? Icons.check_circle_outlined
-                          : Icons.pause_circle_outline,
-                      color: Colors.white70,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        active
-                            ? 'Driver / operator · account active'
-                            : 'Driver / operator · account not active',
+                _HeroAvatar(initials: initials),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
                         ),
                       ),
-                    ),
-                  ],
+                      if (email != null && email.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(190),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.xs),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: 6,
+                        children: [
+                          const _HeroPill(
+                            icon: Icons.badge_outlined,
+                            label: 'Driver / Operator',
+                          ),
+                          _HeroPill(
+                            icon: active
+                                ? Icons.check_circle_outline
+                                : Icons.pause_circle_outline,
+                            label: active ? 'Active' : 'Not active',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -217,41 +296,144 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-class _FeatureTile extends StatelessWidget {
-  const _FeatureTile({
+/// The initials avatar framing the driver's identity, ringed in the gold seal
+/// colour.
+class _HeroAvatar extends StatelessWidget {
+  const _HeroAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(color: AppColors.accent, width: 2.5),
+        boxShadow: AppShadows.card,
+      ),
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// A translucent pill used inside the hero for the role and account state.
+class _HeroPill extends StatelessWidget {
+  const _HeroPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(28),
+        borderRadius: AppRadius.chip,
+        border: Border.all(color: Colors.white.withAlpha(46)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A full-width row in the "Track & updates" group: a tinted icon, a title with
+/// an optional supporting line, an optional trailing badge and a chevron.
+class _RecordTile extends StatelessWidget {
+  const _RecordTile({
     required this.icon,
     required this.title,
-    required this.slice,
+    required this.onTap,
+    this.subtitle,
+    this.badge,
   });
 
   final IconData icon;
   final String title;
-  final String slice;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  /// Optional trailing indicator, shown before the chevron — the notifications
+  /// row uses it for the unread count.
+  final Widget? badge;
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = this.subtitle;
+    final badge = this.badge;
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: InkWell(
-        onTap: () {}, // InkWell adds the pressed state overlay
-        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        borderRadius: AppRadius.card,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.sm),
           child: Row(
             children: [
-              Icon(icon, color: AppColors.primary),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: AppColors.greyFill,
+                  borderRadius: AppRadius.input,
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.inkStrong,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.inkStrong,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppColors.inkMuted,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              _SoonBadge(slice: slice),
+              if (badge != null) ...[
+                badge,
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              const Icon(Icons.chevron_right, color: AppColors.inkMuted),
             ],
           ),
         ),
@@ -260,29 +442,29 @@ class _FeatureTile extends StatelessWidget {
   }
 }
 
-class _SoonBadge extends StatelessWidget {
-  const _SoonBadge({required this.slice});
+/// The unread count on the notifications row. Hidden at zero, capped so a large
+/// number cannot stretch the row.
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
 
-  final String slice;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.accentTint,
-        borderRadius: BorderRadius.circular(AppSpacing.unit),
-        border: Border.all(color: AppColors.border),
+      constraints: const BoxConstraints(minWidth: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: const BoxDecoration(
+        color: AppColors.dangerFill,
+        borderRadius: AppRadius.chip,
       ),
       child: Text(
-        'Soon · $slice',
+        count > 9 ? '9+' : '$count',
+        textAlign: TextAlign.center,
         style: const TextStyle(
-          color: AppColors.warning,
+          color: Colors.white,
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
