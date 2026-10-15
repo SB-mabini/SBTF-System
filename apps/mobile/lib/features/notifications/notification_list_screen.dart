@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
 import '../../core/date_format.dart';
+import '../../core/env.dart';
 import '../../core/models/app_notification.dart';
 import '../../core/notification_format.dart';
 import '../../core/providers.dart';
@@ -24,6 +25,11 @@ import '../certificate/certificate_detail_screen.dart';
 /// (`targetsApplication` / `targetsRecord`), opens that application's tracker or
 /// that certificate. The target is re-read by id, so a stale link can only ever
 /// resolve to the caller's own row.
+///
+/// A row can also be deleted — long-press a card to raise the delete prompt, or
+/// clear everything already read in bulk from the "Clear read" action — so an
+/// account that has accumulated notices stays easy to scan. Both confirm first
+/// and are disabled in demo mode, where the database is never written.
 class NotificationListScreen extends ConsumerStatefulWidget {
   const NotificationListScreen({super.key});
 
@@ -35,6 +41,11 @@ class NotificationListScreen extends ConsumerStatefulWidget {
 class _NotificationListScreenState
     extends ConsumerState<NotificationListScreen> {
   bool _markingAll = false;
+  bool _clearing = false;
+
+  /// Writes are refused in demo mode (the service guards them), so the delete
+  /// actions are disabled rather than failing after the fact.
+  bool get _demo => currentEnv.isDemoMode;
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +54,20 @@ class _NotificationListScreenState
             ?.where((notification) => !notification.read)
             .length ??
         0;
+    final readCount = notificationsAsync.valueOrNull
+            ?.where((notification) => notification.read)
+            .length ??
+        0;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
+          IconButton(
+            tooltip: 'Clear read notifications',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: _demo || readCount == 0 || _clearing ? null : _clearRead,
+          ),
           IconButton(
             tooltip: 'Mark all as read',
             icon: const Icon(Icons.done_all),
@@ -88,6 +108,7 @@ class _NotificationListScreenState
                   return _NotificationCard(
                     notification: notification,
                     onOpen: () => _handleTap(notification),
+                    onLongPress: _demo ? null : () => _delete(notification),
                   );
                 },
               );
@@ -177,6 +198,73 @@ class _NotificationListScreenState
     }
   }
 
+  /// Deletes one notification after the driver confirms.
+  Future<void> _delete(AppNotification notification) async {
+    final confirmed = await _confirm(
+      title: 'Delete notification?',
+      message: '“${notification.title}” will be removed from your feed. '
+          'This cannot be undone.',
+      confirmLabel: 'Delete',
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(notificationServiceProvider).delete(notification.id);
+      if (mounted) _showMessage('Notification deleted.');
+    } on AppFailure catch (failure) {
+      if (mounted) _showMessage(failure.message, isError: true);
+    }
+  }
+
+  /// Deletes every notification the driver has already read, after confirming.
+  Future<void> _clearRead() async {
+    final confirmed = await _confirm(
+      title: 'Clear read notifications?',
+      message: 'Every notification you have already read will be removed. '
+          'Unread ones are kept. This cannot be undone.',
+      confirmLabel: 'Clear',
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _clearing = true);
+    try {
+      await ref.read(notificationServiceProvider).deleteRead();
+      if (mounted) _showMessage('Read notifications cleared.');
+    } on AppFailure catch (failure) {
+      if (mounted) _showMessage(failure.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _clearing = false);
+    }
+  }
+
+  /// Asks the driver to confirm an irreversible action, matching the sign-out
+  /// dialog's shape: a plain Cancel and a danger-filled confirm.
+  Future<bool?> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style:
+                FilledButton.styleFrom(backgroundColor: AppColors.dangerFill),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
@@ -190,10 +278,18 @@ class _NotificationListScreenState
 }
 
 class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({required this.notification, required this.onOpen});
+  const _NotificationCard({
+    required this.notification,
+    required this.onOpen,
+    this.onLongPress,
+  });
 
   final AppNotification notification;
   final VoidCallback onOpen;
+
+  /// Raises the delete prompt on a long-press; null in demo mode, where writes
+  /// are blocked, so the gesture is inert.
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +302,7 @@ class _NotificationCard extends StatelessWidget {
       color: unread ? AppColors.primaryTint : AppColors.surface,
       child: InkWell(
         onTap: onOpen,
+        onLongPress: onLongPress,
         borderRadius: AppRadius.card,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.sm),
@@ -314,7 +411,8 @@ class _NotificationCard extends StatelessWidget {
 }
 
 /// The count of unread rows, or a reassuring line once everything is read —
-/// the same wording the web console uses.
+/// the same wording the web console uses — plus a one-line hint, since a
+/// long-press is otherwise invisible.
 class _Summary extends StatelessWidget {
   const _Summary({required this.unread});
 
@@ -327,9 +425,19 @@ class _Summary extends StatelessWidget {
         : '$unread unread notification${unread == 1 ? '' : 's'}.';
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Text(
-        text,
-        style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Long-press a notification to delete it.',
+            style: TextStyle(color: AppColors.inkMuted, fontSize: 12),
+          ),
+        ],
       ),
     );
   }

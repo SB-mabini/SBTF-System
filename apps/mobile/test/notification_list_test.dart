@@ -84,6 +84,8 @@ class _FakeNotificationService implements NotificationService {
   final List<AppNotification> notifications;
   final List<String> readIds = <String>[];
   int markAllCalls = 0;
+  final List<String> deletedIds = <String>[];
+  int deleteReadCalls = 0;
 
   @override
   Stream<List<AppNotification>> watchMine() => Stream.value(notifications);
@@ -93,6 +95,12 @@ class _FakeNotificationService implements NotificationService {
 
   @override
   Future<void> markAllRead() async => markAllCalls++;
+
+  @override
+  Future<void> delete(String id) async => deletedIds.add(id);
+
+  @override
+  Future<void> deleteRead() async => deleteReadCalls++;
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -342,6 +350,92 @@ void main() {
       expect(find.text('That application is no longer available.'),
           findsOneWidget);
       expect(find.byType(ApplicationDetailScreen), findsNothing);
+    });
+
+    testWidgets('long-pressing a notification confirms first, then removes it',
+        (tester) async {
+      final service = _FakeNotificationService([
+        _notification(id: 'n1', title: 'Renewal due soon'),
+      ]);
+
+      await _pumpTall(
+        tester,
+        _harness(home: const NotificationListScreen(), notifications: service),
+      );
+
+      await tester.longPress(find.text('Renewal due soon'));
+      await tester.pumpAndSettle();
+
+      // A confirm stands between the gesture and the delete.
+      expect(find.text('Delete notification?'), findsOneWidget);
+      expect(service.deletedIds, isEmpty);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(service.deletedIds, ['n1']);
+      expect(find.text('Notification deleted.'), findsOneWidget);
+    });
+
+    testWidgets('cancelling the delete dialog keeps the notification',
+        (tester) async {
+      final service = _FakeNotificationService([
+        _notification(id: 'n1', title: 'Renewal due soon'),
+      ]);
+
+      await _pumpTall(
+        tester,
+        _harness(home: const NotificationListScreen(), notifications: service),
+      );
+
+      await tester.longPress(find.text('Renewal due soon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(service.deletedIds, isEmpty);
+      expect(find.text('Delete notification?'), findsNothing);
+    });
+
+    testWidgets('clear read removes the already-read notifications',
+        (tester) async {
+      final service = _FakeNotificationService([
+        _notification(id: 'n1', title: 'Unread one'),
+        _notification(id: 'n2', title: 'Read one', read: true),
+      ]);
+
+      await _pumpTall(
+        tester,
+        _harness(home: const NotificationListScreen(), notifications: service),
+      );
+
+      await tester.tap(find.byTooltip('Clear read notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Clear read notifications?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Clear'));
+      await tester.pumpAndSettle();
+
+      expect(service.deleteReadCalls, 1);
+      expect(find.text('Read notifications cleared.'), findsOneWidget);
+    });
+
+    testWidgets('the clear-read action is disabled when nothing is read',
+        (tester) async {
+      await _pumpTall(
+        tester,
+        _harness(
+          home: const NotificationListScreen(),
+          notifications: _FakeNotificationService([
+            _notification(id: 'n1'),
+          ]),
+        ),
+      );
+
+      final button = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, Icons.delete_sweep_outlined),
+      );
+      expect(button.onPressed, isNull);
     });
   });
 
