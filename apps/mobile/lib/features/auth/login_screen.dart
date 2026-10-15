@@ -5,7 +5,6 @@ import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
 import 'email_verification_screen.dart';
-import 'otp_login_screen.dart';
 import 'registration_screen.dart';
 
 /// Sign-in for drivers and operators.
@@ -250,17 +249,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             )
                           : const Text('Sign in'),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton(
-                      onPressed: _demo
-                          ? null
-                          : () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const OtpLoginScreen(),
-                                ),
-                              ),
-                      child: const Text('Sign in with one-time password'),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton(
