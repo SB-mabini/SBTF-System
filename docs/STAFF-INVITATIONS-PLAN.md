@@ -1,8 +1,10 @@
 # Staff Invitations & Email Confirmation — Plan and Status
 
-**Status:** design agreed, not yet implemented. No production code has been written.
-**Last updated:** 2026-10-05
-**Branch at time of writing:** `arena/01a104aa-sbtf-system`
+**Status:** implemented in the working tree (uncommitted) — `pending` account status,
+`/auth/confirm`, and the `password-recovery` Edge Function. Delivery now uses **Supabase
+SMTP**, reversing the Nodemailer decision recorded in §3.
+**Last updated:** 2026-10-13
+**Branch at time of writing:** `main`
 
 This file is the handover document for the staff-invitation feature. It records what
 was decided, why, and exactly what remains. Read it before changing anything in this
@@ -55,42 +57,41 @@ The route was designed. It was simply never built.
 
 ---
 
-## 3. Decision: Nodemailer, not Supabase SMTP
+## 3. Delivery: Supabase SMTP (superseding the Nodemailer decision)
 
-Supabase's built-in mailer cannot be used here. Confirmed against the live project:
+The original draft chose Nodemailer because the project had **no SMTP and no verified
+sending domain**. That constraint changed: the project now uses a **Gmail account with a
+Google App Password** as custom SMTP, so Supabase Auth delivers the mail itself. See
+`deployment.md` §3.1 for the exact settings.
 
-- `smtp_host` is empty, `external_email_enabled` is true, `mailer_autoconfirm` is false.
-- No custom SMTP is configured.
-- The free tier is rate-limited well below what driver registration needs.
-- A verified sending domain with SPF/DKIM is required, and **no such domain exists yet**.
+Consequences:
 
-**Decision:** send mail with Nodemailer from the `admin-users` Edge Function, using a
-**dedicated system Gmail account** (not the administrator's personal address).
+- **Self-service recovery** — `password-recovery` calls `resetPasswordForEmail`; Supabase
+  sends the `recovery` template.
+- **Driver/operator OTP** — `signInWithOtp` from the mobile app uses the `magic_link`
+  template, which carries `{{ .Token }}`.
+- **Staff invitations** — `create_staff` still **returns** a link rather than e-mailing
+  it, because the account is `pending` until an administrator approves it and a
+  single-use link mailed at creation could expire before it is usable.
 
-This side-steps Supabase's mailer completely. Confirmation becomes our own flow, which
-means the no-domain constraint stops being fatal.
+Nodemailer is therefore not used. Templates live in `supabase/templates/` for local
+development and are pasted into the dashboard for the hosted project.
 
-### The key technique — reuse Supabase's crypto, own the delivery
+### The key technique — reuse Supabase's crypto
 
 Do **not** build a custom confirmation-token table. Instead:
 
-1. `generateLink({ type: "verify" })` → read `properties.hashed_token`
-2. Email that token inside **our own** template via Nodemailer
-3. On click, call `verifyOtp({ type: "email", token_hash })`
+1. `generateLink({ type })` (or the mailer) mints a single-use, expiring `hashed_token`.
+2. The link is `${SITE_URL}/auth/confirm?token_hash=…&type=…`, built from `{{ .TokenHash }}`.
+3. On click, the app calls `verifyOtp({ type, token_hash })`.
 
 This keeps Supabase's single-use, expiring, unforgeable token verification while we
-control presentation and delivery. Writing a bespoke token table would mean reimplementing
-that security property from scratch.
+control the route. The one rule that matters: the link must **not** be
+`{{ .ConfirmationURL }}`, whose PKCE `?code=` cannot be exchanged because recovery is
+requested server-side (no browser `code_verifier`).
 
-### Where Nodemailer runs, and why
-
-Nodemailer executes **inside the Edge Function** (`npm:nodemailer@7` works under Deno),
-not in the web app. Two reasons:
-
-- The web app deliberately has **no service-role key** (`apps/web/.env.example:19-22`).
-  Without it, a server action cannot call `generateLink` at all.
-- Token minting and sending must happen in the same place. Splitting them means the
-  token has to cross a trust boundary.
+> Sections below (§4 onward) were written for the Nodemailer route. Their flow diagrams
+> and phases are historical; the implemented shape is what §3 describes above.
 
 ---
 

@@ -140,6 +140,7 @@ export default async function AdminUsersPage({
                     options: [
                       { value: "all", label: "All statuses" },
                       { value: "active", label: "Active" },
+                      { value: "pending", label: "Awaiting approval" },
                       { value: "inactive", label: "Inactive" },
                       { value: "suspended", label: "Suspended" },
                     ],
@@ -153,6 +154,7 @@ export default async function AdminUsersPage({
                     options: [
                       { value: "all", label: "All statuses" },
                       { value: "active", label: "Active" },
+                      { value: "pending", label: "Awaiting approval" },
                       { value: "inactive", label: "Inactive" },
                       { value: "suspended", label: "Suspended" },
                     ],

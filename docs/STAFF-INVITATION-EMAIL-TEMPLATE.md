@@ -3,11 +3,21 @@
 **Status:** draft for review. Copy has not been approved. Two fields marked `TBD` need a
 human decision before implementation.
 
+The delivery mechanism changed to **Supabase SMTP** (a Gmail account with an App
+Password) — see `deployment.md` §3.1. The two templates that **are** implemented and
+shipped live in `supabase/templates/recovery.html` and `supabase/templates/magic_link.html`.
+This document is the copy reference for the staff **invitation** e-mail, which is not sent
+yet: staff invitations still hand over a link in the console because the account is
+`pending` until approved (`deployment.md` §3.1d).
+
 Design notes for whoever implements this:
 
-- Template lives in the `admin-users` Edge Function, sent via Nodemailer.
+- Delivery is Supabase Auth's mailer, **not Nodemailer**. Paste the HTML into Dashboard →
+  Authentication → Email Templates, or wire it under `[auth.email.template.*]` for local dev.
 - Tagalog first, English second. The primary readers are barangay staff.
-- The link href is `{SITE_URL}/auth/confirm?token_hash={hashed_token}`.
+- The link href is `{SITE_URL}/auth/confirm?token_hash={hashed_token}` — built from
+  `{{ .TokenHash }}`, **not** `{{ .ConfirmationURL }}` (that returns an unexchangeable
+  PKCE `?code=`).
 - **Do not hardcode an expiry figure in the copy.** Supabase controls token lifetime;
   state the real value at implementation time. The wording below deliberately says
   "limited time" instead of inventing a number that could become wrong.

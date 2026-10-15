@@ -30,6 +30,20 @@ const ALLOWED_ROLES = ["administrator", "staff"] as const;
  */
 const SITE_URL = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
 
+/**
+ * Builds the link the web app verifies at /auth/confirm.
+ *
+ * Supabase's own `action_link` points at GoTrue's verify endpoint and hands the
+ * caller a session in the URL fragment; the web app could not consume that.
+ * Instead the raw single-use `hashed_token` is embedded in our own route, which
+ * calls `verifyOtp` server-side. This keeps Supabase's expiring, single-use
+ * token while giving us a link that actually resolves.
+ */
+function confirmLink(hashedToken: string | null | undefined, type: "recovery" | "invite"): string | null {
+  if (!hashedToken) return null;
+  return `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${type}`;
+}
+
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
 
@@ -133,30 +147,40 @@ Deno.serve(async (request: Request) => {
       );
     }
 
+    // The profiles trigger creates new rows as `active`. A staff account created
+    // here is not usable until an administrator approves it, so it is demoted to
+    // `pending`; approval runs through rpc_admin_set_account_status from the UI.
+    await adminClient
+      .from("profiles")
+      .update({
+        account_status: "pending",
+        status_reason: "Invited by an administrator; awaiting approval.",
+      })
+      .eq("auth_user_id", created.user.id);
+
     await adminClient.from("activity_logs").insert({
       user_id: callerProfile.id,
       action: "user_created",
       target_type: "profile",
       target_id: created.user.id,
-      metadata: { email, role, created_by: "admin-users edge function" },
+      metadata: { email, role, account_status: "pending", created_by: "admin-users edge function" },
     });
 
     // Build the password-setup link and hand it back to the console.
     //
-    // generateLink only *creates* the link — it does not send anything. The
-    // delivery would be left to Supabase's built-in mailer, which on a project
-    // without SMTP is rate-limited and often only delivers to addresses already
-    // on the project team, so an invitation to a real municipal address silently
-    // never arrives. Rather than claim an e-mail was sent, the link is returned
-    // and the administrator passes it on through whatever channel the office
-    // actually uses.
+    // generateLink only *creates* the link — it does not send anything. On a
+    // project without SMTP Supabase's built-in mailer is rate-limited and often
+    // only delivers to addresses already on the project team, so an invitation
+    // to a real municipal address silently never arrives. Rather than claim an
+    // e-mail was sent, our own /auth/confirm link is returned and the
+    // administrator passes it on through whatever channel the office uses.
     const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${SITE_URL}/reset-password` },
+      options: { redirectTo: `${SITE_URL}/auth/confirm` },
     });
 
-    const setupLink: string | null = link?.properties?.action_link ?? null;
+    const setupLink: string | null = confirmLink(link?.properties?.hashed_token, "recovery");
 
     return json(
       {
@@ -166,10 +190,10 @@ Deno.serve(async (request: Request) => {
         role,
         setup_link: setupLink,
         message: setupLink
-          ? "Account created. No e-mail is sent automatically — copy the setup link below and send it to the new user yourself. The link is single-use and expires; the account cannot sign in until the password is set through it."
-          : "Account created, but no setup link could be generated" +
+          ? "Account created and set to “awaiting approval”. Approve it from the Users screen, then copy the setup link below and send it to the new user yourself. The link is single-use and expires; the account cannot sign in until it is approved and the password is set through this link."
+          : "Account created but awaiting approval, and no setup link could be generated" +
             (linkError ? ` (${linkError.message}).` : ".") +
-            " Tell the new user to use “Forgot your password?” on the sign-in page: Supabase Auth will issue the recovery link directly to them.",
+            " Approve the account from the Users screen and generate a new recovery link there.",
       },
       201,
       origin,
@@ -232,15 +256,15 @@ Deno.serve(async (request: Request) => {
       return errorResponse("invalid_email", "An e-mail address is required.", 400, origin);
     }
 
-    // Same contract as create_staff: the link is returned, not e-mailed. See the
-    // comment there for why.
+    // Same contract as create_staff: our own /auth/confirm link is returned, not
+    // e-mailed. See the comment there for why.
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${SITE_URL}/reset-password` },
+      options: { redirectTo: `${SITE_URL}/auth/confirm` },
     });
 
-    const resetLink: string | null = data?.properties?.action_link ?? null;
+    const resetLink: string | null = confirmLink(data?.properties?.hashed_token, "recovery");
 
     return json(
       {
@@ -251,7 +275,7 @@ Deno.serve(async (request: Request) => {
           ? "A new password reset link has been created. No e-mail is sent automatically — copy it and pass it to the account holder yourself. It is single-use and the previous link stops working once this one is used."
           : "No reset link could be generated" +
             (error ? ` (${error.message}).` : ".") +
-            " Tell the account holder to use “Forgot your password?” on the sign-in page instead.",
+            " The account holder can request a new link from “Forgot your password?” if it has already been approved.",
       },
       200,
       origin,

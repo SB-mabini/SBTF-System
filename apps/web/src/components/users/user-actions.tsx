@@ -13,7 +13,7 @@ import {
   setUserRoleAction,
 } from "@/lib/actions/users";
 import { isDemoMode } from "@/lib/env";
-import { roleLabel } from "@/lib/format";
+import { accountStatusLabel, roleLabel } from "@/lib/format";
 import type { AccountStatus, Profile, UserRole } from "@/types/database";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["administrator", "staff"];
@@ -41,6 +41,10 @@ export function UserActions({
 
   const isSelf = profile.id === currentProfileId;
   const readOnly = isDemoMode();
+  // Operators recover access with a one-time password in the mobile app, and a
+  // staff account cannot be recovered until an administrator has approved it.
+  const isOperator = profile.role === "driver";
+  const awaitingApproval = profile.role === "staff" && profile.account_status !== "active";
 
   function afterSuccess(result: { ok: boolean; message: string }) {
     setMessage({ ok: result.ok, text: result.message });
@@ -107,7 +111,7 @@ export function UserActions({
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={profile.account_status === "active" ? "success" : "warning"}>
-          {profile.account_status}
+          {accountStatusLabel(profile.account_status)}
         </Badge>
         <Badge tone="neutral">{roleLabel(profile.role)}</Badge>
         {isSelf ? <Badge tone="info">This is your account</Badge> : null}
@@ -149,21 +153,44 @@ export function UserActions({
             }}
           >
             <UserCheck className="h-4 w-4" />
-            Activate
+            {profile.account_status === "pending" ? "Approve account" : "Activate"}
           </Button>
         )}
 
-        <Button variant="ghost" disabled={readOnly} onClick={() => setResetOpen(true)}>
-          <KeyRound className="h-4 w-4" />
-          Send password reset
-        </Button>
+        {isOperator ? null : (
+          <Button
+            variant="ghost"
+            disabled={readOnly || awaitingApproval}
+            title={
+              awaitingApproval
+                ? "Approve this account before sending a recovery link"
+                : undefined
+            }
+            onClick={() => setResetOpen(true)}
+          >
+            <KeyRound className="h-4 w-4" />
+            Send password reset
+          </Button>
+        )}
       </div>
 
-      <p className="text-[0.75rem] text-muted">
-        Role and status changes run through administrator-only database functions, are refused when
-        the target is your own account or the last active administrator, and are written to the
-        activity log.
-      </p>
+      {awaitingApproval ? (
+        <p className="text-[0.75rem] text-muted">
+          This account is awaiting approval. Approve it first, then send a recovery link so the
+          holder can set a password.
+        </p>
+      ) : isOperator ? (
+        <p className="text-[0.75rem] text-muted">
+          Drivers and operators recover access with the one-time password option in the SBTF mobile
+          app; no recovery link is issued from this console.
+        </p>
+      ) : (
+        <p className="text-[0.75rem] text-muted">
+          Role and status changes run through administrator-only database functions, are refused when
+          the target is your own account or the last active administrator, and are written to the
+          activity log.
+        </p>
+      )}
 
       {/* Role assignment */}
       <Modal

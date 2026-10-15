@@ -8,6 +8,7 @@ import { toDatabaseNotReadyError } from "@/lib/supabase/errors";
 import { REQUIRED_DOCUMENTS } from "@/lib/constants";
 import * as demo from "@/lib/data/demo-fixtures";
 import type {
+  AccountStatus,
   ActivityAction,
   ActivityLog,
   AnalyticsOverview,
@@ -61,7 +62,7 @@ export interface UserFilters {
   search?: string;
   role?: UserRole | "all";
   roles?: UserRole[];
-  status?: "active" | "inactive" | "suspended" | "all";
+  status?: AccountStatus | "all";
   todaId?: string;
   page?: number;
   pageSize?: number;
