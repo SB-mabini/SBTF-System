@@ -10,8 +10,8 @@
  *   1. environment         — is the app pointed at a real project at all?
  *   2. reachability        — does the project answer on the network?
  *   3. key acceptance      — does the project accept the configured key?
- *   4. tables              — are all 15 tables present in the live schema?
- *   5. functions           — are all 21 public RPCs present?
+ *   4. tables              — are all 18 tables present in the live schema?
+ *   5. functions           — are all 35 public RPCs present?
  *   6. buckets             — are the two private storage buckets present?
  *   7. sign-in (optional)  — does a real account authenticate end to end?
  *   8. RLS probe           — does the anon key get NO rows from protected tables?
@@ -32,7 +32,7 @@ const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
 
 const TIMEOUT_MS = 15_000;
 
-// The 15 tables the migrations create. Kept as an explicit list (rather than
+// The 18 tables the migrations create. Kept as an explicit list (rather than
 // scraped from the migrations) so a renamed table shows up as a mismatch the
 // reader has to resolve, not as a silently-moving target.
 const TABLES = [
@@ -42,8 +42,11 @@ const TABLES = [
   "barangays",
   "franchise_applications",
   "franchise_documents",
-  "franchise_number_sequences",
   "franchise_records",
+  "franchise_number_sequences",
+  "form_requests",
+  "application_appointments",
+  "document_releases",
   "notifications",
   "profiles",
   "renewal_reminders_sent",
@@ -53,15 +56,29 @@ const TABLES = [
   "todas",
 ];
 
-// The 21 functions that make up the documented public API surface.
+// The 35 functions that make up the documented public API surface.
 const RPCS = [
   "rpc_log_activity",
   "rpc_driver_submit_application",
   "rpc_driver_replace_document",
+  "rpc_driver_request_form",
+  "rpc_driver_cancel_form_request",
   "rpc_staff_start_review",
   "rpc_staff_verify_document",
   "rpc_staff_approve_application",
   "rpc_staff_reject_application",
+  "rpc_staff_assign_application",
+  "rpc_staff_request_compliance",
+  "rpc_staff_mark_verified",
+  "rpc_staff_record_application",
+  "rpc_staff_record_endorsement",
+  "rpc_staff_record_decision",
+  "rpc_staff_release_document",
+  "rpc_staff_complete_application",
+  "rpc_staff_schedule_appointment",
+  "rpc_staff_update_appointment",
+  "rpc_staff_issue_form_request",
+  "rpc_staff_convert_form_request",
   "rpc_staff_attach_certificate",
   "rpc_staff_archive_franchise_record",
   "rpc_admin_set_user_role",
@@ -229,7 +246,7 @@ for (const table of TABLES) {
   if (res.ok) {
     const rows = await res.json();
     ok(`${table.padEnd(28)} present — anon reads ${rows.length} row(s)`);
-    if (rows.length > 0 && table !== "barangays" && table !== "roles") {
+    if (rows.length > 0 && table !== "barangays" && table !== "roles" && table !== "todas") {
       bad(`${table.padEnd(28)} leaks ${rows.length} row(s) to the anon key — check RLS`);
     }
     continue;

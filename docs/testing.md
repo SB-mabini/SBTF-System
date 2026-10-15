@@ -7,7 +7,7 @@ workflow. Phase 3 (mobile) cases live in [`mobile.md`](./mobile.md).
 with what happened and **Pass** with ✓ / ✗. The columns are intentionally empty
 here — this file is the plan, not the record.
 
-**Environment:** a Supabase project with all 14 migrations applied
+**Environment:** a Supabase project with all 20 migrations applied
 ([`deployment.md`](./deployment.md) §2.2) and the demonstration dataset loaded (§3
 below). Static checks that need no database: `npm run validate:sql`,
 `npm run test:verify`, `npm run web:test`.
@@ -31,7 +31,7 @@ Passwords for the seeded accounts are documented in [`deployment.md`](./deployme
 
 | # | Check | Command / place |
 |---|---|---|
-| 1 | Migrations applied (14 files) | `npm run db:check` steps 4–5 |
+| 1 | Migrations applied (20 files) | `npm run db:check` steps 4–5 |
 | 2 | RLS enforced for the anon key | `npm run db:check` step 8 |
 | 3 | Edge Function `admin-users` deployed | `supabase functions list` |
 | 4 | `SITE_URL` secret set on the project | `supabase secrets list` |
@@ -163,7 +163,70 @@ where a.status in ('approved', 'rejected');
 
 ---
 
-## 9. Automated checks (no database needed)
+## 9. Email, password recovery and one-time password
+
+Self-service password recovery, driver one-time passwords, and the staff-approval gate
+are covered here. Configuration lives in [`deployment.md`](./deployment.md) §3.1; the
+templates are `supabase/templates/recovery.html` and `supabase/templates/magic_link.html`.
+
+Use only addresses you can actually open (for example the configured Gmail account). The
+seeded `@mabini-sbtf.test` accounts cannot receive mail.
+
+### 9.1 Readiness checklist
+
+All must be true before running the cases, or the first error is configuration, not a
+defect.
+
+| # | Check | Where |
+|---|---|---|
+| 1 | Custom SMTP saved (Gmail + App Password) and a **test e-mail arrives** | Dashboard → Authentication → Emails → SMTP Settings |
+| 2 | Site URL is the origin under test, and `/auth/confirm` is in the redirect allow-list | Dashboard → Authentication → URL Configuration |
+| 3 | Reset Password template uses `{{ .TokenHash }}` (copied from `recovery.html`); Magic Link template contains `{{ .Token }}` | Dashboard → Authentication → Email Templates |
+| 4 | `password-recovery` Edge Function deployed with **Verify JWT off** | Dashboard → Edge Functions |
+| 5 | `SITE_URL` function secret set to the origin under test | `supabase secrets list` |
+| 6 | `NEXT_PUBLIC_SUPABASE_URL` is the deployed project and `NEXT_PUBLIC_SITE_URL` matches the Site URL | `apps/web/.env.local` |
+
+### 9.2 Cases (E-01 … E-07)
+
+| ID | Action | Expected result | Actual | Pass |
+|---|---|---|---|---|
+| E-01 | **Forgot your password?** with an administrator's address | Generic "Request accepted" — never reveals whether the account exists; recovery e-mail arrives | | |
+| E-02 | Same with an **active staff** address | Same generic response; recovery e-mail arrives | | |
+| E-03 | Same with a **pending staff** address | Same generic response; **no** e-mail is sent | | |
+| E-04 | Same with a **driver/operator** address | Same generic response; **no** e-mail is sent (drivers use the mobile OTP) | | |
+| E-05 | Open the recovery e-mail link | Lands on `/reset-password`; setting a password succeeds and sign-in works with it | | |
+| E-06 | Re-open the same recovery link | Refused — single-use/expired; lands on `/auth/confirmed?status=invalid` | | |
+| E-07 | Mobile: "Sign in with one-time password" | 6-digit code arrives; entering it signs the driver in | | |
+
+### 9.3 Failure triage
+
+The "Forgot your password?" error line reports the real cause.
+
+| Symptom | Cause |
+|---|---|
+| `HTTP 404` | `password-recovery` not deployed, or `NEXT_PUBLIC_SUPABASE_URL` points at a different project |
+| `HTTP 401` | Verify JWT still on for `password-recovery` |
+| `HTTP 500` | Function runtime error — read the function logs |
+| Fetch/network error | Wrong project URL, or Supabase unreachable |
+| E-02 e-mail never arrives | SMTP not saved/verified, or the Gmail App Password is wrong |
+| E-05 lands on `/auth/confirmed?status=invalid` | Template still uses `{{ .ConfirmationURL }}`, or Site URL / redirect allow-list mismatch |
+
+Logs: Dashboard → Edge Functions → `password-recovery` → Logs.
+
+### 9.4 Staff create + approve (needs the `pending` migration)
+
+Apply `supabase/migrations/20260101091400_pending_account_status.sql` and redeploy
+`admin-users` before this flow, otherwise `create_staff` fails when it sets `pending`.
+
+1. Create a staff account → the row shows **Awaiting approval**.
+2. **Approve account** → status becomes active.
+3. **Send password reset** → the console returns a link (handover by design,
+   §3.1d of `deployment.md`). Once active, the staff member can also self-serve from
+   `/forgot-password`.
+
+---
+
+## 10. Automated checks (no database needed)
 
 | Command | Gate |
 |---|---|
@@ -173,22 +236,22 @@ where a.status in ('approved', 'rejected');
 
 ---
 
-## 10. Recording convention
+## 11. Recording convention
 
 - One run per environment; note the project ref, commit and date at the top of the record.
 - ✗ results get a linked screenshot or the exact error message in **Actual**.
-- A case blocked by a known gap (§11) is marked **blocked**, not ✗, with the gap id.
+- A case blocked by a known gap (§12) is marked **blocked**, not ✗, with the gap id.
 
 ---
 
-## 11. Gap list
+## 12. Gap list
 
 Known holes, current status. Items move out of this list only with a code reference.
 
 | # | Gap | Status |
 |---|---|---|
 | 1 | **Drivers could not replace a rejected document** — no upload path existed after staff rejection. | **Resolved** by migration 14 (`20260101091300`, `rpc_driver_replace_document`); covered by pgTAP section 3a of `supabase/tests/02_workflow.sql`. Mobile UI for it arrives in slice 5. |
-| 2 | No SMTP provider configured; invitation/reset flows hand over links in the console instead of e-mailing them. | Open by design until a sending domain exists ([deployment.md §3](./deployment.md)). |
+| 2 | Staff invitations hand over a link in the console instead of e-mailing it. | Open by design — the account is `pending` until approved, so a single-use link sent at creation would expire first. Self-service recovery and driver OTP **do** send mail through the project's Gmail SMTP ([deployment.md §3.1](./deployment.md)). |
 | 3 | pgTAP suites (`npm run test:rls`) are not executed in CI — they need a Supabase project. | Open; run by hand before releases. |
 | 4 | Mobile application slices 3–8 (submission, tracking, uploads, certificate, notifications) not built yet. | Open — see [mobile.md](./mobile.md) §7. |
 | 5 | Scheduled renewal job registration on a brand-new project is not automated. | Open; confirm after deploy ([deployment.md §9](./deployment.md)). |

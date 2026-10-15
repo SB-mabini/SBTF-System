@@ -1,10 +1,12 @@
 import {
+  ACCOUNT_STATUS_LABELS,
   APPLICATION_STATUS_LABELS,
   APPLICATION_TYPE_LABELS,
   DOCUMENT_LABELS,
   ROLE_LABELS,
 } from "@/lib/constants";
 import type {
+  AccountStatus,
   ActivityAction,
   ApplicationStatus,
   ApplicationType,
@@ -83,6 +85,10 @@ export function roleLabel(role: UserRole | null | undefined): string {
   return role ? ROLE_LABELS[role] ?? role : "—";
 }
 
+export function accountStatusLabel(status: AccountStatus | null | undefined): string {
+  return status ? ACCOUNT_STATUS_LABELS[status] ?? status : "—";
+}
+
 export function applicationStatusLabel(status: ApplicationStatus): string {
   return APPLICATION_STATUS_LABELS[status];
 }
@@ -121,6 +127,14 @@ const ACTION_LABELS: Record<ActivityAction, string> = {
   ai_request: "Requested AI decision support",
   renewal_reminder_sent: "Sent a renewal reminder",
   security_event: "Security event",
+  stage_changed: "Updated the application stage",
+  appointment_scheduled: "Scheduled an appointment",
+  appointment_updated: "Updated an appointment",
+  form_request_created: "Submitted a form request",
+  form_request_issued: "Issued a form request",
+  endorsement_recorded: "Recorded an endorsement",
+  decision_recorded: "Recorded a decision",
+  document_released: "Released documents",
 };
 
 export function actionLabel(action: ActivityAction | string): string {

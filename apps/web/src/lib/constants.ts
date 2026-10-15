@@ -1,4 +1,11 @@
-import type { DocumentType, UserRole } from "@/types/database";
+import type {
+  AppointmentKind,
+  AppointmentStatus,
+  ApplicationStage,
+  DocumentType,
+  FormRequestStatus,
+  UserRole,
+} from "@/types/database";
 
 export const APP_NAME = "SBTF System";
 export const MUNICIPALITY = "Municipality of Mabini";
@@ -16,6 +23,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ACCOUNT_STATUS_LABELS = {
   active: "Active",
+  pending: "Awaiting approval",
   inactive: "Inactive",
   suspended: "Suspended",
 } as const;
@@ -30,6 +38,56 @@ export const APPLICATION_STATUS_LABELS = {
   approved: "Approved",
   rejected: "Rejected",
 } as const;
+
+export const APPLICATION_STAGE_LABELS: Record<ApplicationStage, string> = {
+  submitted: "Submitted",
+  under_verification: "Under Verification",
+  for_compliance: "For Compliance",
+  verified: "Verified",
+  recorded: "Application Recorded",
+  for_endorsement: "For Endorsement",
+  for_approval: "For Approval",
+  ready_for_release: "Ready for Release",
+  released: "Released",
+  completed: "Completed",
+  rejected: "Rejected",
+};
+
+export const APPLICATION_STAGE_ORDER: ApplicationStage[] = [
+  "submitted",
+  "under_verification",
+  "for_compliance",
+  "verified",
+  "recorded",
+  "for_endorsement",
+  "for_approval",
+  "ready_for_release",
+  "released",
+  "completed",
+];
+
+export const FORM_REQUEST_STATUS_LABELS: Record<FormRequestStatus, string> = {
+  requested: "Requested",
+  issued: "Issued",
+  converted: "Converted",
+  cancelled: "Cancelled",
+};
+
+export const APPOINTMENT_KIND_LABELS: Record<AppointmentKind, string> = {
+  evaluation: "Evaluation",
+  physical_documents: "Physical document submission",
+  hearing: "Hearing",
+  release: "Document release",
+  other: "Other",
+};
+
+export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
+  scheduled: "Scheduled",
+  completed: "Completed",
+  no_show: "No show",
+  rescheduled: "Rescheduled",
+  cancelled: "Cancelled",
+};
 
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {
   member_association_certificate: "Member Association Certificate",

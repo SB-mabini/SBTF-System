@@ -8,6 +8,9 @@ import type { UserRole } from "@/types/database";
  * Row Level Security and the SECURITY DEFINER RPCs enforce every rule. If a
  * capability is missing here but permitted in the database, the database still
  * wins; if it is present here but refused by the database, the database wins.
+ *
+ * Phase 1: all application and franchise-record handling belongs to STAFF.
+ * Administrators keep read-only visibility plus user/settings/TODA management.
  */
 export const CAPABILITIES = {
   administrator: [
@@ -18,13 +21,7 @@ export const CAPABILITIES = {
     "users.set_status",
     "users.create_staff",
     "applications.view_all",
-    "applications.review",
-    "applications.verify_documents",
-    "applications.approve",
-    "applications.reject",
     "records.view_all",
-    "records.archive",
-    "records.generate_certificate",
     "analytics.view_operational",
     "analytics.view_system_health",
     "reports.export",
@@ -41,8 +38,16 @@ export const CAPABILITIES = {
     "applications.verify_documents",
     "applications.approve",
     "applications.reject",
+    "applications.assign",
+    "applications.schedule",
+    "applications.record_decision",
+    "applications.release",
     "records.view_all",
+    "records.archive",
     "records.generate_certificate",
+    "records.release",
+    "form_requests.manage",
+    "appointments.manage",
     "analytics.view_operational",
     "reports.export",
     "ai.request",
@@ -51,8 +56,7 @@ export const CAPABILITIES = {
   driver: [],
 } as const satisfies Record<UserRole, readonly string[]>;
 
-export type Capability =
-  (typeof CAPABILITIES)["administrator"][number];
+export type Capability = (typeof CAPABILITIES)[UserRole][number];
 
 export function can(
   role: UserRole | null | undefined,

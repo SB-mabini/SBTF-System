@@ -43,6 +43,7 @@ export function ApplicationTable({
               <th>Submitted</th>
               <th>Documents</th>
               <th>Status</th>
+              <th>Franchise</th>
             </tr>
           </thead>
           <tbody>
@@ -98,6 +99,18 @@ export function ApplicationTable({
                   </td>
                   <td>
                     <StatusBadge status={application.status} />
+                  </td>
+                  <td>
+                    {application.record ? (
+                      <Link
+                        className="font-mono text-[0.8125rem] font-medium text-primary hover:underline"
+                        href={`${basePath}/franchises/${application.record.id}`}
+                      >
+                        {application.record.franchise_number}
+                      </Link>
+                    ) : (
+                      <span className="text-[0.8125rem] text-muted">—</span>
+                    )}
                   </td>
                 </tr>
               );

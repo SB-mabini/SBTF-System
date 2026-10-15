@@ -1,13 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Car, FileText, History, Stamp, User } from "lucide-react";
+import { Archive, Building2, Car, FileText, History, Stamp, User } from "lucide-react";
 
 import { ApplicationSummaryCard, ReviewPanel } from "@/components/applications/review-panel";
 import { StatusTimeline } from "@/components/applications/status-timeline";
+import { ArchiveActions } from "@/components/records/archive-actions";
+import { CertificateActions } from "@/components/records/certificate-actions";
 import { Alert, Badge, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
-import { getApplication, getApplicationDocumentsWithUrls } from "@/lib/data";
+import {
+  getApplication,
+  getApplicationDocumentsWithUrls,
+  getCertificateSignedUrl,
+  getFranchiseRecord,
+  listSettings,
+} from "@/lib/data";
 import { applicationTypeLabel, documentLabel, formatDate, relativeTime } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
+import type { SystemSetting } from "@/types/database";
 
 export async function ApplicationDetail({
   applicationId,
@@ -20,6 +29,20 @@ export async function ApplicationDetail({
   if (!application) notFound();
 
   const documents = await getApplicationDocumentsWithUrls(applicationId);
+
+  // The embedded `record` on the application is only a summary. Re-fetch the
+  // full franchise record so the certificate and archive controls — the same
+  // components the Franchise Records page uses — can be handled without
+  // leaving this application.
+  const record = application.record ? await getFranchiseRecord(application.record.id) : null;
+  let certificateUrl: string | null = null;
+  let settings: SystemSetting[] = [];
+  if (record) {
+    [certificateUrl, settings] = await Promise.all([
+      getCertificateSignedUrl(record.id),
+      listSettings(),
+    ]);
+  }
 
   return (
     <div className="space-y-5">
@@ -143,16 +166,21 @@ export async function ApplicationDetail({
           </Card>
 
           <Card>
-            <CardHeader title="Record linkage" icon={Building2} />
-            {application.record ? (
+            <CardHeader title="Franchise record" icon={Building2} />
+            {record ? (
               <div className="space-y-2 text-[0.8125rem]">
-                <Row label="Franchise number" value={application.record.franchise_number} mono />
-                <Row label="Issued" value={formatDate(application.record.issued_at)} />
-                <Row label="Valid until" value={formatDate(application.record.expires_at)} />
-                <Row label="Archived" value={application.record.archived ? "Yes" : "No"} />
+                <Row label="Franchise number" value={record.franchise_number} mono />
+                <Row label="Verification code" value={record.verification_code} mono />
+                <Row label="Issued" value={formatDate(record.issued_at)} />
+                <Row label="Valid until" value={formatDate(record.expires_at)} />
+                <Row
+                  label="Certificate"
+                  value={record.certificate_storage_path ? "Generated" : "Not generated"}
+                />
+                <Row label="Archived" value={record.archived ? "Yes" : "No"} />
                 <Link
                   className="inline-flex items-center gap-1 pt-1 font-medium text-primary hover:underline"
-                  href={`${basePath}/franchises/${application.record.id}`}
+                  href={`${basePath}/franchises/${record.id}`}
                 >
                   Open franchise record
                 </Link>
@@ -166,6 +194,24 @@ export async function ApplicationDetail({
               </p>
             )}
           </Card>
+
+          {record ? (
+            <>
+              <CertificateActions
+                record={record}
+                certificateUrl={certificateUrl}
+                settings={settings}
+              />
+              <Card>
+                <CardHeader
+                  title="Archive"
+                  description="Operational status only — the documentary record is preserved."
+                  icon={Archive}
+                />
+                <ArchiveActions recordId={record.id} archived={record.archived} />
+              </Card>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

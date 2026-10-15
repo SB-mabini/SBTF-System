@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  accountStatusLabel,
   actionLabel,
   applicationStatusLabel,
   applicationTypeLabel,
@@ -77,6 +78,10 @@ describe("labels", () => {
     expect(applicationStatusLabel("pending")).toBe("Pending");
     expect(applicationTypeLabel("renewal")).toBe("Renewal");
     expect(documentLabel("or_cr")).toMatch(/OR/);
+
+    expect(accountStatusLabel("active")).toBe("Active");
+    expect(accountStatusLabel("pending")).toBe("Awaiting approval");
+    expect(accountStatusLabel(null)).toBe("—");
   });
 
   it("humanises enum values for the audit trail", () => {

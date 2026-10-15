@@ -1,11 +1,16 @@
 import {
   Archive,
   CalendarCheck,
+  CalendarClock,
   CalendarX,
+  ClipboardCheck,
   Eye,
   FileCheck2,
   FileUp,
+  Milestone,
+  PackageCheck,
   RefreshCw,
+  Send,
   ShieldCheck,
   Stamp,
 } from "lucide-react";
@@ -27,6 +32,12 @@ const EVENT_META: Record<
   rejected: { label: "Application rejected", icon: CalendarX, tone: "bg-secondary-50 text-secondary-600" },
   certificate_issued: { label: "Certificate issued", icon: Stamp, tone: "bg-primary-50 text-primary-700" },
   archived: { label: "Franchise archived", icon: Archive, tone: "bg-gray-100 text-gray-700" },
+  stage_changed: { label: "Stage updated", icon: Milestone, tone: "bg-accent-50 text-accent-700" },
+  appointment_scheduled: { label: "Appointment scheduled", icon: CalendarClock, tone: "bg-primary-50 text-primary-700" },
+  appointment_completed: { label: "Appointment completed", icon: CalendarCheck, tone: "bg-success-50 text-success-600" },
+  endorsement_recorded: { label: "Endorsed for approval", icon: Send, tone: "bg-accent-50 text-accent-700" },
+  decision_recorded: { label: "Decision recorded", icon: ClipboardCheck, tone: "bg-success-50 text-success-600" },
+  document_released: { label: "Documents released", icon: PackageCheck, tone: "bg-primary-50 text-primary-700" },
 };
 
 export function StatusTimeline({ events }: { events: ApplicationStatusHistory[] }) {

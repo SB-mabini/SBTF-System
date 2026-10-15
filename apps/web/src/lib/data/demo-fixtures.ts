@@ -273,6 +273,7 @@ export const demoApplications: FranchiseApplicationDetail[] = (() => {
       applicant_id: driver.id,
       application_type: type,
       status,
+      stage: status === "approved" ? "completed" : status === "rejected" ? "rejected" : "submitted",
       toda_id: toda.id,
       operator_first_name: driver.first_name,
       operator_middle_name: null,
@@ -300,6 +301,16 @@ export const demoApplications: FranchiseApplicationDetail[] = (() => {
       reviewed_at: reviewedDaysAgo === null ? null : iso(reviewedDaysAgo, 15),
       rejection_reason:
         status === "rejected" ? REJECTION_REASONS[index % REJECTION_REASONS.length]! : null,
+      assigned_staff_id: decided ? demoProfiles[1]!.id : null,
+      for_compliance_reason: null,
+      endorsed_to: null,
+      endorsement_reference: null,
+      endorsed_at: null,
+      endorsed_by: null,
+      approving_authority: status === "approved" ? "Sangguniang Bayan" : null,
+      decision_reference:
+        status === "approved" ? `RES-${2024 + (index % 2)}-${String(index + 1).padStart(4, "0")}` : null,
+      decision_recorded_at: reviewedDaysAgo === null ? null : iso(reviewedDaysAgo, 15),
       created_at: iso(submittedDaysAgo),
       updated_at: iso(reviewedDaysAgo ?? submittedDaysAgo, 15),
       applicant: {

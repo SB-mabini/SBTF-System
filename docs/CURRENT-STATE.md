@@ -39,8 +39,8 @@ user-supplied. They should be rotated via the account page.
 
 ## 2. Database
 
-- **All 13 migrations applied** to the live project and matching remote history.
-- 15 tables, 28 public RLS policies, 50 functions, 2 storage buckets.
+- **All 20 migrations applied** to the live project and matching remote history.
+- 18 tables, 34 public RLS policies, 69 functions, 2 storage buckets.
 - 34 barangays seeded as reference data (from migrations, **not** from `seed.sql`).
 - **Seed data has never been applied** to any environment, by explicit user decision.
 
@@ -105,6 +105,11 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 Do not mistake these for configuration problems:
 
+> **In progress (working tree, uncommitted):** the `pending` account status, the
+> `/auth/confirm` route, the `password-recovery` Edge Function and the role-aware
+> recovery UI are implemented but not yet committed. Items 1–4 below describe the state
+> *before* that work and will move out of this list once it is committed.
+
 1. **Add-staff UI does not exist.** `createStaffUserAction` has zero call sites. Covered by
    the invitation plan.
 2. **No auth-token route exists.** No `exchangeCodeForSession` or `verifyOtp` anywhere, so
@@ -113,8 +118,10 @@ Do not mistake these for configuration problems:
    `admin-users/index.ts:151`, `verify-email/page.tsx:24-25`.
 4. **No Edge Functions are deployed.** Calling `supabase.functions.invoke("admin-users")`
    fails immediately.
-5. **No SMTP is configured** on the project, and `uri_allow_list` is empty on the cloud
-   project. `supabase/config.toml` is local-only and does not apply to the cloud project.
+5. **SMTP is now configured** on the cloud project — a Gmail account using an App Password,
+   with recovery and magic-link templates provisioned in `supabase/templates/`
+   (`deployment.md` §3.1). The cloud URL configuration must still list the `/auth/confirm`
+   redirect for the origin in use; `supabase/config.toml` remains local-only.
 
 ---
 

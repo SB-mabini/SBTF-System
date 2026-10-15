@@ -15,7 +15,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(47);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -134,7 +134,7 @@ select is(
 
 select is(
   (select count(*)::int from pg_policies where schemaname = 'public'),
-  28,
+  34,
   'the expected number of RLS policies exists'
 );
 
@@ -323,6 +323,20 @@ select throws_ok(
   '42501',
   null,
   'an administrator cannot change their own role'
+);
+
+select throws_ok(
+  $$select public.rpc_staff_start_review((select id from fx_app))$$,
+  '42501',
+  null,
+  'an administrator cannot start a review; application handling is staff-only'
+);
+
+select throws_ok(
+  $$select public.rpc_staff_approve_application((select id from fx_app))$$,
+  '42501',
+  null,
+  'an administrator cannot approve an application; application handling is staff-only'
 );
 
 select throws_ok(

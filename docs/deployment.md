@@ -2,7 +2,7 @@
 
 How the SBTF System goes from this repository to a working deployment.
 
-**Last updated:** 2026-10-08 · applies to migrations `20260101090000` … `20260101091300` (14 files).
+**Last updated:** 2026-10-13 · applies to migrations `20260101090000` … `20260101091300` (20 files).
 
 The short version: apply the schema (§2), deploy the Edge Functions (§3), deploy the
 web app with two environment variables (§4), then create the first accounts (§5, §6).
@@ -36,16 +36,18 @@ the two `NEXT_PUBLIC_*` values are the **only** Supabase credentials it ever see
 2. Either the Supabase CLI logged in (`supabase link`) **or** access to the SQL Editor
    in the dashboard. Both routes are supported; pick one.
 
-### 2.2 Applying the 14 migrations
+### 2.2 Applying the 20 migrations
 
-`supabase/migrations/` contains 14 files, `20260101090000_phase0_types.sql` through
-`20260101091300_phase0_driver_document_replacement.sql`. They create the 15 tables,
-the public RPC surface (21 functions), RLS policies, storage buckets, Realtime
+`supabase/migrations/` contains 20 files, `20260101090000_phase0_types.sql` through
+`20260101091900_phase1_rls_policies.sql`. They create the 18 tables,
+the public RPC surface (35 functions), RLS policies, storage buckets, Realtime
 publication and the scheduled job.
 
-> **Already migrated earlier?** Projects that ran migrations 1–13 need only the new
-> file, `20260101091300_phase0_driver_document_replacement.sql` (the driver
-> document-replacement RPC). It is idempotent; re-running it changes nothing.
+> **Already migrated earlier?** Projects that ran the Phase 0 migrations first need
+> the Phase 1 files, `20260101091500_phase1_workflow_types.sql` through
+> `20260101091900_phase1_rls_policies.sql` (form requests, appointments/hearings,
+> document release and the staff processing pipeline). They are idempotent;
+> re-running them changes nothing.
 
 Two supported routes:
 
@@ -85,32 +87,119 @@ query that must read `auth_linked = true`, `password_set = true`,
 
 ## 3. Edge Functions
 
-Three functions live in `supabase/functions/`. Deploy at least `admin-users`; the
-other two are optional per environment.
+Four functions live in `supabase/functions/`. Deploy `admin-users`; deploy
+`password-recovery` if self-service password recovery is used; the other two are
+optional per environment.
 
 ```bash
 supabase functions deploy admin-users
-supabase secrets set SITE_URL=https://your-app.vercel.app
+supabase functions deploy password-recovery    # keep Verify JWT OFF (see below)
+supabase secrets set SITE_URL=https://sbtf-system.vercel.app
 ```
 
 | Function | Purpose | Required secrets |
 |---|---|---|
 | `admin-users` | Create staff/administrator accounts, deactivate/reactivate, generate password links | `SITE_URL` |
+| `password-recovery` | Role-aware self-service recovery behind "Forgot your password?" (Verify JWT **off**) | `SITE_URL` |
 | `ai-decision-support` | Advisory analytics through the LLM | `GROQ_API_KEY` |
 | `renewal-reminders` | Scheduled 90/60/30-day reminder run | none (uses service role) |
 
-### Why `SITE_URL` matters, and why no e-mail is sent
+> **`password-recovery` must run with Verify JWT disabled.** It is reached before
+> sign-in, so it cannot present a user JWT. `supabase/config.toml` sets
+> `[functions.password-recovery] verify_jwt = false`, but that file is **local-only** —
+> confirm the toggle is off in Dashboard → Edge Functions → `password-recovery`, or
+> deploy with `supabase functions deploy password-recovery --no-verify-jwt`. A 401 here
+> is reported in the UI as "the recovery service did not answer (HTTP 401)".
 
-`admin-users` generates recovery links that redirect to `${SITE_URL}/reset-password`.
-`generateLink()` only **creates** the link — it never sends anything. Supabase's
-built-in mailer is rate-limited on projects without SMTP and usually delivers only to
-addresses already on the project team, so an invitation to a real municipal address
-would silently never arrive.
+### `SITE_URL`
 
-The function therefore **returns the link** (`setup_link` / `reset_link` in the JSON
-response) and the console shows it to the administrator, who passes it on through
-whatever channel the office actually uses. Do not re-add code that claims an e-mail
-was sent unless an SMTP provider is configured and verified.
+Both functions build links as `${SITE_URL}/auth/confirm?token_hash=…&type=…`. Set
+`SITE_URL` as a function secret to the origin being used (production:
+`https://sbtf-system.vercel.app`; local testing against the hosted project:
+`http://localhost:3000`). It falls back to `http://localhost:3000`.
+
+The web app's `NEXT_PUBLIC_SITE_URL` is a **separate** value with the same shape — set
+both, and keep them on the same origin. Mixing them is the most common cause of a
+recovery link that lands on the wrong host.
+
+---
+
+## 3.1 Email (SMTP + templates)
+
+Self-service recovery and driver one-time passwords send real e-mail through
+Supabase Auth. This is configured **per project in the dashboard** — `config.toml`
+only affects local development, where mail is captured by Inbucket.
+
+The deployment here uses a **Gmail account with a Google App Password** (no
+transactional provider, no municipal mail server).
+
+### a. SMTP
+
+Dashboard → **Authentication → Emails → SMTP Settings**:
+
+| Field | Value |
+|---|---|
+| Host | `smtp.gmail.com` |
+| Port | `587` (STARTTLS) — `465` also works (SSL) |
+| Username | `sangguniangbayan.mabini.batangas@gmail.com` |
+| Password | a 16-character **Google App Password** (not the account password) |
+| Sender name | e.g. `SBTF System` |
+| Sender email | the same Gmail address |
+
+The Gmail account must have 2-Step Verification enabled to generate an App Password
+(Google account → Security → App passwords). Use **Send test email** to confirm
+delivery to a real mailbox before relying on it.
+
+### b. URL configuration (the redirect allow-list)
+
+Dashboard → **Authentication → URL Configuration**:
+
+- **Site URL** — the current environment: `https://sbtf-system.vercel.app` in
+  production, `http://localhost:3000` while testing locally against the hosted project.
+- **Redirect URLs** — add both:
+  - `https://sbtf-system.vercel.app/auth/confirm`
+  - `http://localhost:3000/auth/confirm`
+
+If `/auth/confirm` is not on this list, Supabase silently redirects the e-mail link
+back to the Site URL and the token is never consumed.
+
+### c. Email templates
+
+The `{{ .ConfirmationURL }}` in the default templates returns a PKCE `?code=` that the
+app cannot exchange, because recovery is requested **server-side** (no browser
+`code_verifier` exists). The templates therefore build the link from `{{ .TokenHash }}`
+and point at the app's own `/auth/confirm` route, which verifies it with `verifyOtp()`.
+
+For **local development** the templates are wired in `supabase/config.toml`:
+
+```toml
+[auth.email.template.recovery]
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+content_path = "./supabase/templates/magic_link.html"
+```
+
+For the **hosted project**, paste the same HTML into Dashboard → **Authentication →
+Email Templates**:
+
+| Template | Source file | Subject |
+|---|---|---|
+| Reset Password | `supabase/templates/recovery.html` | `Pag-reset ng password — SBTF System \| Reset your password — SBTF System` |
+| Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
+
+The Magic Link template **must contain `{{ .Token }}`** — the mobile app signs in by
+typing the 6-digit code. Keep `otp_length = 6` in the dashboard to match
+`config.toml`.
+
+### d. What still hands over a link
+
+`create_staff` still **returns** the setup link (`setup_link`) instead of e-mailing it,
+because a new staff account is `pending` and unusable until an administrator approves
+it — e-mailing a single-use link at creation time would let it expire before the
+account could be used. The console shows the link for manual handover. Self-service
+recovery (`password-recovery`) and driver OTP do send e-mail. Do not add copy that
+claims mail was sent on a path that only returns a link.
 
 ---
 
@@ -137,9 +226,10 @@ Checklist, in the order things actually break:
    silently serves sample data with every write disabled.
 3. `NEXT_PUBLIC_SITE_URL` matches the real hostname, or recovery links redirect to the
    wrong origin.
-4. The Edge Function `admin-users` is deployed (§3) — otherwise account creation and
-   password resets fail loudly with a "deploy admin-users" message rather than
-   creating a half account.
+4. The Edge Functions are deployed (§3) — `admin-users` for account creation and
+   in-console resets, and `password-recovery` (Verify JWT **off**) for the "Forgot your
+   password?" screen. A missing `password-recovery` surfaces as "the recovery service
+   did not answer (HTTP 404)".
 5. Migrations are applied (§2.2). An unmigrated database now produces a
    `/setup-required` page explaining exactly this, instead of a sign-in loop.
 
@@ -200,7 +290,7 @@ publishable key is embedded, which is safe because RLS is the authorisation boun
 | Command | What it proves | Needs a database |
 |---|---|---|
 | `npm run validate:sql` | Every migration, seed and pgTAP statement parses with the real PostgreSQL grammar | No |
-| `npm run db:check` | 8-step read-only diagnosis: env, reachability, key acceptance, 15 tables, 21 functions, buckets, optional sign-in, RLS probe. Stops at the first broken link | Yes |
+| `npm run db:check` | 8-step read-only diagnosis: env, reachability, key acceptance, 18 tables, 35 functions, buckets, optional sign-in, RLS probe. Stops at the first broken link | Yes |
 | `npm run db:verify` | Replays the console's actual queries against the live project and compares response shapes with the TypeScript interfaces | Yes |
 | `npm run test:verify` | Self-test of the verifier against a local mock — proves the guard works, no database | No |
 | `npm run test:rls` | pgTAP suites (requires Supabase CLI + a project) | Yes |
@@ -215,8 +305,10 @@ publishable key is embedded, which is safe because RLS is the authorisation boun
   self-tests the live verifier against a mock (`test:verify`). Applying migrations and
   running the pgTAP suites still requires a Supabase project; those steps were last run
   by hand, and the results belong in `docs/CURRENT-STATE.md`.
-- **No SMTP is configured.** Any feature that promises e-mail delivery actually hands
-  over a link in the console instead (§3). This is deliberate, not a bug.
+- **SMTP is configured for self-service recovery only.** Password-recovery and driver
+  one-time-password e-mails are delivered through the project's Gmail SMTP (§3.1).
+  Staff *invitations* still hand over a link in the console (§3.1d), because the account
+  is `pending` until an administrator approves it. This is deliberate, not a bug.
 - The scheduled renewal job (`rpc_generate_renewal_reminders`) needs a pg_cron /
   scheduled-job registration on the project; the migration declares the function but
   registration on a brand-new project should be confirmed after deploy.

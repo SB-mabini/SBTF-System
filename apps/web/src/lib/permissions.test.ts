@@ -10,10 +10,26 @@ describe("capability matrix", () => {
     expect(can("administrator", "analytics.view_system_health")).toBe(true);
   });
 
+  it("keeps administrators read-only on applications and records", () => {
+    expect(can("administrator", "applications.view_all")).toBe(true);
+    expect(can("administrator", "records.view_all")).toBe(true);
+
+    expect(can("administrator", "applications.review")).toBe(false);
+    expect(can("administrator", "applications.approve")).toBe(false);
+    expect(can("administrator", "applications.reject")).toBe(false);
+    expect(can("administrator", "applications.record_decision")).toBe(false);
+    expect(can("administrator", "records.generate_certificate")).toBe(false);
+    expect(can("administrator", "records.archive")).toBe(false);
+  });
+
   it("lets staff process applications but not administer the system", () => {
     expect(can("staff", "applications.review")).toBe(true);
     expect(can("staff", "applications.approve")).toBe(true);
+    expect(can("staff", "applications.record_decision")).toBe(true);
+    expect(can("staff", "applications.schedule")).toBe(true);
+    expect(can("staff", "applications.release")).toBe(true);
     expect(can("staff", "records.generate_certificate")).toBe(true);
+    expect(can("staff", "records.archive")).toBe(true);
 
     expect(can("staff", "users.manage")).toBe(false);
     expect(can("staff", "settings.manage")).toBe(false);

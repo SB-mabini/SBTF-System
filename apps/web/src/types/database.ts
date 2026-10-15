@@ -5,9 +5,34 @@
  */
 
 export type UserRole = "administrator" | "staff" | "driver";
-export type AccountStatus = "active" | "inactive" | "suspended";
+export type AccountStatus = "active" | "pending" | "inactive" | "suspended";
 export type ApplicationType = "new" | "renewal";
 export type ApplicationStatus = "pending" | "approved" | "rejected";
+export type ApplicationStage =
+  | "submitted"
+  | "under_verification"
+  | "for_compliance"
+  | "verified"
+  | "recorded"
+  | "for_endorsement"
+  | "for_approval"
+  | "ready_for_release"
+  | "released"
+  | "completed"
+  | "rejected";
+export type FormRequestStatus = "requested" | "issued" | "converted" | "cancelled";
+export type AppointmentKind =
+  | "evaluation"
+  | "physical_documents"
+  | "hearing"
+  | "release"
+  | "other";
+export type AppointmentStatus =
+  | "scheduled"
+  | "completed"
+  | "no_show"
+  | "rescheduled"
+  | "cancelled";
 export type DocumentType =
   | "member_association_certificate"
   | "or_cr"
@@ -23,6 +48,12 @@ export type NotificationType =
   | "renewal_reminder"
   | "application_under_review"
   | "account_updated"
+  | "application_stage_changed"
+  | "form_request_received"
+  | "form_request_issued"
+  | "appointment_scheduled"
+  | "appointment_updated"
+  | "document_release_ready"
   | "system";
 export type ActivityAction =
   | "login"
@@ -49,7 +80,15 @@ export type ActivityAction =
   | "settings_update"
   | "ai_request"
   | "renewal_reminder_sent"
-  | "security_event";
+  | "security_event"
+  | "stage_changed"
+  | "appointment_scheduled"
+  | "appointment_updated"
+  | "form_request_created"
+  | "form_request_issued"
+  | "endorsement_recorded"
+  | "decision_recorded"
+  | "document_released";
 export type LogTargetType =
   | "profile"
   | "franchise_application"
@@ -57,6 +96,9 @@ export type LogTargetType =
   | "franchise_record"
   | "system_setting"
   | "toda"
+  | "form_request"
+  | "appointment"
+  | "document_release"
   | "system";
 
 export interface Profile {
@@ -104,6 +146,7 @@ export interface FranchiseApplication {
   applicant_id: string;
   application_type: ApplicationType;
   status: ApplicationStatus;
+  stage: ApplicationStage;
   toda_id: string;
   operator_first_name: string;
   operator_middle_name: string | null;
@@ -130,6 +173,63 @@ export interface FranchiseApplication {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
+  assigned_staff_id: string | null;
+  for_compliance_reason: string | null;
+  endorsed_to: string | null;
+  endorsement_reference: string | null;
+  endorsed_at: string | null;
+  endorsed_by: string | null;
+  approving_authority: string | null;
+  decision_reference: string | null;
+  decision_recorded_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormRequest {
+  id: string;
+  form_number: string;
+  requested_by: string;
+  toda_id: string | null;
+  application_type: ApplicationType;
+  status: FormRequestStatus;
+  purpose: string | null;
+  requested_at: string;
+  issued_at: string | null;
+  issued_by: string | null;
+  converted_application_id: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApplicationAppointment {
+  id: string;
+  application_id: string;
+  kind: AppointmentKind;
+  status: AppointmentStatus;
+  scheduled_at: string;
+  venue: string;
+  outcome: string | null;
+  notes: string | null;
+  scheduled_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentRelease {
+  id: string;
+  application_id: string;
+  record_id: string;
+  released_at: string;
+  received_by_name: string;
+  received_by_id_number: string | null;
+  relationship: string | null;
+  released_by: string | null;
+  acknowledged: boolean;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -141,6 +241,8 @@ export interface FranchiseApplicationDetail extends FranchiseApplication {
   reviewer?: Pick<Profile, "id" | "full_name"> | null;
   record?: Pick<FranchiseRecord, "id" | "franchise_number" | "issued_at" | "expires_at" | "archived"> | null;
   timeline?: ApplicationStatusHistory[];
+  appointments?: ApplicationAppointment[];
+  release?: DocumentRelease | null;
 }
 
 export interface FranchiseDocument {
@@ -198,7 +300,13 @@ export interface ApplicationStatusHistory {
     | "approved"
     | "rejected"
     | "certificate_issued"
-    | "archived";
+    | "archived"
+    | "stage_changed"
+    | "appointment_scheduled"
+    | "appointment_completed"
+    | "endorsement_recorded"
+    | "decision_recorded"
+    | "document_released";
   actor_id: string | null;
   note: string | null;
   created_at: string;
