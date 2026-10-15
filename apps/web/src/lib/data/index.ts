@@ -12,12 +12,16 @@ import type {
   ActivityAction,
   ActivityLog,
   AnalyticsOverview,
+  ApplicationAppointment,
   ApplicationStatus,
   ApplicationType,
   Barangay,
   CertificateVerification,
   DocumentComplianceRow,
+  DocumentRelease,
   ExpiringRecord,
+  FormRequest,
+  FormRequestStatus,
   FranchiseApplicationDetail,
   FranchiseDocument,
   FranchiseRecordDetail,
@@ -75,6 +79,18 @@ export interface LogFilters {
   to?: string;
   page?: number;
   pageSize?: number;
+}
+
+export interface FormRequestFilters {
+  status?: FormRequestStatus | "all";
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface FormRequestDetail extends FormRequest {
+  applicant?: Pick<Profile, "id" | "full_name" | "email" | "contact_number"> | null;
+  toda?: Pick<Toda, "id" | "name" | "code"> | null;
 }
 
 export interface ListResult<T> {
@@ -391,6 +407,105 @@ export async function getApplicationDocumentsWithUrls(
   );
 
   return withUrls;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Application handling (appointments, document release, form requests)        */
+/* -------------------------------------------------------------------------- */
+
+export async function getApplicationAppointments(
+  applicationId: string,
+): Promise<ApplicationAppointment[]> {
+  if (isDemoMode()) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("application_appointments")
+    .select("*")
+    .eq("application_id", applicationId)
+    .order("scheduled_at", { ascending: true });
+  return (data ?? []) as unknown as ApplicationAppointment[];
+}
+
+export async function getDocumentRelease(
+  applicationId: string,
+): Promise<DocumentRelease | null> {
+  if (isDemoMode()) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("document_releases")
+    .select("*")
+    .eq("application_id", applicationId)
+    .order("released_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as unknown as DocumentRelease | null) ?? null;
+}
+
+const FORM_REQUEST_SELECT = `
+  *,
+  applicant:profiles!form_requests_requested_by_fkey(id, full_name, email, contact_number),
+  toda:todas!form_requests_toda_id_fkey(id, name, code)
+`;
+
+export async function listFormRequests(
+  filters: FormRequestFilters = {},
+): Promise<ListResult<FormRequestDetail>> {
+  const page = Math.max(filters.page ?? 1, 1);
+  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
+
+  if (isDemoMode()) {
+    const rows = demo.demoFormRequests.filter((request) => {
+      if (filters.status && filters.status !== "all" && request.status !== filters.status)
+        return false;
+      if (filters.search) {
+        const term = filters.search.toLowerCase();
+        const haystack = [request.form_number, request.applicant?.full_name ?? "", request.toda?.name ?? ""]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+    return paginate(rows, page, pageSize);
+  }
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("form_requests")
+    .select(FORM_REQUEST_SELECT, { count: "exact" });
+
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.search) {
+    const term = filters.search.replace(/[%,]/g, " ").trim();
+    query = query.or(`form_number.ilike.%${term}%`);
+  }
+
+  const { data, count } = await query
+    .order("requested_at", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  return {
+    rows: (data ?? []) as unknown as FormRequestDetail[],
+    count: count ?? 0,
+    page,
+    pageSize,
+  };
+}
+
+export async function getFormRequest(id: string): Promise<FormRequestDetail | null> {
+  if (isDemoMode()) {
+    return demo.demoFormRequests.find((request) => request.id === id) ?? null;
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("form_requests")
+    .select(FORM_REQUEST_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  return (data as unknown as FormRequestDetail | null) ?? null;
 }
 
 export async function getPendingApplicationsForStaff(

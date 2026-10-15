@@ -4,7 +4,7 @@ Companion to [`STAFF-INVITATIONS-PLAN.md`](./STAFF-INVITATIONS-PLAN.md). This fi
 what has **already been completed**, so the next person does not redo it or assume the
 database is empty.
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-15
 
 ---
 

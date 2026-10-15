@@ -28,6 +28,8 @@ export async function RecordDetail({
   const record = await getFranchiseRecord(recordId);
   if (!record) notFound();
 
+  const readOnly = basePath === "/admin";
+
   const [certificateUrl, settings] = await Promise.all([
     getCertificateSignedUrl(recordId),
     listSettings(),
@@ -113,11 +115,11 @@ export async function RecordDetail({
             </dl>
           </Card>
 
-          <CertificateActions record={record} certificateUrl={certificateUrl} settings={settings} />
+          <CertificateActions record={record} certificateUrl={certificateUrl} settings={settings} readOnly={readOnly} />
 
           <Card>
             <CardHeader title="Archive" description="Operational status only — the documentary record is preserved." icon={Archive} />
-            <ArchiveActions recordId={record.id} archived={record.archived} />
+            <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
           </Card>
         </div>
 

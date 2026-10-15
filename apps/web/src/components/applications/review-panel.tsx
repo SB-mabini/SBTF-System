@@ -3,26 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
   ExternalLink,
   Eye,
   FileText,
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
-  XCircle,
 } from "lucide-react";
 
 import { Alert, Badge, Button, Card, CardHeader, DocumentStatusBadge, Field } from "@/components/ui";
-import { ConfirmDialog, Modal } from "@/components/dialog";
-import {
-  approveApplicationAction,
-  rejectApplicationAction,
-  startReviewAction,
-  verifyDocumentAction,
-} from "@/lib/actions/applications";
+import { Modal } from "@/components/dialog";
+import { startReviewAction, verifyDocumentAction } from "@/lib/actions/applications";
 import { DOCUMENT_LABELS, REQUIRED_DOCUMENTS } from "@/lib/constants";
-import { documentLabel, fileSize, formatDateTime } from "@/lib/format";
+import { fileSize, formatDateTime } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
 import type { DocumentType, FranchiseDocument, FranchiseApplicationDetail } from "@/types/database";
 
@@ -31,26 +24,22 @@ type DocumentWithUrl = FranchiseDocument & { signed_url?: string | null };
 export function ReviewPanel({
   application,
   documents,
+  readOnly = false,
 }: {
   application: FranchiseApplicationDetail;
   documents: DocumentWithUrl[];
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [approveOpen, setApproveOpen] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
   const [documentReject, setDocumentReject] = useState<DocumentWithUrl | null>(null);
   const [documentRemark, setDocumentRemark] = useState("");
 
-  const readOnly = isDemoMode();
+  const disabled = readOnly || isDemoMode();
   const decided = application.status !== "pending";
   const verifiedCount = documents.filter((document) => document.verification_status === "verified").length;
-  const allVerified = REQUIRED_DOCUMENTS.every((type) =>
-    documents.some((document) => document.document_type === type && document.verification_status === "verified"),
-  );
 
   const byType = new Map<DocumentType, DocumentWithUrl>();
   documents.forEach((document) => byType.set(document.document_type, document));
@@ -59,8 +48,6 @@ export function ReviewPanel({
     setMessage({ ok: result.ok, text: result.message });
     setBusy(false);
     if (result.ok) {
-      setApproveOpen(false);
-      setRejectOpen(false);
       setDocumentReject(null);
       setDocumentRemark("");
       startTransition(() => router.refresh());
@@ -72,7 +59,11 @@ export function ReviewPanel({
     refresh(await startReviewAction(application.id));
   }
 
-  async function handleVerify(document: DocumentWithUrl, status: "verified" | "rejected" | "pending", remarks?: string) {
+  async function handleVerify(
+    document: DocumentWithUrl,
+    status: "verified" | "rejected" | "pending",
+    remarks?: string,
+  ) {
     setBusy(true);
     refresh(
       await verifyDocumentAction({
@@ -84,27 +75,17 @@ export function ReviewPanel({
     );
   }
 
-  async function handleApprove() {
-    setBusy(true);
-    refresh(await approveApplicationAction(application.id));
-  }
-
-  async function handleReject() {
-    setBusy(true);
-    refresh(await rejectApplicationAction(application.id, rejectReason));
-  }
-
   return (
     <div className="space-y-4">
       {message ? <Alert tone={message.ok ? "success" : "danger"}>{message.text}</Alert> : null}
 
       <Card>
         <CardHeader
-          title="Review workspace"
+          title="Documentary requirements"
           description={
             decided
-              ? "This application has been decided. The record below is read-only."
-              : "Verify each documentary requirement, then record the decision."
+              ? "This application has been decided. The documents below are read-only."
+              : "Verify each documentary requirement before the application can be marked verified."
           }
           icon={Eye}
           action={
@@ -113,7 +94,7 @@ export function ReviewPanel({
             ) : (
               <Button
                 variant="secondary"
-                disabled={readOnly || decided || busy}
+                disabled={disabled || decided || busy}
                 loading={busy && !decided}
                 onClick={handleStartReview}
               >
@@ -174,7 +155,7 @@ export function ReviewPanel({
 
                       <Button
                         variant="secondary"
-                        disabled={readOnly || decided || busy}
+                        disabled={disabled || decided || busy}
                         onClick={() => handleVerify(document, "verified")}
                       >
                         <ThumbsUp className="h-3.5 w-3.5" />
@@ -183,7 +164,7 @@ export function ReviewPanel({
 
                       <Button
                         variant="outline"
-                        disabled={readOnly || decided || busy}
+                        disabled={disabled || decided || busy}
                         onClick={() => {
                           setDocumentReject(document);
                           setDocumentRemark("");
@@ -196,7 +177,7 @@ export function ReviewPanel({
                       {document.verification_status !== "pending" && !decided ? (
                         <Button
                           variant="ghost"
-                          disabled={readOnly || busy}
+                          disabled={disabled || busy}
                           onClick={() => handleVerify(document, "pending")}
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -213,103 +194,21 @@ export function ReviewPanel({
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
           <p className="text-[0.8125rem] text-muted">
-            <span className="font-medium text-ink">{verifiedCount} of 4</span> requirements verified.
-            Approval needs all four verified.
+            {verifiedCount} of {REQUIRED_DOCUMENTS.length} documentary requirements verified.
           </p>
-
           {decided ? (
             <Badge tone={application.status === "approved" ? "approved" : "rejected"}>
               {application.status === "approved" ? "Approved" : "Rejected"}
             </Badge>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={readOnly || !allVerified || busy}
-                title={allVerified ? undefined : "All four documents must be verified first"}
-                onClick={() => setApproveOpen(true)}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Approve and issue franchise
-              </Button>
-              <Button variant="danger" disabled={readOnly || busy} onClick={() => setRejectOpen(true)}>
-                <XCircle className="h-4 w-4" />
-                Reject application
-              </Button>
-            </div>
-          )}
+          ) : null}
         </div>
       </Card>
 
-      {/* Approve */}
-      <ConfirmDialog
-        open={approveOpen}
-        title="Approve this application?"
-        message="A franchise number and validity dates will be issued, a franchise record will be created, the applicant will be notified, and the decision will be written to the activity log. Approvals cannot be reverted from the interface."
-        confirmLabel="Approve and issue"
-        loading={busy}
-        onConfirm={handleApprove}
-        onCancel={() => setApproveOpen(false)}
-      >
-        <dl className="grid gap-2 text-[0.8125rem]">
-          <Row label="Application" value={application.application_number} />
-          <Row label="Operator" value={`${application.operator_first_name} ${application.operator_last_name}`} />
-          <Row label="Plate" value={application.plate_number} />
-          <Row label="TODA" value={application.toda?.name ?? "—"} />
-          <Row
-            label="Type"
-            value={application.application_type === "renewal" ? "Renewal" : "New franchise"}
-          />
-        </dl>
-      </ConfirmDialog>
-
-      {/* Reject */}
-      <Modal
-        open={rejectOpen}
-        title="Reject this application"
-        description="The applicant receives the reason in the mobile app and by notification."
-        onClose={() => setRejectOpen(false)}
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              loading={busy}
-              disabled={rejectReason.trim().length < 10}
-              onClick={handleReject}
-            >
-              Reject application
-            </Button>
-          </>
-        }
-      >
-        <Field
-          label="Reason for rejection (required, at least 10 characters)"
-          htmlFor="reject-reason"
-          hint={`${rejectReason.trim().length} character(s) entered.`}
-        >
-          <textarea
-            id="reject-reason"
-            className="sbtf-input min-h-[110px]"
-            value={rejectReason}
-            onChange={(event) => setRejectReason(event.target.value)}
-            placeholder="State the specific deficiency and what the applicant must submit again."
-          />
-        </Field>
-        <div className="mt-3">
-          <Alert tone="info">
-            Rejection reasons are part of the public record of the transaction and appear in the
-            activity log and the applicant&apos;s timeline.
-          </Alert>
-        </div>
-      </Modal>
-
-      {/* Reject a single document */}
+      {/* Reject document */}
       <Modal
         open={documentReject !== null}
-        title="Reject this document"
-        description={documentReject ? documentLabel(documentReject.document_type) : undefined}
+        title="Reject document"
+        description="The applicant is notified with the remark below."
         onClose={() => setDocumentReject(null)}
         footer={
           <>
@@ -352,15 +251,6 @@ export function ReviewPanel({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted">{label}</dt>
-      <dd className="text-right font-medium text-ink">{value}</dd>
-    </div>
-  );
-}
-
 export function ApplicationSummaryCard({
   application,
 }: {
@@ -370,6 +260,7 @@ export function ApplicationSummaryCard({
     ["Application number", application.application_number],
     ["Type", application.application_type === "renewal" ? "Renewal" : "New franchise"],
     ["Status", application.status],
+    ["Stage", application.stage.replace(/_/g, " ")],
     ["Submitted", formatDateTime(application.submitted_at)],
     ["Review started", application.review_started_at ? formatDateTime(application.review_started_at) : "Not started"],
     ["Decided", application.reviewed_at ? formatDateTime(application.reviewed_at) : "Pending"],
@@ -383,7 +274,7 @@ export function ApplicationSummaryCard({
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-4">
             <dt className="text-muted">{label}</dt>
-            <dd className="text-right font-medium text-ink">{value ?? "—"}</dd>
+            <dd className="text-right font-medium capitalize text-ink">{value ?? "—"}</dd>
           </div>
         ))}
       </dl>

@@ -14,6 +14,7 @@ import type {
   Barangay,
   DocumentComplianceRow,
   ExpiringRecord,
+  FormRequest,
   FranchiseApplicationDetail,
   FranchiseDocument,
   FranchiseRecordDetail,
@@ -746,3 +747,53 @@ export const demoSettings: SystemSetting[] = [
   updated_by: index % 3 === 0 ? demoProfiles[0]!.id : null,
   updated_at: iso(30 - index),
 }));
+
+export const demoFormRequests: Array<
+  FormRequest & {
+    applicant?: Pick<Profile, "id" | "full_name" | "email" | "contact_number"> | null;
+    toda?: Pick<Toda, "id" | "name" | "code"> | null;
+  }
+> = (() => {
+  const statuses: Array<"requested" | "issued" | "converted" | "cancelled"> = [
+    "requested",
+    "requested",
+    "issued",
+    "issued",
+    "converted",
+    "cancelled",
+  ];
+
+  return statuses.map((status, index) => {
+    const driver = driverProfiles[(index * 3) % driverProfiles.length]!;
+    const toda = demoTodas[(index * 5) % demoTodas.length]!;
+    const requestedDaysAgo = 4 + index * 6;
+    return {
+      id: uuid(0x9000 + index),
+      form_number: `FR-2026-${String(index + 1).padStart(6, "0")}`,
+      requested_by: driver.id,
+      toda_id: toda.id,
+      application_type: index % 3 === 0 ? "renewal" : "new",
+      status,
+      purpose:
+        index % 2 === 0
+          ? "New franchise application for a tricycle-for-hire unit."
+          : "Renewal of an existing franchise that is about to expire.",
+      requested_at: iso(requestedDaysAgo, 10),
+      issued_at: status === "requested" ? null : iso(requestedDaysAgo - 1, 13),
+      issued_by: status === "requested" ? null : demoProfiles[1]!.id,
+      converted_application_id:
+        status === "converted" ? uuid(0x3000 + index) : null,
+      cancelled_at: status === "cancelled" ? iso(requestedDaysAgo - 2, 9) : null,
+      cancel_reason: status === "cancelled" ? "Applicant withdrew the request." : null,
+      created_at: iso(requestedDaysAgo, 10),
+      updated_at: iso(requestedDaysAgo - 1, 13),
+      applicant: {
+        id: driver.id,
+        full_name: driver.full_name,
+        email: driver.email,
+        contact_number: driver.contact_number,
+      },
+      toda: { id: toda.id, name: toda.name, code: toda.code },
+    };
+  });
+})();

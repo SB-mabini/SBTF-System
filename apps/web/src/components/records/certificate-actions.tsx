@@ -16,6 +16,7 @@ interface CertificateActionsProps {
   record: FranchiseRecordDetail;
   certificateUrl: string | null;
   settings: SystemSetting[];
+  readOnly?: boolean;
 }
 
 function settingValue(settings: SystemSetting[], key: string, fallback: string): string {
@@ -24,7 +25,7 @@ function settingValue(settings: SystemSetting[], key: string, fallback: string):
   return typeof setting.value === "string" ? setting.value : String(setting.value ?? fallback);
 }
 
-export function CertificateActions({ record, certificateUrl, settings }: CertificateActionsProps) {
+export function CertificateActions({ record, certificateUrl, settings, readOnly: externalReadOnly = false }: CertificateActionsProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
@@ -32,7 +33,7 @@ export function CertificateActions({ record, certificateUrl, settings }: Certifi
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const generated = Boolean(record.certificate_storage_path) || Boolean(previewUrl);
-  const readOnly = isDemoMode();
+  const readOnly = isDemoMode() || externalReadOnly;
 
   async function generate() {
     setBusy(true);
@@ -154,15 +155,17 @@ export function CertificateActions({ record, certificateUrl, settings }: Certifi
       </dl>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={generate}
-          loading={busy}
-          disabled={readOnly && generated}
-          title={readOnly ? "Available without upload in preview mode" : undefined}
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
-          {generated ? "Regenerate certificate" : "Generate certificate"}
-        </Button>
+        {externalReadOnly ? null : (
+          <Button
+            onClick={generate}
+            loading={busy}
+            disabled={readOnly && generated}
+            title={readOnly ? "Available without upload in preview mode" : undefined}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
+            {generated ? "Regenerate certificate" : "Generate certificate"}
+          </Button>
+        )}
 
         {previewUrl ? (
           <>

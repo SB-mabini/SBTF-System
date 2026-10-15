@@ -3,16 +3,20 @@ import { notFound } from "next/navigation";
 import { Archive, Building2, Car, FileText, History, Stamp, User } from "lucide-react";
 
 import { ApplicationSummaryCard, ReviewPanel } from "@/components/applications/review-panel";
+import { HandlingPanel } from "@/components/applications/handling-panel";
 import { StatusTimeline } from "@/components/applications/status-timeline";
 import { ArchiveActions } from "@/components/records/archive-actions";
 import { CertificateActions } from "@/components/records/certificate-actions";
 import { Alert, Badge, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
 import {
   getApplication,
+  getApplicationAppointments,
   getApplicationDocumentsWithUrls,
   getCertificateSignedUrl,
+  getDocumentRelease,
   getFranchiseRecord,
   listSettings,
+  listStaffMembers,
 } from "@/lib/data";
 import { applicationTypeLabel, documentLabel, formatDate, relativeTime } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
@@ -25,10 +29,17 @@ export async function ApplicationDetail({
   applicationId: string;
   basePath: "/admin" | "/staff";
 }) {
+  const readOnly = basePath === "/admin";
+
   const application = await getApplication(applicationId);
   if (!application) notFound();
 
-  const documents = await getApplicationDocumentsWithUrls(applicationId);
+  const [documents, appointments, release, staffMembers] = await Promise.all([
+    getApplicationDocumentsWithUrls(applicationId),
+    getApplicationAppointments(applicationId),
+    getDocumentRelease(applicationId),
+    listStaffMembers(),
+  ]);
 
   // The embedded `record` on the application is only a summary. Re-fetch the
   // full franchise record so the certificate and archive controls — the same
@@ -111,7 +122,15 @@ export async function ApplicationDetail({
             </dl>
           </Card>
 
-          <ReviewPanel application={application} documents={documents} />
+          <HandlingPanel
+            application={application}
+            staff={staffMembers.filter((member) => member.role === "staff")}
+            appointments={appointments}
+            release={release}
+            readOnly={readOnly}
+          />
+
+          <ReviewPanel application={application} documents={documents} readOnly={readOnly} />
         </div>
 
         <div className="space-y-4">
@@ -197,19 +216,20 @@ export async function ApplicationDetail({
 
           {record ? (
             <>
-              <CertificateActions
-                record={record}
-                certificateUrl={certificateUrl}
-                settings={settings}
+            <CertificateActions
+              record={record}
+              certificateUrl={certificateUrl}
+              settings={settings}
+              readOnly={readOnly}
+            />
+            <Card>
+              <CardHeader
+                title="Archive"
+                description="Operational status only — the documentary record is preserved."
+                icon={Archive}
               />
-              <Card>
-                <CardHeader
-                  title="Archive"
-                  description="Operational status only — the documentary record is preserved."
-                  icon={Archive}
-                />
-                <ArchiveActions recordId={record.id} archived={record.archived} />
-              </Card>
+              <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
+            </Card>
             </>
           ) : null}
         </div>

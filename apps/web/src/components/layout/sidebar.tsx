@@ -6,6 +6,7 @@ import {
   Activity,
   BarChart3,
   Bell,
+  ClipboardList,
   FileBarChart,
   FileText,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const ADMIN_NAV: NavItem[] = [
 const STAFF_NAV: NavItem[] = [
   { href: "/staff", label: "Dashboard", icon: LayoutDashboard, capability: "dashboard.view", exact: true },
   { href: "/staff/applications", label: "Applications", icon: FileText, capability: "applications.view_all" },
+  { href: "/staff/form-requests", label: "Form Requests", icon: ClipboardList, capability: "form_requests.manage" },
   { href: "/staff/franchises", label: "Franchise Records", icon: Stamp, capability: "records.view_all" },
   { href: "/staff/analytics", label: "Analytics", icon: BarChart3, capability: "analytics.view_operational" },
   { href: "/staff/reports", label: "Reports", icon: FileBarChart, capability: "reports.export" },

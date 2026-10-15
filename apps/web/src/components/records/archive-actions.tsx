@@ -12,9 +12,11 @@ import { isDemoMode } from "@/lib/env";
 export function ArchiveActions({
   recordId,
   archived,
+  readOnly: externalReadOnly = false,
 }: {
   recordId: string;
   archived: boolean;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -23,7 +25,7 @@ export function ArchiveActions({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const readOnly = isDemoMode();
+  const readOnly = isDemoMode() || externalReadOnly;
 
   async function submit() {
     setBusy(true);
