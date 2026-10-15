@@ -11,7 +11,6 @@ import { Alert, Badge, Card, CardHeader, LinkButton, SectionTitle } from "@/comp
 import {
   getApplication,
   getApplicationAppointments,
-  getApplicationDocumentsWithUrls,
   getCertificateSignedUrl,
   getDocumentRelease,
   getFranchiseRecord,
@@ -34,8 +33,11 @@ export async function ApplicationDetail({
   const application = await getApplication(applicationId);
   if (!application) notFound();
 
-  const [documents, appointments, release, staffMembers] = await Promise.all([
-    getApplicationDocumentsWithUrls(applicationId),
+  // Files stream through /api/documents/[id] when staff click "Open file", so
+  // no signed URL is embedded here — one minted now would expire before use.
+  const documents = application.documents ?? [];
+
+  const [appointments, release, staffMembers] = await Promise.all([
     getApplicationAppointments(applicationId),
     getDocumentRelease(applicationId),
     listStaffMembers(),
@@ -128,9 +130,9 @@ export async function ApplicationDetail({
             appointments={appointments}
             release={release}
             readOnly={readOnly}
-          />
-
-          <ReviewPanel application={application} documents={documents} readOnly={readOnly} />
+          >
+            <ReviewPanel application={application} documents={documents} readOnly={readOnly} />
+          </HandlingPanel>
         </div>
 
         <div className="space-y-4">

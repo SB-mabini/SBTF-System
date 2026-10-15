@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -30,7 +30,7 @@ import {
   APPOINTMENT_STATUS_LABELS,
   REQUIRED_DOCUMENTS,
 } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, toDateTimeLocalValue } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
 import type {
   ApplicationAppointment,
@@ -49,12 +49,14 @@ export function HandlingPanel({
   appointments,
   release,
   readOnly = false,
+  children,
 }: {
   application: FranchiseApplicationDetail;
   staff: Profile[];
   appointments: ApplicationAppointment[];
   release: DocumentRelease | null;
   readOnly?: boolean;
+  children?: ReactNode;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -264,6 +266,8 @@ export function HandlingPanel({
         )}
       </Card>
 
+      {children}
+
       <Card>
         <CardHeader
           title="Appointments"
@@ -271,12 +275,27 @@ export function HandlingPanel({
           icon={CalendarDays}
           action={
             !locked && !terminal ? (
-              <Button variant="secondary" onClick={() => setScheduleOpen(true)}>
+              <Button
+                variant="secondary"
+                disabled={!allVerified || busy}
+                title={
+                  allVerified
+                    ? undefined
+                    : "Verify every documentary requirement before scheduling an appointment."
+                }
+                onClick={() => setScheduleOpen(true)}
+              >
                 Schedule
               </Button>
             ) : null
           }
         />
+
+        {!locked && !terminal && !allVerified ? (
+          <p className="mb-3 text-[0.75rem] text-secondary-600">
+            Scheduling is locked until every documentary requirement has been verified above.
+          </p>
+        ) : null}
 
         {appointments.length === 0 ? (
           <p className="text-[0.8125rem] text-muted">No appointments scheduled.</p>
@@ -308,7 +327,7 @@ export function HandlingPanel({
                         setAppointmentEdit(appointment);
                         setAppointmentStatus("completed");
                         setAppointmentOutcome("");
-                        setAppointmentAt(appointment.scheduled_at.slice(0, 16));
+                        setAppointmentAt(toDateTimeLocalValue(appointment.scheduled_at));
                         setAppointmentVenue(appointment.venue);
                         setAppointmentNotes("");
                       }}

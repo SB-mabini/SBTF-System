@@ -26,7 +26,6 @@ import type {
   FormRequestStatus,
   FranchiseApplication,
   FranchiseApplicationDetail,
-  FranchiseDocument,
   FranchiseRecordDetail,
   Notification,
   PrescriptiveIndicator,
@@ -386,7 +385,7 @@ export async function getApplication(
   const supabase = await createClient();
   const { data } = await supabase
     .from("franchise_applications")
-    .select(`${APPLICATION_SELECT}, timeline:application_status_history(*), reviewer:profiles!franchise_applications_reviewed_by_fkey(id, full_name), review_starter:profiles!franchise_applications_review_started_by_fkey(id, full_name)`)
+    .select(`${APPLICATION_SELECT}, timeline:application_status_history(*), review_starter:profiles!franchise_applications_review_started_by_fkey(id, full_name)`)
     .eq("id", id)
     .maybeSingle();
 
@@ -402,29 +401,6 @@ export async function getApplication(
       REQUIRED_DOCUMENTS.indexOf(a.document_type) - REQUIRED_DOCUMENTS.indexOf(b.document_type),
   );
   return application;
-}
-
-export async function getApplicationDocumentsWithUrls(
-  applicationId: string,
-): Promise<Array<FranchiseDocument & { signed_url: string | null }>> {
-  const application = await getApplication(applicationId);
-  if (!application?.documents) return [];
-
-  if (isDemoMode()) {
-    return application.documents.map((document) => ({ ...document, signed_url: null }));
-  }
-
-  const supabase = await createClient();
-  const withUrls = await Promise.all(
-    application.documents.map(async (document) => {
-      const { data } = await supabase.storage
-        .from("franchise-documents")
-        .createSignedUrl(document.storage_path, 120);
-      return { ...document, signed_url: data?.signedUrl ?? null };
-    }),
-  );
-
-  return withUrls;
 }
 
 /* -------------------------------------------------------------------------- */

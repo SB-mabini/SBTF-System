@@ -19,29 +19,27 @@ import { fileSize, formatDateTime } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
 import type { DocumentType, FranchiseDocument, FranchiseApplicationDetail } from "@/types/database";
 
-type DocumentWithUrl = FranchiseDocument & { signed_url?: string | null };
-
 export function ReviewPanel({
   application,
   documents,
   readOnly = false,
 }: {
   application: FranchiseApplicationDetail;
-  documents: DocumentWithUrl[];
+  documents: FranchiseDocument[];
   readOnly?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [documentReject, setDocumentReject] = useState<DocumentWithUrl | null>(null);
+  const [documentReject, setDocumentReject] = useState<FranchiseDocument | null>(null);
   const [documentRemark, setDocumentRemark] = useState("");
 
   const disabled = readOnly || isDemoMode();
   const decided = application.status !== "pending";
   const verifiedCount = documents.filter((document) => document.verification_status === "verified").length;
 
-  const byType = new Map<DocumentType, DocumentWithUrl>();
+  const byType = new Map<DocumentType, FranchiseDocument>();
   documents.forEach((document) => byType.set(document.document_type, document));
 
   function refresh(result: { ok: boolean; message: string }) {
@@ -60,7 +58,7 @@ export function ReviewPanel({
   }
 
   async function handleVerify(
-    document: DocumentWithUrl,
+    document: FranchiseDocument,
     status: "verified" | "rejected" | "pending",
     remarks?: string,
   ) {
@@ -136,21 +134,21 @@ export function ReviewPanel({
                     ) : null}
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {document.signed_url ? (
+                      {isDemoMode() ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-page px-2.5 py-1.5 text-[0.75rem] text-muted">
+                          <FileText className="h-3.5 w-3.5" />
+                          Preview mode — no file
+                        </span>
+                      ) : (
                         <a
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-2.5 py-1.5 text-[0.75rem] font-medium text-ink hover:bg-page"
-                          href={document.signed_url}
+                          href={`/api/documents/${document.id}`}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3.5 py-2 text-[0.8125rem] font-medium text-primary-700 transition-colors hover:bg-primary-100"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           Open file
                         </a>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-page px-2.5 py-1.5 text-[0.75rem] text-muted">
-                          <FileText className="h-3.5 w-3.5" />
-                          {isDemoMode() ? "Preview mode — no file" : "Signed link unavailable"}
-                        </span>
                       )}
 
                       <Button

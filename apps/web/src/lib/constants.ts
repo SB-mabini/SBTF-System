@@ -10,6 +10,16 @@ import type {
 export const APP_NAME = "SBTF System";
 export const MUNICIPALITY = "Municipality of Mabini";
 export const PROVINCE = "Batangas";
+
+/**
+ * The municipality's civil time zone. Every date shown in the interface and
+ * every `datetime-local` value is interpreted in this zone, so a booking reads
+ * the same whether it is rendered on a UTC server or in the operator's browser.
+ * Philippine Standard Time is UTC+8 all year — it has never observed DST — so
+ * the fixed offset below is exact.
+ */
+export const APP_TIME_ZONE = "Asia/Manila";
+export const APP_TIME_ZONE_OFFSET = "+08:00";
 export const SYSTEM_TITLE =
   "Franchising and Tricycle Driver Registration System";
 export const SYSTEM_TITLE_LONG =

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
+import { fromDateTimeLocalValue } from "@/lib/format";
 import { DEMO_WRITE_BLOCKED, type ActionState } from "@/lib/actions/types";
 
 /**
@@ -295,7 +296,7 @@ export async function scheduleAppointmentAction(input: {
   const { error } = await supabase.rpc("rpc_staff_schedule_appointment", {
     p_application_id: input.applicationId,
     p_kind: input.kind,
-    p_scheduled_at: new Date(input.scheduledAt).toISOString(),
+    p_scheduled_at: fromDateTimeLocalValue(input.scheduledAt),
     p_venue: input.venue.trim(),
     p_notes: input.notes?.trim() || null,
   });
@@ -322,7 +323,7 @@ export async function updateAppointmentAction(input: {
     p_appointment_id: input.appointmentId,
     p_status: input.status,
     p_outcome: input.outcome?.trim() || null,
-    p_scheduled_at: input.scheduledAt ? new Date(input.scheduledAt).toISOString() : null,
+    p_scheduled_at: input.scheduledAt ? fromDateTimeLocalValue(input.scheduledAt) : null,
     p_venue: input.venue?.trim() || null,
     p_notes: input.notes?.trim() || null,
   });

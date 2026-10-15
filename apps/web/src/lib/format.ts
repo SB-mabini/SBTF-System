@@ -2,6 +2,8 @@ import {
   ACCOUNT_STATUS_LABELS,
   APPLICATION_STATUS_LABELS,
   APPLICATION_TYPE_LABELS,
+  APP_TIME_ZONE,
+  APP_TIME_ZONE_OFFSET,
   DOCUMENT_LABELS,
   ROLE_LABELS,
 } from "@/lib/constants";
@@ -28,6 +30,7 @@ export function formatDate(value: string | null | undefined): string {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: APP_TIME_ZONE,
   });
 }
 
@@ -40,7 +43,45 @@ export function formatDateTime(value: string | null | undefined): string {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TIME_ZONE,
   });
+}
+
+/**
+ * Formats a stored instant (UTC ISO string) as a `datetime-local` field value
+ * in the municipality's time zone. An `<input type="datetime-local">` has no
+ * zone, so it must be shown as the local wall-clock time — otherwise a 9:00 AM
+ * booking reads back as its 01:00 UTC equivalent and is saved 8 hours off.
+ */
+export function toDateTimeLocalValue(value: string | null | undefined): string {
+  const date = parseDate(value);
+  if (!date) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((accumulator, part) => {
+      accumulator[part.type] = part.value;
+      return accumulator;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+/**
+ * Converts a `datetime-local` value into the UTC instant it represents in the
+ * municipality's time zone. The field carries no zone, and server actions run
+ * on the server, so the zone must be pinned here rather than inferred from the
+ * host — a UTC production server would otherwise shift every booking by 8h.
+ */
+export function fromDateTimeLocalValue(value: string): string {
+  const withSeconds = value.length === 16 ? `${value}:00` : value;
+  return new Date(`${withSeconds}${APP_TIME_ZONE_OFFSET}`).toISOString();
 }
 
 export function formatNumber(value: number | null | undefined): string {
