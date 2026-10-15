@@ -12,7 +12,7 @@ import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from "@/lib/actions/notifications";
-import { formatDateTime, humanizeKey } from "@/lib/format";
+import { formatDateTime, humanizeKey, notificationTarget } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
 import type { Notification } from "@/types/database";
 
@@ -24,6 +24,12 @@ const TYPE_LABELS: Record<string, string> = {
   document_rejected: "Document rejected",
   renewal_reminder: "Renewal reminder",
   application_under_review: "Application under review",
+  application_stage_changed: "Stage changed",
+  form_request_received: "Form request received",
+  form_request_issued: "Form request issued",
+  appointment_scheduled: "Appointment scheduled",
+  appointment_updated: "Appointment updated",
+  document_release_ready: "Document released",
   account_updated: "Account updated",
   system: "System",
 };
@@ -142,22 +148,17 @@ export function NotificationList({
                   </p>
 
                   <div className="mt-2 flex flex-wrap items-center gap-3">
-                    {notification.target_type === "franchise_application" && notification.target_id ? (
-                      <Link
-                        className="text-[0.8125rem] font-medium text-primary hover:underline"
-                        href={`${basePath}/applications/${notification.target_id}`}
-                      >
-                        Open application
-                      </Link>
-                    ) : null}
-                    {notification.target_type === "franchise_record" && notification.target_id ? (
-                      <Link
-                        className="text-[0.8125rem] font-medium text-primary hover:underline"
-                        href={`${basePath}/franchises/${notification.target_id}`}
-                      >
-                        Open franchise record
-                      </Link>
-                    ) : null}
+                    {(() => {
+                      const target = notificationTarget(notification, basePath);
+                      return target ? (
+                        <Link
+                          className="text-[0.8125rem] font-medium text-primary hover:underline"
+                          href={target.href}
+                        >
+                          {target.label}
+                        </Link>
+                      ) : null;
+                    })()}
 
                     {notification.read ? null : (
                       <Button

@@ -10,11 +10,15 @@
 import type {
   ActivityLog,
   AnalyticsOverview,
+  ApplicationAppointment,
   ApplicationStatusHistory,
+  AppointmentKind,
+  AppointmentStatus,
   Barangay,
   DocumentComplianceRow,
   ExpiringRecord,
   FormRequest,
+  FranchiseApplication,
   FranchiseApplicationDetail,
   FranchiseDocument,
   FranchiseRecordDetail,
@@ -794,6 +798,62 @@ export const demoFormRequests: Array<
         contact_number: driver.contact_number,
       },
       toda: { id: toda.id, name: toda.name, code: toda.code },
+    };
+  });
+})();
+
+export const demoAppointments: Array<
+  ApplicationAppointment & {
+    application?:
+      | Pick<FranchiseApplication, "id" | "application_number" | "operator_first_name" | "operator_last_name">
+      | null;
+  }
+> = (() => {
+  const kinds: AppointmentKind[] = [
+    "evaluation",
+    "physical_documents",
+    "hearing",
+    "release",
+    "other",
+  ];
+  const statuses: AppointmentStatus[] = [
+    "scheduled",
+    "scheduled",
+    "completed",
+    "no_show",
+    "rescheduled",
+    "cancelled",
+  ];
+
+  return statuses.map((status, index) => {
+    const application = demoApplications[index]!;
+    const upcoming = index % 2 === 0;
+    const scheduledAt = iso(upcoming ? -(index + 1) : index + 2, 8 + (index % 6));
+    const settled = status === "completed" || status === "no_show";
+
+    return {
+      id: uuid(0xa000 + index),
+      application_id: application.id,
+      kind: kinds[index % kinds.length]!,
+      status,
+      scheduled_at: scheduledAt,
+      venue: index % 3 === 0 ? "Franchising Office, Session Hall" : "Franchising Office, Counter 2",
+      outcome: settled
+        ? status === "completed"
+          ? "Applicant attended and completed the requirement."
+          : "Applicant did not appear for the appointment."
+        : null,
+      notes: index % 2 === 0 ? "Bring the original copies of all submitted documents." : null,
+      scheduled_by: demoProfiles[1]!.id,
+      completed_at: settled ? scheduledAt : null,
+      created_at: iso(index + 6, 9),
+      updated_at: iso(index + 5, 15),
+      application: {
+        id: application.id,
+        application_number: application.application_number,
+        operator_first_name: application.operator_first_name,
+        operator_last_name: application.operator_last_name,
+      },
     };
   });
 })();

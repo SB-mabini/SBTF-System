@@ -11,6 +11,7 @@ import type {
   ApplicationStatus,
   ApplicationType,
   DocumentType,
+  Notification,
   UserRole,
 } from "@/types/database";
 
@@ -162,4 +163,31 @@ export function initials(fullName: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+/**
+ * Where a notification points inside the console. Staff-only destinations are
+ * suppressed for administrators, who have a read-only view of the same data.
+ * Returns null when the notification has no navigable target.
+ */
+export function notificationTarget(
+  notification: Pick<Notification, "target_type" | "target_id">,
+  basePath: "/admin" | "/staff",
+): { href: string; label: string } | null {
+  const { target_type: type, target_id: id } = notification;
+  if (!id) return null;
+
+  if (type === "franchise_application") {
+    return { href: `${basePath}/applications/${id}`, label: "Open application" };
+  }
+  if (type === "franchise_record") {
+    return { href: `${basePath}/franchises/${id}`, label: "Open franchise record" };
+  }
+  if (type === "form_request" && basePath === "/staff") {
+    return { href: "/staff/form-requests", label: "Open form requests" };
+  }
+  if (type === "appointment" && basePath === "/staff") {
+    return { href: "/staff/appointments", label: "Open appointments" };
+  }
+  return null;
 }

@@ -14,7 +14,7 @@ database is empty.
 |---|---|
 | Supabase project ref | `qdtmzgaxktebyhsxrgvf` |
 | URL | `https://qdtmzgaxktebyhsxrgvf.supabase.co` |
-| Branch | `arena/01a104aa-sbtf-system` |
+| Branch | `main` |
 | Local app | `npm run web:dev` → `http://localhost:3000` |
 | Connectivity check | `npm run db:check` (script at `scripts/db-check.mjs`) |
 
@@ -39,7 +39,7 @@ user-supplied. They should be rotated via the account page.
 
 ## 2. Database
 
-- **All 20 migrations applied** to the live project and matching remote history.
+- **All 21 migrations applied** to the live project and matching remote history.
 - 18 tables, 34 public RLS policies, 69 functions, 2 storage buckets.
 - 34 barangays seeded as reference data (from migrations, **not** from `seed.sql`).
 - **Seed data has never been applied** to any environment, by explicit user decision.
@@ -122,10 +122,39 @@ Do not mistake these for configuration problems:
    with recovery and magic-link templates provisioned in `supabase/templates/`
    (`deployment.md` §3.1). The cloud URL configuration must still list the `/auth/confirm`
    redirect for the origin in use; `supabase/config.toml` remains local-only.
+6. **`rpc_verify_certificate` fails at runtime.** In
+   `supabase/migrations/20260101090700_phase0_workflow_rpcs.sql` the function calls
+   `digest(...)` while `set search_path = public, pg_temp` and pgcrypto lives in the
+   `extensions` schema, so the call raises `42883: function digest(text, unknown) does not
+   exist`. The file is already applied, so the fix needs a new migration (qualify the call
+   as `extensions.digest(...)` or widen the search path) rather than an edit.
 
 ---
 
-## 6. Where to look first
+## 6. Staff-driven workflow rebuild (Phases 1–3)
+
+Target workflow is described in [`process.md`](./process.md): staff handle every step of an
+application, administrators are view-only. Implemented so far:
+
+- **Phase 1** — data model and enforcement. New `ApplicationStage` pipeline column plus
+  `application_appointments`, `form_requests` and `document_releases` tables; granular
+  staff-only RPCs; triggers that own the timeline, audit log and notifications; RLS so an
+  administrator can read but never write the workflow tables. Migrations
+  `20260101091500`–`091900`.
+- **Phase 2** — staff handling UI. `handling-panel.tsx` drives the pipeline (assign,
+  compliance, endorsement, decision, release, appointments); `review-panel.tsx` is now
+  document-verification only; the Form Requests console lives at `/staff/form-requests`.
+- **Phase 3** — scheduling and notifications. A cross-application appointments view at
+  `/staff/appointments`, notification deep-links (application, franchise record, form
+  requests, appointments) in the bell dropdown and the notifications page, and the Phase 1
+  tables added to the Realtime publication (`20260101092000`).
+
+Realtime subscriptions honour RLS; the tables published for `supabase_realtime` are the
+original four plus `application_appointments`, `form_requests` and `document_releases`.
+
+---
+
+## 7. Where to look first
 
 | Working on | Read |
 |---|---|

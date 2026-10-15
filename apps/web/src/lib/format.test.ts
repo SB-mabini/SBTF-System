@@ -14,6 +14,7 @@ import {
   formatPercent,
   humanizeKey,
   initials,
+  notificationTarget,
   relativeTime,
   roleLabel,
 } from "./format";
@@ -93,5 +94,34 @@ describe("labels", () => {
   it("builds initials for the avatar in the top bar", () => {
     expect(initials("Juan Dela Cruz")).toBe("JD");
     expect(initials("Maria")).toBe("M");
+  });
+});
+
+describe("notificationTarget", () => {
+  it("resolves application and record targets for both consoles", () => {
+    expect(
+      notificationTarget({ target_type: "franchise_application", target_id: "app-1" }, "/staff"),
+    ).toEqual({ href: "/staff/applications/app-1", label: "Open application" });
+    expect(
+      notificationTarget({ target_type: "franchise_record", target_id: "rec-1" }, "/admin"),
+    ).toEqual({ href: "/admin/franchises/rec-1", label: "Open franchise record" });
+  });
+
+  it("keeps staff-only destinations out of the administrator console", () => {
+    expect(
+      notificationTarget({ target_type: "appointment", target_id: "apt-1" }, "/staff"),
+    ).toEqual({ href: "/staff/appointments", label: "Open appointments" });
+    expect(
+      notificationTarget({ target_type: "appointment", target_id: "apt-1" }, "/admin"),
+    ).toBeNull();
+    expect(
+      notificationTarget({ target_type: "form_request", target_id: "fr-1" }, "/admin"),
+    ).toBeNull();
+  });
+
+  it("returns null when there is no navigable target", () => {
+    expect(
+      notificationTarget({ target_type: "franchise_application", target_id: null }, "/staff"),
+    ).toBeNull();
   });
 });

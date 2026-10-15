@@ -52,6 +52,21 @@ export function RealtimeRefresher() {
       )
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "application_appointments" },
+        schedule,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "form_requests" },
+        schedule,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "document_releases" },
+        schedule,
+      )
+      .on(
+        "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         schedule,
       )

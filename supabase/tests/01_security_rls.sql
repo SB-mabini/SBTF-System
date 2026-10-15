@@ -15,7 +15,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(48);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -470,6 +470,15 @@ select is(
       and tablename in ('notifications', 'franchise_applications', 'franchise_records', 'franchise_documents')),
   4,
   'the four user-facing tables are published for Realtime'
+);
+
+select is(
+  (select count(*)::int
+     from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and tablename in ('application_appointments', 'form_requests', 'document_releases')),
+  3,
+  'the Phase 1 workflow tables are published for Realtime'
 );
 
 select is(

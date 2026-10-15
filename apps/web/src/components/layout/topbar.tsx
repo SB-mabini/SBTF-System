@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
-import { initials, relativeTime, roleLabel } from "@/lib/format";
+import { initials, notificationTarget, relativeTime, roleLabel } from "@/lib/format";
 import type { Notification, UserRole } from "@/types/database";
 
 export function Topbar({
@@ -29,6 +29,7 @@ export function Topbar({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const unread = notifications.filter((notification) => !notification.read).length;
+  const basePath: "/admin" | "/staff" = role === "administrator" ? "/admin" : "/staff";
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -109,7 +110,7 @@ export function Topbar({
                 <p className="text-[0.8125rem] font-semibold text-ink">Notifications</p>
                 <Link
                   className="text-[0.75rem] text-primary hover:underline"
-                  href={role === "administrator" ? "/staff/notifications" : "/staff/notifications"}
+                  href={`${basePath}/notifications`}
                   onClick={() => setNotificationsOpen(false)}
                 >
                   View all
@@ -121,8 +122,9 @@ export function Topbar({
                     No notifications yet.
                   </li>
                 ) : (
-                  notifications.slice(0, 8).map((notification) => (
-                    <li key={notification.id} className="px-3 py-2.5">
+                  notifications.slice(0, 8).map((notification) => {
+                    const target = notificationTarget(notification, basePath);
+                    const body = (
                       <div className="flex items-start gap-2">
                         {!notification.read ? (
                           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-secondary-500" />
@@ -141,8 +143,24 @@ export function Topbar({
                           </p>
                         </div>
                       </div>
-                    </li>
-                  ))
+                    );
+
+                    return (
+                      <li key={notification.id} className="px-3 py-2.5">
+                        {target ? (
+                          <Link
+                            href={target.href}
+                            onClick={() => setNotificationsOpen(false)}
+                            className="block rounded-md transition-colors hover:bg-page"
+                          >
+                            {body}
+                          </Link>
+                        ) : (
+                          body
+                        )}
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </div>

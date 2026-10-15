@@ -15,6 +15,8 @@ import type {
   ApplicationAppointment,
   ApplicationStatus,
   ApplicationType,
+  AppointmentKind,
+  AppointmentStatus,
   Barangay,
   CertificateVerification,
   DocumentComplianceRow,
@@ -22,6 +24,7 @@ import type {
   ExpiringRecord,
   FormRequest,
   FormRequestStatus,
+  FranchiseApplication,
   FranchiseApplicationDetail,
   FranchiseDocument,
   FranchiseRecordDetail,
@@ -91,6 +94,21 @@ export interface FormRequestFilters {
 export interface FormRequestDetail extends FormRequest {
   applicant?: Pick<Profile, "id" | "full_name" | "email" | "contact_number"> | null;
   toda?: Pick<Toda, "id" | "name" | "code"> | null;
+}
+
+export interface AppointmentFilters {
+  status?: AppointmentStatus | "all";
+  kind?: AppointmentKind | "all";
+  scope?: "upcoming" | "past" | "all";
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AppointmentListItem extends ApplicationAppointment {
+  application?:
+    | Pick<FranchiseApplication, "id" | "application_number" | "operator_first_name" | "operator_last_name">
+    | null;
 }
 
 export interface ListResult<T> {
@@ -441,6 +459,65 @@ export async function getDocumentRelease(
     .limit(1)
     .maybeSingle();
   return (data as unknown as DocumentRelease | null) ?? null;
+}
+
+const APPOINTMENT_SELECT = `
+  *,
+  application:franchise_applications!application_appointments_application_id_fkey(id, application_number, operator_first_name, operator_last_name)
+`;
+
+export async function listAppointments(
+  filters: AppointmentFilters = {},
+): Promise<ListResult<AppointmentListItem>> {
+  const page = Math.max(filters.page ?? 1, 1);
+  const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
+  const scope = filters.scope ?? "upcoming";
+  const now = new Date().toISOString();
+
+  if (isDemoMode()) {
+    const term = filters.search?.toLowerCase();
+    const rows = demo.demoAppointments.filter((appointment) => {
+      if (filters.status && filters.status !== "all" && appointment.status !== filters.status)
+        return false;
+      if (filters.kind && filters.kind !== "all" && appointment.kind !== filters.kind) return false;
+      if (scope === "upcoming" && appointment.scheduled_at < now) return false;
+      if (scope === "past" && appointment.scheduled_at >= now) return false;
+      if (term) {
+        const haystack = [
+          appointment.application?.application_number ?? "",
+          appointment.application?.operator_first_name ?? "",
+          appointment.application?.operator_last_name ?? "",
+          appointment.venue,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+    return paginate(rows, page, pageSize);
+  }
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("application_appointments")
+    .select(APPOINTMENT_SELECT, { count: "exact" });
+
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.kind && filters.kind !== "all") query = query.eq("kind", filters.kind);
+  if (scope === "upcoming") query = query.gte("scheduled_at", now);
+  if (scope === "past") query = query.lt("scheduled_at", now);
+
+  const { data, count } = await query
+    .order("scheduled_at", { ascending: scope !== "past" })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  return {
+    rows: (data ?? []) as unknown as AppointmentListItem[],
+    count: count ?? 0,
+    page,
+    pageSize,
+  };
 }
 
 const FORM_REQUEST_SELECT = `
