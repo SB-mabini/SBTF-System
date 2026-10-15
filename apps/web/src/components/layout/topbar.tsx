@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
+import { markNotificationReadAction } from "@/lib/actions/notifications";
 import { initials, notificationTarget, relativeTime, roleLabel } from "@/lib/format";
 import type { Notification, UserRole } from "@/types/database";
 
@@ -150,7 +151,12 @@ export function Topbar({
                         {target ? (
                           <Link
                             href={target.href}
-                            onClick={() => setNotificationsOpen(false)}
+                            onClick={async () => {
+                              setNotificationsOpen(false);
+                              if (notification.read || isDemoMode()) return;
+                              const result = await markNotificationReadAction(notification.id);
+                              if (result.ok) router.refresh();
+                            }}
                             className="block rounded-md transition-colors hover:bg-page"
                           >
                             {body}

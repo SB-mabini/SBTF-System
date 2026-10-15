@@ -1,5 +1,6 @@
 import { ClipboardList, Sparkles } from "lucide-react";
 
+import { UpcomingAppointmentsPanel } from "@/components/appointments/upcoming-panel";
 import { DocumentComplianceChart, ProcessingTimeChart } from "@/components/charts";
 import {
   ExpiringPanel,
@@ -100,6 +101,8 @@ export default async function StaffDashboardPage() {
           </dl>
         </Card>
       </div>
+
+      <UpcomingAppointmentsPanel />
 
       <PrescriptivePanel indicators={indicators} />
 

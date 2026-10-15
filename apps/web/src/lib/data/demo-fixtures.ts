@@ -722,6 +722,30 @@ export const demoNotifications: Notification[] = [
     read_at: iso(2, 10),
     created_at: iso(3, 8),
   },
+  {
+    id: uuid(0x8003),
+    user_id: demoProfiles[0]!.id,
+    title: "Appointment scheduled",
+    message: "A physical document submission appointment is set for Jan 8, 2026 9:00 AM at Franchising Office, Counter 2.",
+    notification_type: "appointment_scheduled",
+    target_type: "appointment",
+    target_id: uuid(0xa000),
+    read: false,
+    read_at: null,
+    created_at: iso(1, 14),
+  },
+  {
+    id: uuid(0x8004),
+    user_id: demoProfiles[0]!.id,
+    title: "Form request issued",
+    message: "Your form request FR-2026-000002 is ready to be claimed at the franchising office.",
+    notification_type: "form_request_issued",
+    target_type: "form_request",
+    target_id: uuid(0x9001),
+    read: false,
+    read_at: null,
+    created_at: iso(2, 11),
+  },
 ];
 
 export const demoSettings: SystemSetting[] = [

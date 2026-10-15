@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, MapPin } from "lucide-react";
 
-import { Badge, Card, CardHeader, EmptyState, SectionTitle } from "@/components/ui";
+import { Badge, Button, Card, CardHeader, EmptyState, SectionTitle } from "@/components/ui";
 import { APPOINTMENT_KIND_LABELS, APPOINTMENT_STATUS_LABELS } from "@/lib/constants";
 import { listAppointments } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -33,10 +33,12 @@ const STATUS_TONE: Record<AppointmentStatus, "info" | "success" | "warning" | "d
 function buildHref(params: {
   scope: string;
   kind: string;
+  search?: string;
 }): string {
   const query = new URLSearchParams();
   if (params.scope !== "upcoming") query.set("scope", params.scope);
   if (params.kind !== "all") query.set("kind", params.kind);
+  if (params.search?.trim()) query.set("q", params.search.trim());
   const suffix = query.toString();
   return suffix ? `/staff/appointments?${suffix}` : "/staff/appointments";
 }
@@ -54,8 +56,9 @@ export async function AppointmentsPage({
   const kind = KIND_TABS.some((tab) => tab.value === kindParam)
     ? (kindParam as AppointmentKind | "all")
     : "all";
+  const search = typeof searchParams.q === "string" ? searchParams.q : "";
 
-  const result = await listAppointments({ scope, kind, pageSize: 50 });
+  const result = await listAppointments({ scope, kind, search, pageSize: 50 });
 
   return (
     <div className="space-y-5">
@@ -64,6 +67,33 @@ export async function AppointmentsPage({
         description="Evaluation, physical-document submission, hearing and release appointments across every application."
       />
 
+      <form
+        action="/staff/appointments"
+        method="get"
+        className="flex flex-wrap items-center gap-2"
+      >
+        <input
+          type="hidden"
+          name="scope"
+          value={scope}
+        />
+        <input type="hidden" name="kind" value={kind} />
+        <input
+          className="sbtf-input max-w-xs flex-1"
+          type="search"
+          name="q"
+          defaultValue={search}
+          placeholder="Search application number, operator or venue…"
+          aria-label="Search appointments"
+        />
+        <Button type="submit">Search</Button>
+        {search ? (
+          <Link className="text-[0.8125rem] text-primary hover:underline" href={buildHref({ scope, kind })}>
+            Clear
+          </Link>
+        ) : null}
+      </form>
+
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
           {SCOPE_TABS.map((tab) => {
@@ -71,7 +101,7 @@ export async function AppointmentsPage({
             return (
               <Link
                 key={tab.value}
-                href={buildHref({ scope: tab.value, kind })}
+                href={buildHref({ scope: tab.value, kind, search })}
                 className={`rounded-lg border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
                   active
                     ? "border-primary-100 bg-primary-50 text-primary-700"
@@ -90,7 +120,7 @@ export async function AppointmentsPage({
             return (
               <Link
                 key={tab.value}
-                href={buildHref({ scope, kind: tab.value })}
+                href={buildHref({ scope, kind: tab.value, search })}
                 className={`rounded-full border px-3 py-1 text-[0.75rem] font-medium transition-colors ${
                   active
                     ? "border-primary-100 bg-primary-50 text-primary-700"
@@ -107,14 +137,24 @@ export async function AppointmentsPage({
       <Card>
         <CardHeader
           title={`${result.count} appointment${result.count === 1 ? "" : "s"}`}
-          description={scope === "all" ? "Every appointment" : scope === "past" ? "Past appointments" : "Scheduled ahead"}
+          description={
+            scope === "all"
+              ? "Every appointment"
+              : scope === "past"
+                ? "Past appointments"
+                : "Scheduled ahead"
+          }
           icon={CalendarClock}
         />
 
         {result.rows.length === 0 ? (
           <EmptyState
-            title="No appointments"
-            description="Schedule an appointment from an application's handling panel and it will appear here."
+            title={search ? "No matching appointments" : "No appointments"}
+            description={
+              search
+                ? `Nothing matches “${search}”.`
+                : "Schedule an appointment from an application's handling panel and it will appear here."
+            }
           />
         ) : (
           <ul className="space-y-3">
