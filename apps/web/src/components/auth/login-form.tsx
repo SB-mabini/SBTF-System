@@ -67,7 +67,9 @@ export function LoginForm() {
       await supabase.auth.signOut();
       setLoading(false);
       setError(
-        "This account is not active. Contact the administrator of the SBTF System at the municipal office.",
+        profile.account_status === "pending"
+          ? "This account is awaiting approval by a municipal administrator. You will be able to sign in once it has been approved."
+          : "This account is not active. Contact the administrator of the SBTF System at the municipal office.",
       );
       return;
     }

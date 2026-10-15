@@ -16,6 +16,11 @@ const REASONS: Record<string, { title: string; body: string }> = {
     body:
       "An inactive or suspended account is treated as having no identity in the database, so it cannot read or change any record. Contact the municipal administrator to restore access.",
   },
+  awaiting_approval: {
+    title: "This account is awaiting approval",
+    body:
+      "A new staff account cannot be used until a municipal administrator approves it from the Users screen. Once approved, a recovery link lets you set a password and sign in.",
+  },
   driver_on_web: {
     title: "Drivers and operators use the mobile application",
     body:

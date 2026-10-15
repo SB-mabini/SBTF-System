@@ -96,7 +96,10 @@ export async function updateSession(
     if (blocked && !isPublic) {
       const url = request.nextUrl.clone();
       url.pathname = "/unauthorized";
-      url.searchParams.set("reason", "account_inactive");
+      url.searchParams.set(
+        "reason",
+        profile.account_status === "pending" ? "awaiting_approval" : "account_inactive",
+      );
       return NextResponse.redirect(url);
     }
 

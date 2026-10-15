@@ -70,6 +70,24 @@ max_frequency = "1s"
 otp_length = 6
 otp_expiry = 900
 
+# Custom templates (bilingual; Tagalog first). These apply to local development
+# only — `supabase start` serves them through Inbucket and ignores the hosted
+# dashboard builder. For the hosted project, paste the same HTML from
+# supabase/templates/ into Dashboard → Authentication → Email Templates.
+#
+# recovery  : the link is built from {{ .TokenHash }} and points at the app's
+#             /auth/confirm route, NOT {{ .ConfirmationURL }} — see the file header
+#             for why the PKCE `?code=` path cannot be used here.
+# magic_link: the body must contain {{ .Token }}; the mobile app verifies it with
+#             auth.verifyOTP({ type: 'email' }).
+[auth.email.template.recovery]
+subject = "Pag-reset ng password — SBTF System | Reset your password — SBTF System"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "One-time password — SBTF System"
+content_path = "./supabase/templates/magic_link.html"
+
 [auth.sms]
 enable_signup = false
 enable_confirmations = false
@@ -87,6 +105,12 @@ verify_jwt = true
 # Admin user provisioning: service-role work, caller role re-verified in code.
 [functions.admin-users]
 verify_jwt = true
+
+# Self-service password recovery: reachable before sign-in by design, so it
+# cannot require a JWT. It reads the caller's role with the service role and
+# answers with a constant, enumeration-safe confirmation.
+[functions.password-recovery]
+verify_jwt = false
 
 # Scheduled renewal reminders: invoked by pg_cron / Supabase scheduled
 # functions with a shared secret header instead of a JWT.

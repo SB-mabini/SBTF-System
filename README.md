@@ -62,13 +62,15 @@ docs/              Deployment, testing and mobile documentation
 - **`supabase/config.toml` applies to local development only.** Per its own header it is
   consumed by `supabase start` and `functions serve`. The cloud project has its own
   settings, including an empty `uri_allow_list` that this file does not reflect.
-- **No e-mail is sent for invitations or password resets — by design.** The
-  `admin-users` Edge Function returns the link (`setup_link` / `reset_link`) and the
-  console shows it for manual handover. Supabase's built-in mailer is rate-limited
-  without SMTP and would silently drop municipal addresses. See `docs/deployment.md` §3.
-- **Recovery/setup links work when opened** — `supabase-js` picks the token up from the
-  URL on `/reset-password`. What has no consumer yet is a dedicated `/auth/callback`
-  route for other flows; sign-in from a link always lands on the reset-password page.
+- **E-mail is sent for self-service recovery and driver one-time passwords, but not for
+  staff invitations.** Recovery and OTP mail go through the project's Gmail SMTP
+  (`docs/deployment.md` §3.1). `admin-users` still **returns** the invitation link
+  (`setup_link` / `reset_link`) for manual handover, because a new staff account is
+  `pending` until an administrator approves it.
+- **Auth links are consumed by `/auth/confirm`**, which handles both
+  `?token_hash=…&type=…` (the links this repo builds) and `?code=…` (Supabase's PKCE
+  flow), then forwards recovery to `/reset-password`. See
+  `apps/web/src/app/auth/confirm/route.ts`.
 - **`seed.sql` has never been applied to production.** Do not apply it there. It is
   additive and idempotent in development; see `docs/testing.md` §3–4 for the traps it
   sets for testers.

@@ -15,7 +15,7 @@ export async function requireAdministrator(): Promise<SessionContext> {
 
   if (!session) redirect("/login");
   if (session.profile.account_status !== "active") {
-    redirect("/unauthorized?reason=account_inactive");
+    redirect(`/unauthorized?reason=${blockedReason(session.profile.account_status)}`);
   }
   if (session.role !== "administrator") redirect("/unauthorized?reason=forbidden");
 
@@ -27,11 +27,16 @@ export async function requireStaff(): Promise<SessionContext> {
 
   if (!session) redirect("/login");
   if (session.profile.account_status !== "active") {
-    redirect("/unauthorized?reason=account_inactive");
+    redirect(`/unauthorized?reason=${blockedReason(session.profile.account_status)}`);
   }
   if (session.role !== "staff" && session.role !== "administrator") {
     redirect("/unauthorized?reason=forbidden");
   }
 
   return session;
+}
+
+/** The diagnostic reason a blocked account is sent to /unauthorized with. */
+function blockedReason(status: string): string {
+  return status === "pending" ? "awaiting_approval" : "account_inactive";
 }

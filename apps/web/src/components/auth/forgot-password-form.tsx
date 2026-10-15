@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Alert, Button, Field } from "@/components/ui";
-import { getBrowserClient } from "@/lib/supabase/client";
-import { isDemoMode, SITE_URL } from "@/lib/env";
+import { requestPasswordRecoveryAction } from "@/lib/actions/auth";
+import { isDemoMode } from "@/lib/env";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -26,27 +27,29 @@ export function ForgotPasswordForm() {
     setLoading(true);
     setError(null);
 
-    const supabase = getBrowserClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      { redirectTo: `${SITE_URL}/reset-password` },
-    );
+    const result = await requestPasswordRecoveryAction(email);
 
     setLoading(false);
-    if (resetError) {
-      setError(resetError.message);
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
+    setNotice(result.message);
     setSent(true);
   }
 
   if (sent) {
     return (
       <div className="space-y-4">
-        <Alert tone="success" title="Check your inbox">
-          If an account exists for <strong>{email}</strong>, Supabase Auth has sent a password
-          recovery link. The link expires after a short time and can only be used once.
+        <Alert tone="success" title="Request accepted">
+          {notice ??
+            "If an account exists for that address, recovery instructions have been sent."}
         </Alert>
+        <p className="text-[0.8125rem] text-muted">
+          Administrators and approved staff receive a recovery link by e-mail. Staff accounts that
+          are still awaiting approval cannot be recovered until an administrator approves them.
+          Drivers and operators sign in with a one-time password in the SBTF mobile app.
+        </p>
         <Link className="text-[0.8125rem] text-primary hover:underline" href="/login">
           Back to sign in
         </Link>
@@ -61,7 +64,7 @@ export function ForgotPasswordForm() {
       <Field
         label="Official e-mail address"
         htmlFor="email"
-        hint="A recovery link is sent to this address if it belongs to an account."
+        hint="Recovery instructions are sent to this address if it belongs to an account."
       >
         <input
           id="email"
@@ -74,7 +77,7 @@ export function ForgotPasswordForm() {
       </Field>
 
       <Button type="submit" loading={loading} className="w-full">
-        Send recovery link
+        Send recovery instructions
       </Button>
 
       <p className="text-center text-[0.8125rem]">

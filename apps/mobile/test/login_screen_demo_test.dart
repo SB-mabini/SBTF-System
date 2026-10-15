@@ -23,7 +23,14 @@ void main() {
     final signIn = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(signIn.onPressed, isNull);
 
-    final register = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
+    final otp = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Sign in with one-time password'),
+    );
+    expect(otp.onPressed, isNull);
+
+    final register = tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, 'Create an account'),
+    );
     expect(register.onPressed, isNull);
   });
 }

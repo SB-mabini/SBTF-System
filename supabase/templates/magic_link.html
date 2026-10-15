@@ -1,0 +1,58 @@
+<!--
+  Magic Link / One-Time Password email — SBTF System (bilingual).
+
+  Used by:
+    - the SBTF mobile app: auth.signInWithOtp({ email }) for driver/operator
+      sign-in, followed by auth.verifyOTP({ type: 'email', token }).
+
+  The mobile app needs the numeric {{ .Token }}, so it MUST appear in the body.
+  The optional link is a convenience fallback for opening on the web; it uses
+  {{ .TokenHash }} against the app's /auth/confirm route.
+
+  OTP length is fixed at 6 digits (supabase/config.toml → auth.email.otp_length;
+  set the same value in the hosted dashboard).
+-->
+<div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+
+  <p style="font-size: 15px; line-height: 1.6;">Magandang araw,</p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    Gamitin ang code sa ibaba upang makapasok sa <strong>SBTF mobile app</strong>:
+  </p>
+
+  <p style="font-size: 30px; font-weight: 700; letter-spacing: 8px; margin: 20px 0;">
+    {{ .Token }}
+  </p>
+
+  <p style="font-size: 13px; color: #666; line-height: 1.6;">
+    <em>May limitadong oras ang code na ito at isang beses lamang magagamit.
+    Huwag itong ibahagi kaninuman — hindi kami kailanman hihingi ng code na ito.</em>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+  <p style="font-size: 15px; line-height: 1.6;">Good day,</p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    Use the code below to sign in to the <strong>SBTF mobile app</strong>:
+  </p>
+
+  <p style="font-size: 30px; font-weight: 700; letter-spacing: 8px; margin: 20px 0;">
+    {{ .Token }}
+  </p>
+
+  <p style="font-size: 13px; color: #666; line-height: 1.6;">
+    <em>This code expires after a limited time and works only once. Never share
+    it — we will never ask you for this code.</em>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+  <p style="font-size: 14px; line-height: 1.6;">
+    Salamat,<br />
+    <strong>SBTF System</strong><br />
+    <span style="color: #666; font-size: 13px;">Municipality of Mabini, Batangas</span>
+  </p>
+
+</div>
