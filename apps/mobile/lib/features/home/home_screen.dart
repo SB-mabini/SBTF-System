@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SBTF Mobile'),
+        title: const Text('Mabini Franchise'),
         actions: [
           IconButton(
             tooltip: 'Sign out',
@@ -106,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
           email: profile?.email,
           active: profile?.isActive ?? false,
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         const SectionHeader('Services'),
         _RecordTile(
           icon: Icons.note_add_outlined,
@@ -114,28 +114,28 @@ class HomeScreen extends ConsumerWidget {
           subtitle: 'Apply for a new tricycle franchise',
           onTap: () => _openApplication(context, ApplicationType.newFranchise),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 6),
         _RecordTile(
           icon: Icons.autorenew_outlined,
           title: 'Renewal application',
           subtitle: 'Renew an existing franchise',
           onTap: () => _openApplication(context, ApplicationType.renewal),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 6),
         _RecordTile(
           icon: Icons.description_outlined,
           title: 'My documents',
           subtitle: 'Manage your uploaded files',
           onTap: () => _openDocuments(context),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 6),
         _RecordTile(
           icon: Icons.verified_outlined,
           title: 'Certificate & QR code',
           subtitle: 'View your franchise certificate',
           onTap: () => _openCertificates(context),
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         const SectionHeader('Track & updates'),
         _RecordTile(
           icon: Icons.track_changes_outlined,
@@ -143,7 +143,7 @@ class HomeScreen extends ConsumerWidget {
           subtitle: 'Follow your submissions',
           onTap: () => _openStatus(context),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: 6),
         _RecordTile(
           icon: Icons.notifications_outlined,
           title: 'Notifications',
@@ -219,7 +219,7 @@ class _HeroCard extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: AppGradients.hero,
         borderRadius: AppRadius.hero,
-        boxShadow: AppShadows.raised,
+        boxShadow: AppShadows.card,
       ),
       child: Stack(
         children: [
@@ -234,7 +234,7 @@ class _HeroCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.all(AppSpacing.sm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -250,7 +250,7 @@ class _HeroCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
                           height: 1.2,
                         ),
@@ -263,11 +263,11 @@ class _HeroCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white.withAlpha(190),
-                            fontSize: 13,
+                            fontSize: 12,
                           ),
                         ),
                       ],
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: 6),
                       Wrap(
                         spacing: AppSpacing.xs,
                         runSpacing: 6,
@@ -306,8 +306,8 @@ class _HeroAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 60,
-      height: 60,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -319,7 +319,7 @@ class _HeroAvatar extends StatelessWidget {
         initials,
         style: const TextStyle(
           color: AppColors.primary,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -337,7 +337,7 @@ class _HeroPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(28),
         borderRadius: AppRadius.chip,
@@ -352,7 +352,7 @@ class _HeroPill extends StatelessWidget {
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11.5,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -391,17 +391,20 @@ class _RecordTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.card,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.compact,
+            vertical: 10,
+          ),
           child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
                 decoration: const BoxDecoration(
-                  color: AppColors.greyFill,
+                  color: AppColors.primaryTint,
                   borderRadius: AppRadius.input,
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -412,7 +415,7 @@ class _RecordTile extends StatelessWidget {
                       title,
                       style: const TextStyle(
                         color: AppColors.inkStrong,
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -422,7 +425,7 @@ class _RecordTile extends StatelessWidget {
                         subtitle,
                         style: const TextStyle(
                           color: AppColors.inkMuted,
-                          fontSize: 12.5,
+                          fontSize: 12,
                         ),
                       ),
                     ],

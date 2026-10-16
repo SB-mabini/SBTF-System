@@ -17,5 +17,7 @@ void main() {
     expect(theme.useMaterial3, isTrue);
     expect(theme.colorScheme.primary, AppColors.primary);
     expect(theme.scaffoldBackgroundColor, AppColors.background);
+    expect(theme.textTheme.titleMedium?.fontSize, 15);
+    expect(theme.textTheme.bodyMedium?.fontSize, 13);
   });
 }

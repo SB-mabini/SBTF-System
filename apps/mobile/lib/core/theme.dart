@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Spacing constants on an 8px grid. Every padding and gap in the app is a
-/// multiple of [unit] so the interface stays visually consistent.
+/// Shared spacing tokens for consistent screen rhythm and compact components.
 abstract final class AppSpacing {
   static const double unit = 8;
   static const double xs = 8; // 1 unit
+  static const double compact = 12;
   static const double sm = 16; // 2 units
   static const double md = 24; // 3 units
   static const double lg = 32; // 4 units
@@ -17,7 +17,7 @@ abstract final class AppSpacing {
 /// [BorderRadius] values so a call site never spells out a number.
 abstract final class AppRadius {
   static const double sm = 12;
-  static const double md = 16;
+  static const double md = 14;
   static const double lg = 20;
   static const double xl = 28;
   static const double pill = 999;
@@ -101,11 +101,11 @@ abstract final class AppColors {
 
   // --- Surfaces ---
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFFAFAFC);
-  static const Color background = Color(0xFFF5F6FA);
-  static const Color border = Color(0xFFE7E8EF);
-  static const Color borderStrong = Color(0xFFD7D9E4);
-  static const Color greyFill = Color(0xFFF0F1F5);
+  static const Color surfaceMuted = Color(0xFFFAF9FC);
+  static const Color background = Color(0xFFF7F7FB);
+  static const Color border = Color(0xFFE6E5EE);
+  static const Color borderStrong = Color(0xFFD8D7E2);
+  static const Color greyFill = Color(0xFFF1F0F6);
 
   // --- Ink ---
   static const Color inkStrong = Color(0xFF14131E);
@@ -159,66 +159,66 @@ abstract final class AppTheme {
     const textTheme = TextTheme(
       displaySmall: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: FontWeight.w700,
         height: 1.2,
         letterSpacing: -0.4,
       ),
       headlineMedium: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: FontWeight.w700,
         height: 1.25,
         letterSpacing: -0.3,
       ),
       headlineSmall: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: FontWeight.w700,
         height: 1.3,
         letterSpacing: -0.2,
       ),
       titleLarge: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: FontWeight.w700,
         height: 1.3,
       ),
       titleMedium: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         height: 1.35,
       ),
       titleSmall: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         height: 1.35,
       ),
       bodyLarge: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 16,
-        height: 1.55,
+        fontSize: 15,
+        height: 1.5,
       ),
       bodyMedium: TextStyle(
         color: AppColors.inkStrong,
-        fontSize: 14,
+        fontSize: 13,
         height: 1.5,
       ),
       bodySmall: TextStyle(
         color: AppColors.inkMuted,
-        fontSize: 13,
+        fontSize: 12,
         height: 1.45,
       ),
       labelLarge: TextStyle(
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
       ),
       labelMedium: TextStyle(
         color: AppColors.inkMuted,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.3,
       ),
@@ -249,7 +249,7 @@ abstract final class AppTheme {
         titleSpacing: AppSpacing.sm,
         titleTextStyle: TextStyle(
           color: AppColors.inkStrong,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
           height: 1.3,
         ),
@@ -259,7 +259,7 @@ abstract final class AppTheme {
         iconTheme: IconThemeData(color: AppColors.inkStrong, size: 24),
       ),
 
-      // --- Text inputs: white fill, 12dp radius, 52dp min ---
+      // --- Text inputs: white fill, 12dp radius, accessible 48dp min ---
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
@@ -289,12 +289,12 @@ abstract final class AppTheme {
         ),
         labelStyle: const TextStyle(
           color: AppColors.inkMuted,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
         hintStyle: const TextStyle(
           color: AppColors.inkMuted,
-          fontSize: 14,
+          fontSize: 13,
         ),
         errorStyle: const TextStyle(
           color: AppColors.danger,
@@ -302,24 +302,24 @@ abstract final class AppTheme {
         ),
         prefixIconColor: AppColors.inkMuted,
         suffixIconColor: AppColors.inkMuted,
-        constraints: const BoxConstraints(minHeight: 52),
+        constraints: const BoxConstraints(minHeight: 48),
       ),
 
-      // --- Primary button: full-width, 52dp, 12dp radius ---
+      // --- Primary button: full-width, 48dp, 12dp radius ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.primary.withAlpha(90),
           disabledForegroundColor: Colors.white.withAlpha(190),
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 15,
           ),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.input),
           textStyle: const TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.1,
           ),
@@ -331,14 +331,14 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.borderStrong),
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 15,
           ),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.input),
           textStyle: const TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.1,
           ),
@@ -350,7 +350,7 @@ abstract final class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 15,
@@ -358,7 +358,7 @@ abstract final class AppTheme {
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.input),
           elevation: 0,
           textStyle: const TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -377,12 +377,12 @@ abstract final class AppTheme {
         ),
       ),
 
-      // --- Card: white, soft shadow, 16dp radius, hairline border ---
+      // --- Card: flat surface, compact radius, hairline border ---
       cardTheme: CardThemeData(
         color: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         shadowColor: const Color(0x1A0B1220),
-        elevation: 3,
+        elevation: 0,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -413,12 +413,12 @@ abstract final class AppTheme {
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.hero),
         titleTextStyle: const TextStyle(
           color: AppColors.inkStrong,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
         ),
         contentTextStyle: const TextStyle(
           color: AppColors.inkMuted,
-          fontSize: 14,
+          fontSize: 13,
           height: 1.5,
         ),
       ),

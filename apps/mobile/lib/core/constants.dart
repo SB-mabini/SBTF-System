@@ -10,7 +10,7 @@ library;
 /// database defines them (`public.document_type`, migration 0.1).
 ///
 /// The order matters: `rpc_driver_submit_application` requires exactly these
-/// four types, and the UI lists them in this sequence.
+/// four types in this sequence.
 const List<String> requiredDocumentTypes = [
   'member_association_certificate',
   'or_cr',

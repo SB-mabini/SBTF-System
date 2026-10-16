@@ -220,6 +220,33 @@ void main() {
       expect(find.text('Everything has been read.'), findsNothing);
     });
 
+    testWidgets('appointment notification card uses compact spacing and text',
+        (tester) async {
+      await _pumpTall(
+        tester,
+        _harness(
+          home: const NotificationListScreen(),
+          notifications: _FakeNotificationService([
+            _notification(
+              id: 'appointment-1',
+              title: 'Appointment scheduled',
+              message: 'A hearing appointment is set for Oct 19 at 1:00 PM.',
+              type: 'system',
+            ),
+          ]),
+        ),
+      );
+
+      final title = find.text('Appointment scheduled');
+      final message =
+          find.text('A hearing appointment is set for Oct 19 at 1:00 PM.');
+      final card = find.ancestor(of: title, matching: find.byType(Card));
+
+      expect(tester.widget<Text>(title).style?.fontSize, 13);
+      expect(tester.widget<Text>(message).style?.fontSize, 12);
+      expect(tester.getSize(card).height, lessThan(125));
+    });
+
     testWidgets('tapping an unread notification marks it read', (tester) async {
       final service = _FakeNotificationService([
         _notification(
@@ -367,8 +394,22 @@ void main() {
       await tester.pumpAndSettle();
 
       // A confirm stands between the gesture and the delete.
-      expect(find.text('Delete notification?'), findsOneWidget);
+      expect(
+        find.text('Delete Notification'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Are you sure you want to delete this notification?'),
+        findsOneWidget,
+      );
       expect(service.deletedIds, isEmpty);
+      final dialogSurface = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byType(Material),
+      );
+      final dialogSize = tester.getSize(dialogSurface.last);
+      expect(dialogSize.width, lessThanOrEqualTo(320));
+      expect(dialogSize.height, lessThanOrEqualTo(220));
 
       await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
       await tester.pumpAndSettle();
@@ -394,7 +435,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.deletedIds, isEmpty);
-      expect(find.text('Delete notification?'), findsNothing);
+      expect(
+        find.text('Delete Notification'),
+        findsNothing,
+      );
     });
 
     testWidgets('clear read removes the already-read notifications',

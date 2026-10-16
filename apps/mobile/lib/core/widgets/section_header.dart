@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// A quiet, uppercase section label used to group a long screen into readable
-/// blocks (for example "Services" or "Track & updates").
+/// A quiet section title used to group a long screen into readable blocks
+/// (for example "Services" or "Track & updates").
 ///
 /// Rendering the label in the shared component keeps the tracking and weight of
 /// every section break identical across the app.
@@ -24,13 +24,10 @@ class SectionHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              title.toUpperCase(),
-              style: const TextStyle(
-                color: AppColors.inkMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.9,
-              ),
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
           ),
           if (trailing != null) trailing,

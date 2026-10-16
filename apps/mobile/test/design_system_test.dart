@@ -20,7 +20,8 @@ void main() {
     test('the card theme uses the shared card radius', () {
       final shape = AppTheme.light.cardTheme.shape as RoundedRectangleBorder;
       expect(shape.borderRadius, AppRadius.card);
-      expect(AppRadius.card, const BorderRadius.all(Radius.circular(16)));
+      expect(AppRadius.card, const BorderRadius.all(Radius.circular(14)));
+      expect(AppTheme.light.cardTheme.elevation, 0);
     });
 
     test('semantic colours pair with their tints', () {
@@ -55,10 +56,10 @@ void main() {
   });
 
   group('SectionHeader', () {
-    testWidgets('upper-cases its label', (tester) async {
+    testWidgets('shows its title in sentence case', (tester) async {
       await tester.pumpWidget(_host(const SectionHeader('Services')));
 
-      expect(find.text('SERVICES'), findsOneWidget);
+      expect(find.text('Services'), findsOneWidget);
     });
   });
 

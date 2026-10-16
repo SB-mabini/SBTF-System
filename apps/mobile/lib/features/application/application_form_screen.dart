@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_error.dart';
 import '../../core/constants.dart';
 import '../../core/models/franchise_application.dart';
+import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/section_header.dart';
@@ -402,23 +403,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             label: 'Could not load the TODA list.',
             onRetry: () => ref.invalidate(todaListProvider),
           ),
-          data: (todas) => DropdownButtonFormField<String>(
-            initialValue:
-                todas.any((toda) => toda.id == _todaId) ? _todaId : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'TODA'),
-            hint: const Text('Select your TODA'),
-            items: <DropdownMenuItem<String>>[
-              for (final toda in todas)
-                DropdownMenuItem<String>(
-                  value: toda.id,
-                  child: Text(toda.name, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            onChanged: (value) => setState(() => _todaId = value),
-            validator: (value) =>
-                value == null ? 'Select an accredited TODA.' : null,
-          ),
+          data: (todas) => _todaPicker(todas),
         ),
         const SizedBox(height: AppSpacing.sm),
         barangaysAsync.when(
@@ -427,22 +412,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             label: 'Could not load the barangay list.',
             onRetry: () => ref.invalidate(barangayListProvider),
           ),
-          data: (barangays) => DropdownButtonFormField<String>(
-            initialValue: barangays.any((b) => b.code == _barangayCode)
-                ? _barangayCode
-                : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Barangay'),
-            hint: const Text('Select your barangay'),
-            items: <DropdownMenuItem<String>>[
-              for (final barangay in barangays)
-                DropdownMenuItem<String>(
-                  value: barangay.code,
-                  child: Text(barangay.name, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            onChanged: (value) => setState(() => _barangayCode = value),
-          ),
+          data: (barangays) => _barangayPicker(barangays),
         ),
         if (_isRenewal) ...[
           const SizedBox(height: AppSpacing.sm),
@@ -450,6 +420,249 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         ],
       ],
     );
+  }
+
+  Widget _todaPicker(List<Toda> todas) {
+    final initialId =
+        todas.any((toda) => toda.id == _todaId) ? _todaId : null;
+
+    return FormField<String>(
+      initialValue: initialId,
+      validator: (value) =>
+          value == null ? 'Select an accredited TODA.' : null,
+      builder: (field) {
+        Toda? selected;
+        for (final toda in todas) {
+          if (toda.id == field.value) {
+            selected = toda;
+            break;
+          }
+        }
+
+        return InkWell(
+          borderRadius: AppRadius.input,
+          onTap: todas.isEmpty
+              ? null
+              : () async {
+                  final selectedId = await _showTodaPicker(todas);
+                  if (selectedId != null && mounted) {
+                    setState(() => _todaId = selectedId);
+                    field.didChange(selectedId);
+                  }
+                },
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'TODA',
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+              errorText: field.errorText,
+            ),
+            isEmpty: selected == null,
+            child: Text(
+              selected?.name ?? 'Select your TODA',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: selected == null
+                        ? AppColors.inkMuted
+                        : AppColors.inkStrong,
+                  ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _showTodaPicker(List<Toda> todas) {
+    final sortedTodas = [...todas]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.65,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Choose your TODA',
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  itemCount: sortedTodas.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final toda = sortedTodas[index];
+                    final isSelected = toda.id == _todaId;
+                    return ListTile(
+                      dense: true,
+                      minVerticalPadding: 8,
+                      title: Text(
+                        toda.name,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.inkStrong,
+                          fontSize: 13,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: AppColors.primary,
+                              size: 18,
+                            )
+                          : null,
+                      onTap: () => Navigator.of(sheetContext).pop(toda.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _barangayPicker(List<Barangay> barangays) {
+    Barangay? selected;
+    for (final barangay in barangays) {
+      if (barangay.code == _barangayCode) {
+        selected = barangay;
+        break;
+      }
+    }
+
+    return InkWell(
+      borderRadius: AppRadius.input,
+      onTap: barangays.isEmpty ? null : () => _showBarangayPicker(barangays),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Barangay',
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          suffixIcon: Icon(Icons.arrow_drop_down),
+        ),
+        isEmpty: selected == null,
+        child: Text(
+          selected?.name ?? 'Select your barangay',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color:
+                    selected == null ? AppColors.inkMuted : AppColors.inkStrong,
+              ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBarangayPicker(List<Barangay> barangays) async {
+    final sortedBarangays = [...barangays]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final selectedCode = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.65,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Choose your barangay',
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  itemCount: sortedBarangays.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final barangay = sortedBarangays[index];
+                    final isSelected = barangay.code == _barangayCode;
+                    return ListTile(
+                      dense: true,
+                      minVerticalPadding: 8,
+                      title: Text(
+                        barangay.name,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.inkStrong,
+                          fontSize: 13,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              color: AppColors.primary,
+                              size: 18,
+                            )
+                          : null,
+                      onTap: () =>
+                          Navigator.of(sheetContext).pop(barangay.code),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedCode != null && mounted) {
+      setState(() => _barangayCode = selectedCode);
+    }
   }
 
   Widget _renewalRecordField() {

@@ -40,14 +40,16 @@ void main() {
     expect(find.text('JD'), findsOneWidget);
     expect(find.text('juan@example.com'), findsOneWidget);
     expect(find.text('Driver / Operator'), findsOneWidget);
+    expect(find.text('Welcome back'), findsNothing);
+    expect(find.text('Mabini Franchise'), findsOneWidget);
   });
 
   testWidgets('groups every destination under the section headers',
       (tester) async {
     await _pumpTall(tester, _harness(0));
 
-    expect(find.text('SERVICES'), findsOneWidget);
-    expect(find.text('TRACK & UPDATES'), findsOneWidget);
+    expect(find.text('Services'), findsOneWidget);
+    expect(find.text('Track & updates'), findsOneWidget);
     expect(find.text('New franchise application'), findsOneWidget);
     expect(find.text('Renewal application'), findsOneWidget);
     expect(find.text('My documents'), findsOneWidget);
@@ -62,5 +64,20 @@ void main() {
 
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
+  });
+
+  testWidgets('service cards use compact typography and spacing',
+      (tester) async {
+    await _pumpTall(tester, _harness(0));
+
+    final title = tester.widget<Text>(find.text('My documents'));
+    expect(title.style?.fontSize, 14);
+
+    final cardFinder = find.ancestor(
+      of: find.text('My documents'),
+      matching: find.byType(Card),
+    );
+    final cardSize = tester.getSize(cardFinder);
+    expect(cardSize.height, inInclusiveRange(48, 72));
   });
 }

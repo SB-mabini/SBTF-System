@@ -190,7 +190,7 @@ class _Body extends StatelessWidget {
     final message = error;
 
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         _Header(application: application),
@@ -220,8 +220,7 @@ class _Body extends StatelessWidget {
                   application.isPending && (byType[type]?.canReplace ?? false),
               blockedNote:
                   application.isPending && (byType[type]?.isVerified ?? false)
-                      ? 'Verified copies are part of the reviewed record and '
-                          'cannot be replaced.'
+                      ? 'Verified copies cannot be replaced.'
                       : null,
               onView: onView,
               onReplace: onReplace,
@@ -301,7 +300,7 @@ class _DocumentCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.xs),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -313,7 +312,7 @@ class _DocumentCard extends StatelessWidget {
                     style: const TextStyle(
                       color: AppColors.inkStrong,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -324,22 +323,18 @@ class _DocumentCard extends StatelessWidget {
                   documentStatusChip(doc.verificationStatus),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             if (doc == null)
               const Text(
                 'No file has been recorded for this requirement.',
                 style: TextStyle(color: AppColors.inkMuted, fontSize: 12),
               )
             else ...[
-              Text(
-                doc.fileName.isEmpty ? 'File attached' : doc.fileName,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-              ),
               if (doc.uploadedAt != null)
                 Text(
                   'Uploaded ${formatDateTime(doc.uploadedAt)}',
                   style:
-                      const TextStyle(color: AppColors.inkMuted, fontSize: 12),
+                      const TextStyle(color: AppColors.inkMuted, fontSize: 11),
                 ),
               if (doc.isRejected && (doc.remarks ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: 4),
@@ -352,12 +347,22 @@ class _DocumentCard extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => onView(doc),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        textStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       child: const Text('View'),
                     ),
                   ),
@@ -366,6 +371,16 @@ class _DocumentCard extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: replacing ? null : () => onReplace(doc),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         child: replacing
                             ? const SizedBox(
                                 width: 18,
@@ -386,8 +401,8 @@ class _DocumentCard extends StatelessWidget {
                   note,
                   style: const TextStyle(
                     color: AppColors.inkMuted,
-                    fontSize: 12,
-                    height: 1.3,
+                    fontSize: 11,
+                    height: 1.25,
                   ),
                 ),
               ],
@@ -482,7 +497,7 @@ class _DocumentPreviewDialogState
                       borderRadius: AppRadius.box,
                       child: Image.network(
                         url,
-                        height: 320,
+                        height: 220,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stack) =>
                             const _PreviewBox(
@@ -512,12 +527,6 @@ class _DocumentPreviewDialogState
                   );
                 },
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                document.fileName.isEmpty ? 'File attached' : document.fileName,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-              ),
             ],
           ),
         ),
@@ -537,7 +546,6 @@ class _PreviewBox extends StatelessWidget {
       height: 200,
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.greyFill,
         borderRadius: AppRadius.box,
       ),
       child: Center(child: child),

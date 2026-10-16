@@ -208,8 +208,32 @@ void main() {
       findsNothing,
     );
     expect(
-      find.textContaining('Verified copies are part of the reviewed record'),
+      find.text('Verified copies cannot be replaced.'),
       findsNWidgets(2),
+    );
+  });
+
+  testWidgets('verified document card uses compact spacing and actions',
+      (tester) async {
+    await _pumpTall(tester, _harness(application: _mixedPending()));
+
+    final label = find.text(documentLabels['cedula']!);
+    final card = find.ancestor(of: label, matching: find.byType(Card));
+    final viewButton = find.descendant(
+        of: card, matching: find.widgetWithText(OutlinedButton, 'View'));
+
+    expect(tester.widget<Text>(label).style?.fontSize, 13);
+    expect(
+      tester.getSize(viewButton).height,
+      36,
+    );
+    expect(tester.getSize(card).height, lessThan(165));
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Verified copies cannot be replaced.'),
+      ),
+      findsOneWidget,
     );
   });
 
@@ -223,7 +247,7 @@ void main() {
     );
     // The application-level notice covers it, so the per-document note is noise.
     expect(
-      find.textContaining('Verified copies are part of the reviewed record'),
+      find.text('Verified copies cannot be replaced.'),
       findsNothing,
     );
   });
@@ -237,6 +261,24 @@ void main() {
     await _pumpTall(tester, _harness(application: application));
 
     expect(find.text('Not on file'), findsNWidgets(3));
+    expect(find.text('View'), findsOneWidget);
+  });
+
+  testWidgets('document card hides the uploaded filename', (tester) async {
+    final application = _application(
+      status: ApplicationStatus.pending,
+      documents: [
+        _doc(
+          'member_association_certificate',
+          verification: 'verified',
+          fileName: 'Add a heading.png',
+        ),
+      ],
+    );
+    await _pumpTall(tester, _harness(application: application));
+
+    expect(find.text('Add a heading.png'), findsNothing);
+    expect(find.textContaining('Uploaded '), findsOneWidget);
     expect(find.text('View'), findsOneWidget);
   });
 
@@ -339,6 +381,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(Image), findsOneWidget);
+    expect(tester.widget<Image>(find.byType(Image)).height, 220);
+    expect(find.text('or-cr.jpg'), findsNothing);
     expect(find.textContaining('PDF preview is not available'), findsNothing);
   });
 
