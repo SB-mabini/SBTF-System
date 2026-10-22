@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'document_picker.dart';
 import 'models/app_notification.dart';
+import 'models/appointment.dart';
 import 'models/franchise_application.dart';
 import 'models/franchise_record.dart';
 import 'models/profile.dart';
@@ -10,6 +11,7 @@ import 'models/toda.dart';
 import 'qr_scanner.dart';
 import 'url_opener.dart';
 import 'services/application_service.dart';
+import 'services/appointment_service.dart';
 import 'services/certificate_service.dart';
 import 'services/document_service.dart';
 import 'services/notification_service.dart';
@@ -87,6 +89,11 @@ final certificateServiceProvider = Provider<CertificateService>(
 /// Slice 7 — notifications.
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(ref.watch(supabaseClientProvider)),
+);
+
+/// Slice 9 — in-person appointments booked by the municipal staff.
+final appointmentServiceProvider = Provider<AppointmentService>(
+  (ref) => AppointmentService(ref.watch(supabaseClientProvider)),
 );
 
 /// Slice 3 + 5 — picks a documentary requirement from the device.
@@ -193,4 +200,13 @@ final unreadNotificationCountStreamProvider = StreamProvider<int>(
 /// Live franchise records (slice 6).
 final myRecordsStreamProvider = StreamProvider<List<FranchiseRecord>>(
   (ref) => ref.watch(certificateServiceProvider).watchMine(),
+);
+
+/// Live appointment list (slice 9).
+///
+/// The home screen watches the same provider for its badge and the list
+/// screen watches it for the rows, so the app opens a single Realtime
+/// channel for appointments either way.
+final myAppointmentsStreamProvider = StreamProvider<List<Appointment>>(
+  (ref) => ref.watch(appointmentServiceProvider).watchMine(),
 );

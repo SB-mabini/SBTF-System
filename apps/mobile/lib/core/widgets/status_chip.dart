@@ -129,6 +129,46 @@ StatusChip verificationStatusChip(String status) {
   }
 }
 
+/// A chip for an `application_appointments.status` value:
+/// `scheduled` | `completed` | `no_show` | `rescheduled` | `cancelled`.
+///
+/// The colours follow the web console's appointment tone map, so an
+/// appointment reads the same on a phone and on the staff console.
+StatusChip appointmentStatusChip(String status) {
+  switch (status) {
+    case 'scheduled':
+      return const StatusChip(
+        label: 'Scheduled',
+        foreground: AppColors.primary,
+        background: AppColors.primaryTint,
+      );
+    case 'completed':
+      return const StatusChip(
+        label: 'Completed',
+        foreground: AppColors.success,
+        background: AppColors.successTint,
+      );
+    case 'no_show':
+      return const StatusChip(
+        label: 'No show',
+        foreground: AppColors.danger,
+        background: AppColors.dangerTint,
+      );
+    case 'rescheduled':
+      return const StatusChip(
+        label: 'Rescheduled',
+        foreground: AppColors.warning,
+        background: AppColors.warningTint,
+      );
+    default:
+      return const StatusChip(
+        label: 'Cancelled',
+        foreground: AppColors.inkMuted,
+        background: AppColors.greyFill,
+      );
+  }
+}
+
 /// A small colour-coded pill. Built only through the helpers above so the
 /// colour of a status is never chosen ad hoc at a call site.
 ///

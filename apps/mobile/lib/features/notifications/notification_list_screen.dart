@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/error_view.dart';
 import '../application/application_detail_screen.dart';
+import '../appointments/appointment_detail_screen.dart';
 import '../certificate/certificate_detail_screen.dart';
 
 /// The driver's notification feed, newest first — slice 7.
@@ -22,9 +23,10 @@ import '../certificate/certificate_detail_screen.dart';
 /// (`20260101090900_phase0_rls_policies.sql`), never write the content.
 ///
 /// Tapping a notification marks it read and, when it carries a deep-link target
-/// (`targetsApplication` / `targetsRecord`), opens that application's tracker or
-/// that certificate. The target is re-read by id, so a stale link can only ever
-/// resolve to the caller's own row.
+/// (`targetsApplication` / `targetsRecord` / `targetsAppointment`), opens that
+/// application's tracker, that certificate or that appointment. The target is
+/// re-read by id, so a stale link can only ever resolve to the caller's own
+/// row.
 ///
 /// A row can also be deleted — long-press a card to raise the delete prompt, or
 /// clear everything already read in bulk from the "Clear read" action — so an
@@ -144,6 +146,8 @@ class _NotificationListScreenState
       await _openApplication(notification.targetId!);
     } else if (notification.targetsRecord) {
       await _openRecord(notification.targetId!);
+    } else if (notification.targetsAppointment) {
+      await _openAppointment(notification.targetId!);
     }
   }
 
@@ -169,6 +173,19 @@ class _NotificationListScreenState
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CertificateDetailScreen(record: record),
+      ),
+    );
+  }
+
+  Future<void> _openAppointment(String id) async {
+    final appointment = await _load(
+      () => ref.read(appointmentServiceProvider).getById(id),
+      'That appointment is no longer available.',
+    );
+    if (appointment == null || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AppointmentDetailScreen(appointment: appointment),
       ),
     );
   }
@@ -321,8 +338,9 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unread = !notification.read;
-    final hasTarget =
-        notification.targetsApplication || notification.targetsRecord;
+    final hasTarget = notification.targetsApplication ||
+        notification.targetsRecord ||
+        notification.targetsAppointment;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -409,9 +427,7 @@ class _NotificationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            notification.targetsApplication
-                                ? 'Open application'
-                                : 'Open certificate',
+                            _targetLabel(notification),
                             style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
@@ -437,6 +453,13 @@ class _NotificationCard extends StatelessWidget {
       return '$created · read ${formatDateTime(notification.readAt)}';
     }
     return created;
+  }
+
+  /// The deep-link hint under a row that points at something.
+  String _targetLabel(AppNotification notification) {
+    if (notification.targetsApplication) return 'Open application';
+    if (notification.targetsRecord) return 'Open certificate';
+    return 'Open appointment';
   }
 }
 

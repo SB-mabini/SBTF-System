@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sbtf_mobile/core/models/app_notification.dart';
+import 'package:sbtf_mobile/core/models/appointment.dart';
 import 'package:sbtf_mobile/core/models/franchise_application.dart';
 import 'package:sbtf_mobile/core/models/franchise_record.dart';
 import 'package:sbtf_mobile/core/models/profile.dart';
 import 'package:sbtf_mobile/core/providers.dart';
 import 'package:sbtf_mobile/core/services/application_service.dart';
+import 'package:sbtf_mobile/core/services/appointment_service.dart';
 import 'package:sbtf_mobile/core/services/certificate_service.dart';
 import 'package:sbtf_mobile/core/services/notification_service.dart';
 import 'package:sbtf_mobile/features/application/application_detail_screen.dart';
+import 'package:sbtf_mobile/features/appointments/appointment_detail_screen.dart';
 import 'package:sbtf_mobile/features/certificate/certificate_detail_screen.dart';
 import 'package:sbtf_mobile/features/home/home_screen.dart';
 import 'package:sbtf_mobile/features/notifications/notification_list_screen.dart';
@@ -61,6 +64,18 @@ FranchiseRecord _record() {
     todaName: 'Mabini TODA',
     plateNumber: 'ABC 1234',
     operatorName: 'Juan Dela Cruz',
+  );
+}
+
+Appointment _appointment() {
+  return Appointment(
+    id: 'appt-1',
+    applicationId: 'app-1',
+    kind: 'hearing',
+    status: 'scheduled',
+    scheduledAt: DateTime.now().add(const Duration(days: 4)),
+    venue: 'Municipal Hall',
+    applicationNumber: 'SBTF-2026-0001',
   );
 }
 
@@ -120,6 +135,19 @@ class _FakeApplicationService implements ApplicationService {
       throw UnsupportedError('Unexpected call to ${invocation.memberName}');
 }
 
+class _FakeAppointmentService implements AppointmentService {
+  _FakeAppointmentService(this.appointment);
+
+  final Appointment? appointment;
+
+  @override
+  Future<Appointment?> getById(String id) async => appointment;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('Unexpected call to ${invocation.memberName}');
+}
+
 class _FakeCertificateService implements CertificateService {
   _FakeCertificateService(this.record);
 
@@ -141,6 +169,7 @@ Widget _harness({
   NotificationService? notifications,
   ApplicationService? applications,
   CertificateService? certificates,
+  AppointmentService? appointments,
   FranchiseApplication? detail,
 }) {
   return ProviderScope(
@@ -151,6 +180,8 @@ Widget _harness({
         applicationServiceProvider.overrideWith((ref) => applications),
       if (certificates != null)
         certificateServiceProvider.overrideWith((ref) => certificates),
+      if (appointments != null)
+        appointmentServiceProvider.overrideWith((ref) => appointments),
       if (detail != null)
         applicationDetailProvider.overrideWith((ref, id) => detail),
     ],
@@ -328,6 +359,35 @@ void main() {
 
       expect(find.byType(ApplicationDetailScreen), findsOneWidget);
       expect(service.readIds, ['n1']);
+    });
+
+    testWidgets('tapping an appointment notification opens its appointment',
+        (tester) async {
+      await _pumpTall(
+        tester,
+        _harness(
+          home: const NotificationListScreen(),
+          notifications: _FakeNotificationService([
+            _notification(
+              id: 'n1',
+              title: 'Your hearing is booked',
+              type: 'appointment_scheduled',
+              targetType: 'appointment',
+              targetId: 'appt-1',
+            ),
+          ]),
+          appointments: _FakeAppointmentService(_appointment()),
+        ),
+      );
+
+      // The type chip comes from the shared web-parity vocabulary.
+      expect(find.text('Appointment scheduled'), findsOneWidget);
+      expect(find.text('Open appointment'), findsOneWidget);
+
+      await tester.tap(find.text('Your hearing is booked'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppointmentDetailScreen), findsOneWidget);
     });
 
     testWidgets('tapping a record notification opens its certificate',

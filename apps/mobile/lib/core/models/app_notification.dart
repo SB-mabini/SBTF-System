@@ -44,6 +44,10 @@ class AppNotification {
   bool get targetsRecord =>
       targetType == 'franchise_record' && targetId != null;
 
+  /// True when it points at an in-person appointment.
+  bool get targetsAppointment =>
+      targetType == 'appointment' && targetId != null;
+
   factory AppNotification.fromMap(Map<String, dynamic> map) {
     return AppNotification(
       id: (map['id'] ?? '').toString(),

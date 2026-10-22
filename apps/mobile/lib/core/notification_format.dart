@@ -15,6 +15,8 @@ const Map<String, String> notificationTypeLabels = {
   'document_rejected': 'Document rejected',
   'renewal_reminder': 'Renewal reminder',
   'application_under_review': 'Application under review',
+  'appointment_scheduled': 'Appointment scheduled',
+  'appointment_updated': 'Appointment updated',
   'account_updated': 'Account updated',
   'system': 'System',
 };

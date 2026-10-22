@@ -10,6 +10,7 @@ import '../../core/widgets/error_view.dart';
 import '../../core/widgets/section_header.dart';
 import '../application/application_form_screen.dart';
 import '../application/application_list_screen.dart';
+import '../appointments/appointment_list_screen.dart';
 import '../certificate/certificate_list_screen.dart';
 import '../documents/document_manager_screen.dart';
 import '../notifications/notification_list_screen.dart';
@@ -64,6 +65,13 @@ class HomeScreen extends ConsumerWidget {
     // (offline, or the table is missing) simply leaves the badge off.
     final unread =
         ref.watch(unreadNotificationCountStreamProvider).valueOrNull ?? 0;
+    // Appointments the driver still has to attend. The same stream feeds the
+    // appointments list, so the app opens a single Realtime channel either
+    // way; a stream that cannot start simply leaves the badge off.
+    final appointments =
+        ref.watch(myAppointmentsStreamProvider).valueOrNull ?? const [];
+    final upcoming =
+        appointments.where((appointment) => appointment.isUpcoming).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -85,13 +93,14 @@ class HomeScreen extends ConsumerWidget {
               onRetry: () => ref.invalidate(profileProvider),
             ),
           ),
-          data: (profile) => _dashboard(context, unread, profile),
+          data: (profile) => _dashboard(context, unread, upcoming, profile),
         ),
       ),
     );
   }
 
-  Widget _dashboard(BuildContext context, int unread, Profile? profile) {
+  Widget _dashboard(
+      BuildContext context, int unread, int upcoming, Profile? profile) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.sm,
@@ -138,6 +147,14 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         const SectionHeader('Track & updates'),
         _RecordTile(
+          icon: Icons.event_available_outlined,
+          title: 'My appointments',
+          subtitle: 'Scheduled visits and hearings',
+          onTap: () => _openAppointments(context),
+          badge: upcoming > 0 ? _CountBadge(count: upcoming) : null,
+        ),
+        const SizedBox(height: 6),
+        _RecordTile(
           icon: Icons.track_changes_outlined,
           title: 'My application status',
           subtitle: 'Follow your submissions',
@@ -149,7 +166,7 @@ class HomeScreen extends ConsumerWidget {
           title: 'Notifications',
           subtitle: 'Decisions and reminders',
           onTap: () => _openNotifications(context),
-          badge: unread > 0 ? _UnreadBadge(count: unread) : null,
+          badge: unread > 0 ? _CountBadge(count: unread) : null,
         ),
       ],
     );
@@ -167,6 +184,14 @@ class HomeScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const ApplicationListScreen(),
+      ),
+    );
+  }
+
+  void _openAppointments(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AppointmentListScreen(),
       ),
     );
   }
@@ -445,10 +470,10 @@ class _RecordTile extends StatelessWidget {
   }
 }
 
-/// The unread count on the notifications row. Hidden at zero, capped so a large
-/// number cannot stretch the row.
-class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge({required this.count});
+/// The count on the notifications and appointments rows. Hidden at zero,
+/// capped so a large number cannot stretch the row.
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
 
   final int count;
 

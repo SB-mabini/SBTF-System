@@ -4,9 +4,10 @@ The driver/operator application for the SBTF System. Flutter + Riverpod, talking
 the same Supabase project as the web console. There is no mobile-specific backend:
 the database, its RPCs, RLS policies and triggers are the entire contract.
 
-**Last updated:** 2026-10-15 · slices 1–8 implemented: every screen (1–7), the
+**Last updated:** 2026-10-22 · slices 1–9 implemented: every screen (1–7), the
 slice-8 hardening (offline behaviour, error-surface parity with the web console,
-signed release builds) and a visual pass over the whole app — see §2, §5, §7 and §8.
+signed release builds), a visual pass over the whole app and slice 9 (the
+driver's appointments) — see §2, §5, §7 and §8.
 
 ---
 
@@ -34,7 +35,7 @@ Decisions from Phase 0–2 that this app inherits without change:
 
 ---
 
-## 2. Implemented slices (1–8)
+## 2. Implemented slices (1–9)
 
 | Slice | Delivered |
 |---|---|
@@ -46,13 +47,14 @@ Decisions from Phase 0–2 that this app inherits without change:
 | 6 — certificate + QR | Certificate and QR viewer (`lib/features/certificate/certificate_list_screen.dart`, `certificate_detail_screen.dart`, `certificate_verify_screen.dart`) over `CertificateService`: the list shows the driver's own franchises newest-first with a state chip (active / expiring / expired / archived) and stays current through the Realtime stream; the detail renders the same QR payload the web console prints (the public verification URL when `certificate_verification_base_url` is set, otherwise the bare code), the record details and the verification code, and opens the certificate PDF through a short-lived signed URL; the scanner reads a QR with `mobile_scanner` and resolves it — or a hand-typed code — through the public `rpc_verify_certificate`, which returns only a masked name and the franchise dates. The slice-6 home tile is now live |
 | 7 — notifications | Notification feed (`lib/features/notifications/notification_list_screen.dart`) over `NotificationService`: the list shows the driver's own notifications newest-first with an unread highlight and a "New" badge and stays current through the Realtime stream; tapping a row marks it read and, when the row carries a deep-link target, opens that application's tracker or that certificate (re-read by id, so a stale link can only ever resolve to the caller's own row); "Mark all as read" clears the badge in one update; a row can be deleted on its own by long-pressing its card, or everything already read in one go through "Clear read" — both behind a confirm and disabled in demo mode, so a long feed stays easy to scan. Rows are created only by SECURITY DEFINER functions and triggers; the client may only mark its own rows read and delete them. The slice-7 home tile is now live and carries the live unread count |
 | 8 — hardening & release | Hardening pass over the finished screens, with no new screen and no new dependency: one classified error surface for every slice (`lib/core/widgets/error_view.dart`), a stronger error taxonomy with a reason + actionable hint mirroring the web console (`lib/core/app_error.dart`), the session gate classifying and retrying its own failures (`lib/features/auth/auth_gate.dart`), and optional release signing for the Android build (`android/app/build.gradle.kts`, `android/key.properties.example`, §5) |
+| 9 — appointments | Appointment list and detail (`lib/features/appointments/appointment_list_screen.dart`, `appointment_detail_screen.dart`) over `AppointmentService`: the dashboard gains a "My appointments" row under "Track & updates" carrying the live count of visits still to attend; the list splits the schedule into **Upcoming** and **Past** (the same split the staff console uses), each row showing the kind of visit, the date and time, the venue and the application it belongs to; a row opens the detail, which shows the venue, the date, the status, the outcome and any note the office left, and a way into the owning application's tracker. Appointments are **read-only** — the staff book and close them out from the web console, so the app writes nothing. The slice-7 notification feed deep-links an `appointment_scheduled` / `appointment_updated` notice into this detail |
 
-### Slice data layer (3–8) — implemented
+### Slice data layer (3–9) — implemented
 
 Every slice's database contract is already wrapped in a typed service; the slice 3
-through 7 screens are now built (§2), and slice 8 hardened them in place rather than
-adding a screen. This layer changes nothing in `supabase/migrations` — it only reads
-that contract.
+through 7 screens are now built (§2), slice 8 hardened them in place rather than
+adding a screen, and slice 9 added the one screen the driver never had. This layer
+changes nothing in `supabase/migrations` — it only reads that contract.
 
 | Slice | Service (`lib/core/services/`) | Delivered |
 |---|---|---|
@@ -61,13 +63,14 @@ that contract.
 | 5 | `document_service.dart` | `uploadDocument()`, `replaceDocument()`, `signedDocumentUrl()`, `removeUpload()`, `buildStoragePath()` |
 | 6 | `certificate_service.dart` | `listMine()`, `getById()`, `activeRecord()`, `certificateSignedUrl()`, `verify()`, `verificationBaseUrl()`, `watchMine()` |
 | 7 | `notification_service.dart` | `listMine()`, `unreadCount()`, `markRead()`, `markAllRead()`, `delete()`, `deleteRead()`, `watchMine()`, `watchUnreadCount()` |
+| 9 | `appointment_service.dart` | `listMine()`, `getById()`, `watchMine()` |
 
 Supporting pieces:
 
 - **Models** (`lib/core/models/`) — `Toda`/`Barangay`, `FranchiseApplication` with
   `ApplicationSubmission`/`ApplicationDocumentUpload`, `FranchiseDocument`,
   `ApplicationEvent`, `FranchiseRecord`, `CertificateVerification`,
-  `AppNotification`. Every `fromMap` parses defensively.
+  `AppNotification`, `Appointment`. Every `fromMap` parses defensively.
 - **Domain constants and QR helpers** — `lib/core/constants.dart` (document types,
   upload limits, storage buckets) and `lib/core/verification.dart`, mirroring the
   web console so a code built by either client resolves identically.
@@ -102,6 +105,10 @@ Supporting pieces:
 - **Notification labels** — `lib/core/notification_format.dart` keeps the
   `notification_type` → label vocabulary in one place, mirroring the web console's
   `notification-list.tsx`; an unknown type is humanised rather than shown raw.
+- **Appointment labels** — `lib/core/appointment_format.dart` keeps the
+  `appointment_kind` / `appointment_status` vocabulary and the "Today / Tomorrow /
+  weekday" day label in one place, mirroring the web console's staff appointments
+  page, so a visit reads the same in either client.
 - **Providers** (`lib/core/providers.dart`) — one per service, plus data providers
   and Realtime stream providers, all lazy so preview/demo mode never touches
   `Supabase.instance`.
@@ -111,9 +118,10 @@ Both write paths call `ensureWritable()` first, so preview/demo mode throws
 pure logic (validation, payload building, error classification, verification and
 storage-path construction) is covered by unit tests under `test/`.
 
-There is no unbuilt screen left: all six home tiles are live (slices 3–7). Slice 8
-hardened them in place — offline behaviour, error-surface parity with the web
-console and signed release builds (§5, §7) — rather than adding a screen.
+There is no unbuilt screen left: all six home tiles are live (slices 3–7) and the
+slice-9 "My appointments" row is live with it. Slice 8 hardened them in place —
+offline behaviour, error-surface parity with the web console and signed release
+builds (§5, §7) — rather than adding a screen.
 
 ---
 
@@ -158,6 +166,7 @@ that wraps it (§2).
 | Certificate + signed download | read (6) | own `franchise_records`; bucket `certificates` signed URL | `CertificateService.listMine()` / `certificateSignedUrl()` |
 | Certificate verification | read (6, public) | `rpc_verify_certificate(code)` (masked name) | `CertificateService.verify()` |
 | Own notifications | read + mark-read + delete (7) | `notifications` select; `update` sets `read`/`read_at`; `delete` removes the caller's own rows | `NotificationService.listMine()` / `watchMine()` / `unreadCount()` / `watchUnreadCount()` / `markRead()` / `markAllRead()` / `delete()` / `deleteRead()`, rendered by the notification list (`notification_list_screen.dart`) |
+| Own appointments | read (9) | RLS-scoped select on `application_appointments` (read-only to clients — staff book through `rpc_staff_schedule_appointment`); Realtime on the same table | `AppointmentService.listMine()` / `getById()` / `watchMine()`, rendered by the appointment list (`appointment_list_screen.dart`) and detail (`appointment_detail_screen.dart`) |
 
 Failure on any of these is classified, not shown raw: `classifyAppError` turns a
 transport or PostgREST failure into a message plus an actionable hint (§2), and every
@@ -220,7 +229,7 @@ flutter build appbundle --release    # Play Store bundle (.aab)
 
 ---
 
-## 6. Functional acceptance cases (MA-01 … MA-47)
+## 6. Functional acceptance cases (MA-01 … MA-54)
 
 Record **Actual** and **Pass** per run; note device, Flutter version and project ref.
 
@@ -273,14 +282,21 @@ Record **Actual** and **Pass** per run; note device, Flutter version and project
 | MA-45 | Cold-start the app on Android | The launch window is the municipal purple; the first Flutter frame fades in over it with no white flash | | |
 | MA-46 | Delete a single notification | Long-pressing a card raises a delete prompt; confirming removes just that row (the home badge drops on the next Realtime event) and Cancel leaves the feed untouched | | |
 | MA-47 | Clear read notifications | The "Clear read" action asks for confirmation, then removes every row already read and keeps the unread ones; it is disabled when nothing is read | | |
+| MA-48 | Tap "My appointments" with no appointments | Empty state explains that an evaluation, hearing or document-release visit booked by the office appears here with its date, time and venue, and offers a way into the application tracker | | |
+| MA-49 | Tap "My appointments" with appointments | Two scope tabs — **Upcoming** and **Past**, each with its count; Upcoming holds the visits still to attend (next first), Past holds the closed ones (most recent first); every row shows the kind of visit, the date and time, the venue and the owning application's number | | |
+| MA-50 | Inspect the home "My appointments" row | It carries the live count of visits still to attend, hidden at zero; it drops as soon as the office closes the visit out or calls it off | | |
+| MA-51 | Open an appointment | Detail shows the kind of visit, the date and time, the venue, the application number, the status and when it was booked and closed out; the recorded outcome and any note from the office appear when the office left one; no booking, rescheduling or cancellation action exists anywhere | | |
+| MA-52 | The office schedules, moves or closes out an appointment | The visit reaches the phone on the next Realtime event, without a manual refresh; a cancelled appointment is not counted as upcoming and sits under Past | | |
+| MA-53 | Open an `appointment_scheduled` / `appointment_updated` notification | The notice deep-links into the appointment's detail, re-read by id, so a stale link can only ever resolve to the caller's own row; a withdrawn appointment shows a "no longer available" message instead of navigating | | |
+| MA-54 | Inspect the Past scope | Completed, missed and cancelled visits appear with their outcome and close-out date; with none yet, the empty state explains that they show up once the office closes them out | | |
 
 ---
 
-## 7. Roadmap — slices 3–8
+## 7. Roadmap — slices 3–9
 
 Every slice is implemented: slices 3–7 built the screens (§2), slice 8 hardened them
-and the release path. The SQL contract in `supabase/migrations` is fixed — the
-mobile app only reads it.
+and the release path, and slice 9 added the driver's appointments. The SQL contract
+in `supabase/migrations` is fixed — the mobile app only reads it.
 
 | Slice | Scope | Service layer | Remaining (UI) |
 |---|---|---|---|
@@ -290,6 +306,7 @@ mobile app only reads it.
 | 6 | Certificate + QR viewing | `certificate_service.dart` | **Implemented** — certificate list and detail in `lib/features/certificate/certificate_list_screen.dart` (state chips, Realtime) and `certificate_detail_screen.dart` (QR via `qr_flutter`, signed-URL PDF through `url_launcher`, copy link), plus the scanner in `certificate_verify_screen.dart` (`mobile_scanner`, with a typed-code fallback) resolving through the public `rpc_verify_certificate` |
 | 7 | Notifications | `notification_service.dart` (reads + Realtime) | **Implemented** — feed in `lib/features/notifications/notification_list_screen.dart` (unread highlight + "New" badge, live via Realtime, mark-as-read on open, mark-all-as-read, long-press a card to delete one row and a bulk "Clear read", both confirmed) with deep links into the slice-4 tracker and slice-6 certificate detail; the home tile carries the live unread count |
 | 8 | Hardening & release | error taxonomy in `lib/core/app_error.dart`; no new SQL | **Implemented** — one classified error surface (`lib/core/widgets/error_view.dart`) used by every slice; `app_error.dart` extended to the web console's reason + hint parity (transport/status detection, session-vs-project authorisation, `blocking`); the session gate classifies and retries its own failures; optional release signing in `android/app/build.gradle.kts` with a debug fallback and `android/key.properties.example`, documented in §5 |
+| 9 | Appointments | `appointment_service.dart` (reads + Realtime); no new SQL | **Implemented** — list in `lib/features/appointments/appointment_list_screen.dart` (Upcoming / Past split with counts, pull-to-refresh, live via Realtime) and detail in `appointment_detail_screen.dart` (venue, date, status, outcome, office note, way into the owning application's tracker); the home tile carries the live count of visits still to attend; the slice-7 notification feed deep-links an appointment notice into the detail. Read-only — the office books and closes visits from the web console |
 
 ---
 
@@ -309,12 +326,14 @@ shadows or text sizes.
   `CenteredScrollView`, §2 slice 8), one empty-state panel (`EmptyState`), one
   inline message strip (`AppBanner`, tone-based) and one section label
   (`SectionHeader`). A status is always rendered through a `StatusChip` helper, so
-  its colour and shape never vary by call site.
+  its colour and shape never vary by call site — the helper covers the application,
+  document, certificate, notification **and appointment** vocabularies.
 - **Home dashboard.** The landing screen is a dashboard, not a list of tiles: a
   gradient hero card (sign-in identity, gold-ringed initials avatar, role and
   account-state pills, a faint municipal-seal watermark), a two-column "Services"
   grid (new franchise, renewal, documents, certificate & QR) and a "Track & updates"
-  group (application status, notifications with the live unread badge).
+  group (application status, notifications with the live unread badge, my
+  appointments with the live count of visits still to attend).
 - **Depth and type.** White cards on a cool neutral background carry one soft shadow
   plus a hairline border and a 16px radius; the type scale uses the platform font
   with a disciplined size/weight/line-height ramp — no new dependency.
