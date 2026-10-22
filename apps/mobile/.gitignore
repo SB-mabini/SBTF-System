@@ -25,6 +25,7 @@ ios/Flutter/flutter_export_environment.sh
 *.iml
 .idea/
 .vscode/
+devtools_options.yaml
 
 # Keystores and signing material must never be committed.
 *.jks
