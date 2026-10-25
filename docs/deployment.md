@@ -87,14 +87,18 @@ query that must read `auth_linked = true`, `password_set = true`,
 
 ## 3. Edge Functions
 
-Four functions live in `supabase/functions/`. Deploy `admin-users`; deploy
-`password-recovery` if self-service password recovery is used; the other two are
-optional per environment.
+Four functions live in `supabase/functions/`. `admin-users` is required for account
+management; deploy `password-recovery` if self-service password recovery is used;
+deploy `ai-decision-support` to enable the AI advisory screens; `renewal-reminders` is
+only needed when the scheduled reminder job runs.
 
 ```bash
 supabase functions deploy admin-users
+supabase functions deploy ai-decision-support
 supabase functions deploy password-recovery    # keep Verify JWT OFF (see below)
 supabase secrets set SITE_URL=https://sbtf-system.vercel.app
+supabase secrets set ALLOWED_WEB_ORIGINS=https://sbtf-system.vercel.app
+supabase secrets set GROQ_API_KEY=gsk_...      # only for ai-decision-support
 ```
 
 | Function | Purpose | Required secrets |
@@ -103,6 +107,10 @@ supabase secrets set SITE_URL=https://sbtf-system.vercel.app
 | `password-recovery` | Role-aware self-service recovery behind "Forgot your password?" (Verify JWT **off**) | `SITE_URL` |
 | `ai-decision-support` | Advisory analytics through the LLM | `GROQ_API_KEY` |
 | `renewal-reminders` | Scheduled 90/60/30-day reminder run | none (uses service role) |
+
+`ALLOWED_WEB_ORIGINS` is shared by every function: it is a comma-separated list of the
+browser origins allowed by the CORS helper. Localhost is always allowed; any deployed
+origin must be listed or the browser rejects the response. See §3.2.
 
 > **`password-recovery` must run with Verify JWT disabled.** It is reached before
 > sign-in, so it cannot present a user JWT. `supabase/config.toml` sets
@@ -200,6 +208,68 @@ it — e-mailing a single-use link at creation time would let it expire before t
 account could be used. The console shows the link for manual handover. Self-service
 recovery (`password-recovery`) and driver OTP do send e-mail. Do not add copy that
 claims mail was sent on a path that only returns a link.
+
+---
+
+## 3.2 AI decision support (Groq)
+
+The AI screens (`/admin/ai-support` and `/staff/ai-support`) produce an advisory briefing
+from **aggregated, anonymised** statistics. The system uses **Groq**, not xAI Grok: the
+Edge Function calls `https://api.groq.com/openai/v1/chat/completions` with the model named
+in `system_settings.ai_model` (default `llama-3.3-70b-versatile`).
+
+Flow: browser → `ai-decision-support` (caller's JWT) → `rpc_analytics_ai_context(months)`
+→ Groq → structured JSON rendered by the panel. The API key never leaves the Edge
+Function, and only counts/rates/TODA names/error excerpts are sent — no applicant names,
+contacts, plate or engine numbers.
+
+### Deploy
+
+```bash
+supabase functions deploy ai-decision-support   # keep Verify JWT ON
+supabase secrets set GROQ_API_KEY=gsk_... ALLOWED_WEB_ORIGINS=https://sbtf-system.vercel.app
+```
+
+- **`GROQ_API_KEY`** — create one at <https://console.groq.com/keys>. Without it every
+  call returns HTTP 503 `ai_not_configured`.
+- **`ALLOWED_WEB_ORIGINS`** — must include the deployed origin, otherwise the browser
+  blocks the response before the panel can read it (the CORS helper falls back to
+  `http://localhost:3000`).
+- Keep **Verify JWT ON**. The function validates the Supabase token, resolves the
+  caller's profile, and requires an active `staff` or `administrator` role. Drivers get
+  HTTP 403 `forbidden`.
+
+### Runtime settings
+
+Administrator → **Settings** (`system_settings`, category `ai`):
+
+| Key | Default | Effect |
+|---|---|---|
+| `ai_enabled` | `true` | When `false`, every call returns HTTP 503 `ai_disabled` and the UI disables the button. |
+| `ai_model` | `llama-3.3-70b-versatile` | Groq model ID; must support JSON mode (`response_format`). |
+| `ai_max_requests_per_user_per_day` | `20` | Per-user 24-hour limit. Excess calls are logged as `rejected`. |
+
+### Audit trail
+
+Every attempt appends one row to `ai_request_logs` (model, role, latency, token counts,
+SHA-256 hashes of prompt/context, aggregate `context_summary`, status/error code). The
+table is **append-only** and readable by administrators only. No prompt text and no
+personal data are stored.
+
+### Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| 503 `ai_not_configured` | `GROQ_API_KEY` is not set for the project. |
+| 503 `ai_disabled` | `ai_enabled` is `false` in Settings. |
+| 429 `rate_limit_exceeded` | The per-user daily limit was reached; raise the setting or wait 24 h. |
+| 403 `forbidden` | Caller is a driver or has no active staff/administrator profile. |
+| 500 `context_unavailable` | `rpc_analytics_ai_context` failed — usually a missing Phase 0 migration. |
+| Browser CORS error or generic "non-2xx" | Origin missing from `ALLOWED_WEB_ORIGINS`, or the function is not deployed. |
+
+> The Edge Function must call the RPC with the **caller's** JWT, not the service-role
+> key: `rpc_analytics_ai_context` is `SECURITY DEFINER` but still gates on
+> `is_staff_or_admin()`, which reads `auth.uid()` and is null for service-role requests.
 
 ---
 

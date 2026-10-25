@@ -163,12 +163,16 @@ Deno.serve(async (request: Request) => {
   const body = await request.json().catch(() => ({}));
   const months = Math.min(Math.max(Number(body?.months ?? 12), 3), 24);
 
-  const { data: context, error: contextError } = await adminClient.rpc(
+  // The RPC is SECURITY DEFINER but still gates on auth.uid() via
+  // is_staff_or_admin(), so it must run with the caller's JWT. The service-role
+  // client has no user identity and would raise 42501 here.
+  const { data: context, error: contextError } = await userClient.rpc(
     "rpc_analytics_ai_context",
     { p_months: months },
   );
 
   if (contextError || !context) {
+    console.error("AI context RPC failed", contextError);
     return errorResponse("context_unavailable", "Aggregated statistics could not be prepared.", 500, origin);
   }
 

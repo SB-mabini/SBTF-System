@@ -16,6 +16,27 @@ const PRIORITY_TONE = {
 } as const;
 
 /**
+ * `functions.invoke()` collapses every non-2xx response into the same generic
+ * message. The Edge Function returns `{ error, message }`, so surface that
+ * detail (e.g. "not configured", "daily limit reached") when it is readable.
+ */
+async function describeInvokeError(error: unknown): Promise<string> {
+  const fallback = error instanceof Error ? error.message : String(error);
+  const context = (error as { context?: Response } | null)?.context;
+  if (!context || typeof context.clone !== "function") return fallback;
+
+  try {
+    const body = (await context.clone().json()) as { message?: unknown; error?: unknown };
+    if (typeof body?.message === "string" && body.message) return body.message;
+    if (typeof body?.error === "string" && body.error) return body.error;
+  } catch {
+    // Non-JSON body: keep the generic message.
+  }
+
+  return fallback;
+}
+
+/**
  * AI decision-support panel.
  *
  * The browser never sees the Groq API key: the request goes to the
@@ -32,11 +53,14 @@ export function AiAdvisoryPanel({
   maxRequestsPerDay: number;
   enabled: boolean;
 }) {
+  const demo = isDemoMode();
   const [months, setMonths] = useState(12);
   const [busy, setBusy] = useState(false);
-  const [advisory, setAdvisory] = useState<AiAdvisory | null>(sampleAdvisory);
+  // The sample briefing exists only for preview mode. In a connected
+  // environment the page must start empty, otherwise demo copy would be
+  // presented as a real model output.
+  const [advisory, setAdvisory] = useState<AiAdvisory | null>(demo ? sampleAdvisory : null);
   const [error, setError] = useState<string | null>(null);
-  const demo = isDemoMode();
 
   async function generate() {
     setBusy(true);
@@ -57,8 +81,9 @@ export function AiAdvisoryPanel({
     setBusy(false);
 
     if (invokeError) {
+      const detail = await describeInvokeError(invokeError);
       setError(
-        `The advisory could not be generated (${invokeError.message}). The franchising office can still process applications normally — this feature is optional.`,
+        `The advisory could not be generated (${detail}). The franchising office can still process applications normally — this feature is optional.`,
       );
       return;
     }
@@ -239,8 +264,8 @@ export function AiAdvisoryPanel({
 
           <Card>
             <CardHeader
-              title="Statistics sent to the model"
-              description="The complete payload: aggregated figures only, reproducible from the Analytics screen."
+              title="Key statistics sent to the model"
+              description="A summary of the aggregated figures supplied to the model."
               icon={CalendarRange}
             />
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -257,8 +282,8 @@ export function AiAdvisoryPanel({
             </div>
             <p className="mt-3 text-[0.75rem] text-muted">
               Data as of {advisory.data_as_of ? formatDateTime(advisory.data_as_of) : "the time of the request"}.
-              Nested values in the same payload are aggregate breakdowns by month and by association
-              code; no individual record is included.
+              The model also receives aggregate breakdowns by month and by association; no individual
+              record is included.
             </p>
           </Card>
         </>

@@ -49,6 +49,7 @@ const STAFF_NAV: NavItem[] = [
   { href: "/staff/franchises", label: "Franchise Records", icon: Stamp, capability: "records.view_all" },
   { href: "/staff/analytics", label: "Analytics", icon: BarChart3, capability: "analytics.view_operational" },
   { href: "/staff/reports", label: "Reports", icon: FileBarChart, capability: "reports.export" },
+  { href: "/staff/ai-support", label: "AI Decision Support", icon: Sparkles, capability: "ai.request" },
   { href: "/staff/notifications", label: "Notifications", icon: Bell, capability: "dashboard.view" },
 ];
 
