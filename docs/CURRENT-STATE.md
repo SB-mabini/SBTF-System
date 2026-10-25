@@ -16,7 +16,9 @@ database is empty.
 | URL | `https://qdtmzgaxktebyhsxrgvf.supabase.co` |
 | Branch | `main` |
 | Local app | `npm run web:dev` → `http://localhost:3000` |
-| Connectivity check | `npm run db:check` (script at `scripts/db-check.mjs`) |
+| Deployed web app | `https://sbtf-system.vercel.app` |
+| Edge Functions live | `ai-decision-support` (Verify JWT ON), `password-recovery` (Verify JWT OFF) |
+| Connectivity check | `npm run db:check` (script at `scripts/check-supabase.mjs`) |
 
 `apps/web/.env.local` has `NEXT_PUBLIC_DEMO_MODE=false`, so the app runs against the real
 project with real authentication. Demo mode is off **deliberately** — it must never be
@@ -24,13 +26,16 @@ enabled outside local UI review, since it disables all writes.
 
 ### ⚠️ Exposed credentials — rotate these
 
-These were pasted into chat and must be rotated once the invitation work is done:
+These were pasted into chat and must be rotated once the outstanding work is verified:
 
 - Supabase **personal access token** (platform admin scope)
 - **Database password**
+- **Groq API key** (used by `ai-decision-support`; revoke at <https://console.groq.com/keys>)
+- The **Google App Password** if it is ever pasted into chat for SMTP testing; revoke it at
+  <https://myaccount.google.com/apppasswords>
 
-Neither is committed to the repository, but both are compromised by exposure. Treat
-rotation as a required follow-up task, not optional.
+None is committed to the repository, but all are compromised by exposure. Treat rotation
+as a required follow-up task, not optional.
 
 The two account passwords (`admin-password`, `staff-password`) are also weak and were
 user-supplied. They should be rotated via the account page.
@@ -105,31 +110,53 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 ## 5. Known broken, not yet fixed
 
-Do not mistake these for configuration problems:
-
-> **In progress (working tree, uncommitted):** the `pending` account status, the
-> `/auth/confirm` route, the `password-recovery` Edge Function and the role-aware
-> recovery UI are implemented but not yet committed. Items 1–4 below describe the state
-> *before* that work and will move out of this list once it is committed.
-
 1. **Add-staff UI does not exist.** `createStaffUserAction` has zero call sites. Covered by
    the invitation plan.
-2. **No auth-token route exists.** No `exchangeCodeForSession` or `verifyOtp` anywhere, so
-   confirmation, recovery, and invitation links all dead-end. Covered by the invitation plan.
-3. **Three UI strings claim an email was sent when none is.** `users.ts:122`,
-   `admin-users/index.ts:151`, `verify-email/page.tsx:24-25`.
-4. **No Edge Functions are deployed.** Calling `supabase.functions.invoke("admin-users")`
-   fails immediately.
-5. **SMTP is now configured** on the cloud project — a Gmail account using an App Password,
-   with recovery and magic-link templates provisioned in `supabase/templates/`
-   (`deployment.md` §3.1). The cloud URL configuration must still list the `/auth/confirm`
-   redirect for the origin in use; `supabase/config.toml` remains local-only.
-6. **`rpc_verify_certificate` fails at runtime.** In
-   `supabase/migrations/20260101090700_phase0_workflow_rpcs.sql` the function calls
-   `digest(...)` while `set search_path = public, pg_temp` and pgcrypto lives in the
-   `extensions` schema, so the call raises `42883: function digest(text, unknown) does not
-   exist`. The file is already applied, so the fix needs a new migration (qualify the call
-   as `extensions.digest(...)` or widen the search path) rather than an edit.
+2. **Three UI strings claim an email was sent when none is.** `users.ts:122`,
+   `admin-users/index.ts:151`, `verify-email/page.tsx:24-25`. Re-check once SMTP delivery
+   works.
+3. **Two Edge Functions are not deployed.** `admin-users` (account provisioning) and
+   `renewal-reminders` (scheduled reminders) have no deployment in the live project.
+   `ai-decision-support` and `password-recovery` are live.
+4. **Password-recovery e-mail is not delivered yet.** The function and URL configuration
+   are correct; Gmail rejects the stored SMTP credential. Details and the exact resume
+   steps are below.
+
+### Password recovery — status on 25 October 2026
+
+Working:
+
+- `password-recovery` is deployed with **Verify JWT OFF** (v2) and the logging fix in
+  commit `0548b28`; preflight and the generic `200` response were verified from the Vercel
+  origin.
+- SMTP host/port/username/sender are correct: `smtp.gmail.com:587`, username and sender
+  both `sangguniangbayan.mabini.batangas@gmail.com`, sender name `Sangguniang Bayan`.
+- Requests reach GoTrue: `user_recovery_requested` appears in the Auth logs, and the
+  redirect `https://sbtf-system.vercel.app/auth/confirm` is in the Auth allow-list.
+
+Blocking:
+
+- Gmail rejects the stored password:
+  `535 5.7.8 Username and Password not accepted … BadCredentials`.
+- Supabase stores only a hash of the SMTP password. It still matches the earlier value
+  (prefix `9fb83e…`), so the **Password** field was not actually replaced with a new
+  Google App Password. The Gmail account password never works here.
+
+To finish:
+
+1. On `sangguniangbayan.mabini.batangas@gmail.com`, enable **2-Step Verification**, then
+   create an App Password at <https://myaccount.google.com/apppasswords>.
+2. Supabase → **Authentication → Emails → SMTP Settings** → paste the 16-character value
+   into **Password** → **Save**.
+3. Wait **60 seconds** (`smtp_max_frequency`), then request one recovery from
+   `/forgot-password`.
+4. Success = `/recover` returns `status 200` in the Auth logs and the mail arrives. The
+   function log line `password-recovery: could not send the recovery e-mail` stops.
+
+The browser always shows the generic "request accepted" message, even on failure, by
+design (anti-enumeration). Only the logs reveal the truth. The relevant sources in the
+unified `logs` table are `source = 'auth_logs'` (filter `event_message ilike '%/recover%'`)
+and `source = 'function_logs'`.
 
 ---
 
