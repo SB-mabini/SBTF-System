@@ -284,14 +284,63 @@ step(5, `Functions (${RPCS.length} expected)`);
 
 let missingRpc = 0;
 
+// PostgREST resolves a function by its argument names, so a call with an empty
+// body reports PGRST202 for every function that has *required* parameters —
+// even when the function exists. Probe those with all required arguments, using
+// values that cannot mutate anything (zero UUIDs, invalid enums, an empty
+// payload). Functions the anon role may not execute then answer 42501, which
+// still proves the function is present.
+const PROBE_UUID = "00000000-0000-0000-0000-000000000000";
+const PROBE_TEXT = "SBTF diagnostic probe";
+const PROBE_ENUM = "sbtf_probe"; // invalid for every enum used here
+
+const RPC_PROBES = {
+  rpc_log_activity: { p_action: PROBE_ENUM },
+  rpc_driver_submit_application: { p_payload: {} },
+  rpc_driver_replace_document: { p_document_id: PROBE_UUID, p_storage_path: PROBE_TEXT },
+  rpc_driver_request_form: { p_payload: {} },
+  rpc_driver_cancel_form_request: { p_form_request_id: PROBE_UUID },
+  rpc_staff_start_review: { p_application_id: PROBE_UUID },
+  rpc_staff_verify_document: { p_document_id: PROBE_UUID, p_status: PROBE_ENUM },
+  rpc_staff_approve_application: { p_application_id: PROBE_UUID },
+  rpc_staff_reject_application: { p_application_id: PROBE_UUID, p_reason: PROBE_TEXT },
+  rpc_staff_assign_application: { p_application_id: PROBE_UUID, p_staff_id: PROBE_UUID },
+  rpc_staff_request_compliance: { p_application_id: PROBE_UUID, p_reason: PROBE_TEXT },
+  rpc_staff_mark_verified: { p_application_id: PROBE_UUID },
+  rpc_staff_record_application: { p_application_id: PROBE_UUID },
+  rpc_staff_record_endorsement: { p_application_id: PROBE_UUID, p_endorsed_to: PROBE_TEXT },
+  rpc_staff_record_decision: { p_application_id: PROBE_UUID, p_decision: PROBE_ENUM },
+  rpc_staff_release_document: { p_application_id: PROBE_UUID, p_received_by_name: PROBE_TEXT },
+  rpc_staff_complete_application: { p_application_id: PROBE_UUID },
+  rpc_staff_schedule_appointment: {
+    p_application_id: PROBE_UUID,
+    p_kind: PROBE_ENUM,
+    p_scheduled_at: "1970-01-01T00:00:00Z",
+    p_venue: PROBE_TEXT,
+  },
+  rpc_staff_update_appointment: { p_appointment_id: PROBE_UUID, p_status: PROBE_ENUM },
+  rpc_staff_issue_form_request: { p_form_request_id: PROBE_UUID },
+  rpc_staff_convert_form_request: {
+    p_form_request_id: PROBE_UUID,
+    p_application_id: PROBE_UUID,
+  },
+  rpc_staff_attach_certificate: { p_record_id: PROBE_UUID, p_storage_path: PROBE_TEXT },
+  rpc_staff_archive_franchise_record: { p_record_id: PROBE_UUID, p_reason: PROBE_TEXT },
+  rpc_admin_set_user_role: { p_profile_id: PROBE_UUID, p_role: PROBE_ENUM },
+  rpc_admin_set_account_status: { p_profile_id: PROBE_UUID, p_status: PROBE_ENUM },
+  rpc_verify_certificate: { p_code: "SBTF-DIAGNOSTIC-PROBE" },
+};
+
 for (const rpc of RPCS) {
   let res;
   let body = "";
   try {
-    // An empty argument object is deliberate: PostgREST resolves the function
-    // name before it validates arguments, so a missing function reports
-    // PGRST202 while a present one reports an argument or permission error.
-    res = await call(`/rest/v1/rpc/${rpc}`, { method: "POST", body: "{}" });
+    // A missing function reports PGRST202 even with the correct argument names;
+    // a present one answers with a permission, validation or result response.
+    res = await call(`/rest/v1/rpc/${rpc}`, {
+      method: "POST",
+      body: JSON.stringify(RPC_PROBES[rpc] ?? {}),
+    });
     body = await res.text();
   } catch (error) {
     bad(`${rpc.padEnd(38)} ${error.message}`);
@@ -325,7 +374,17 @@ try {
   if (res.ok) {
     const buckets = await res.json();
     const names = new Set(buckets.map((bucket) => bucket.name));
+    if (names.size === 0) {
+      // Storage hides private buckets from the publishable key: an empty list is
+      // not evidence that the buckets are missing, so this cannot be asserted
+      // from the anon role. Confirm them in Dashboard → Storage instead.
+      info(
+        "no bucket is visible to the publishable key — private buckets are hidden by design; " +
+          "confirm franchise-documents and certificates in Dashboard → Storage",
+      );
+    }
     for (const name of BUCKETS) {
+      if (names.size === 0) break;
       if (names.has(name)) {
         const bucket = buckets.find((candidate) => candidate.name === name);
         ok(`${name.padEnd(28)} present${bucket?.public ? " (PUBLIC — should be private)" : " (private)"}`);
