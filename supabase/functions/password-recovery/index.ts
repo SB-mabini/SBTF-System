@@ -75,10 +75,17 @@ Deno.serve(async (request: Request) => {
   if (mayReceiveLink) {
     // Fire and forget: delivery is Supabase's mailer, and any failure (rate
     // limit, missing SMTP) must still answer with the same generic confirmation
-    // so the response cannot be used to probe the account.
-    await anonClient.auth
-      .resetPasswordForEmail(email, { redirectTo: `${SITE_URL}/auth/confirm` })
-      .catch(() => undefined);
+    // so the response cannot be used to probe the account. The failure is
+    // logged here because the caller deliberately never sees it.
+    const { error: sendError } = await anonClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${SITE_URL}/auth/confirm`,
+    });
+    if (sendError) {
+      console.error(
+        "password-recovery: could not send the recovery e-mail:",
+        sendError.message,
+      );
+    }
   }
 
   return json({ ok: true, message: GENERIC_MESSAGE }, 200, origin);

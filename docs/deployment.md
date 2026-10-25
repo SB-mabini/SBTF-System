@@ -158,6 +158,20 @@ The Gmail account must have 2-Step Verification enabled to generate an App Passw
 (Google account → Security → App passwords). Use **Send test email** to confirm
 delivery to a real mailbox before relying on it.
 
+Two failures are easy to confuse:
+
+- **`535 5.7.8 Username and Password not accepted … BadCredentials`** — the stored
+  password is the Gmail account password or a revoked App Password. Generate a fresh
+  App Password and paste the 16 characters without spaces. Confirm the username is the
+  full Gmail address, not the sender name.
+- **`context deadline exceeded` / HTTP 504 on `/recover`** — GoTrue cannot reach the
+  SMTP server. Check the port (`587` or `465`; a typo such as `585` hangs until the
+  10-second timeout).
+
+The `password-recovery` function keeps its response generic, so the browser cannot show
+these errors. It writes them to the function logs instead (Dashboard → Edge Functions →
+`password-recovery` → Logs); the same detail appears in Auth logs as `/recover`.
+
 ### b. URL configuration (the redirect allow-list)
 
 Dashboard → **Authentication → URL Configuration**:
