@@ -22,6 +22,15 @@ const PRIORITY_TONE = {
  */
 async function describeInvokeError(error: unknown): Promise<string> {
   const fallback = error instanceof Error ? error.message : String(error);
+
+  // FunctionsFetchError means the request never reached the function at all.
+  // In practice that is an undeployed function: the gateway answers 404 without
+  // Access-Control-Allow-Methods, so the browser's CORS preflight fails and
+  // fetch() rejects before supabase-js can read the error body.
+  if ((error as { name?: string } | null)?.name === "FunctionsFetchError") {
+    return "the ai-decision-support function could not be reached — it may not be deployed for this project yet";
+  }
+
   const context = (error as { context?: Response } | null)?.context;
   if (!context || typeof context.clone !== "function") return fallback;
 
