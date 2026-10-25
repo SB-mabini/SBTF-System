@@ -476,6 +476,8 @@ export interface AiAdvisory {
   advisory_notice: string;
   notice_detail: string;
   generated_at: string;
+  /** Set by the Edge Function: the saved briefing stops being served after this. */
+  expires_at?: string | null;
   model: string;
   period_months: number;
   data_as_of: string | null;

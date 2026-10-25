@@ -55,20 +55,23 @@ async function describeInvokeError(error: unknown): Promise<string> {
  */
 export function AiAdvisoryPanel({
   sampleAdvisory,
+  savedAdvisory,
   maxRequestsPerDay,
   enabled,
 }: {
   sampleAdvisory: AiAdvisory | null;
+  /** The caller's persisted briefing, served only while it is inside its 24-hour window. */
+  savedAdvisory: AiAdvisory | null;
   maxRequestsPerDay: number;
   enabled: boolean;
 }) {
   const demo = isDemoMode();
-  const [months, setMonths] = useState(12);
+  const [months, setMonths] = useState(savedAdvisory?.period_months ?? 12);
   const [busy, setBusy] = useState(false);
-  // The sample briefing exists only for preview mode. In a connected
-  // environment the page must start empty, otherwise demo copy would be
-  // presented as a real model output.
-  const [advisory, setAdvisory] = useState<AiAdvisory | null>(demo ? sampleAdvisory : null);
+  // Preview mode shows sample content. In a connected environment only a
+  // briefing the Edge Function actually generated is rendered: the saved one
+  // from the last 24 hours, otherwise nothing.
+  const [advisory, setAdvisory] = useState<AiAdvisory | null>(demo ? sampleAdvisory : savedAdvisory);
   const [error, setError] = useState<string | null>(null);
 
   async function generate() {
@@ -153,6 +156,16 @@ export function AiAdvisoryPanel({
               The briefing below is sample content shipped with the demonstration dataset. In a
               connected environment the button calls the Groq model through the Supabase Edge
               Function.
+            </Alert>
+          </div>
+        ) : null}
+
+        {!demo && advisory ? (
+          <div className="mt-3">
+            <Alert tone="info" title="Saved briefing">
+              This briefing is stored for 24 hours
+              {advisory.expires_at ? ` (until ${formatDateTime(advisory.expires_at)})` : ""} and
+              reappears after a refresh. Generating a new briefing replaces it immediately.
             </Alert>
           </div>
         ) : null}

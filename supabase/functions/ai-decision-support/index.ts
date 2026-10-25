@@ -34,6 +34,10 @@ const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const MAX_COMPLETION_TOKENS = 4000;
 
+// A generated briefing is kept for the caller for one day; generating a new one
+// replaces it. Mirrors the expires_at column on public.ai_briefings.
+const BRIEFING_TTL_MS = 24 * 60 * 60 * 1000;
+
 const SYSTEM_PROMPT = `You are the decision-support analyst for the tricycle franchising office of the Municipality of Mabini, Batangas.
 
 You receive aggregated, anonymised statistics about franchise applications. You must:
@@ -290,34 +294,54 @@ Provide the advisory briefing as specified.`;
     output_tokens: usage.completion_tokens ?? null,
   });
 
-  return json(
+  const generatedAt = new Date();
+  const expiresAt = new Date(generatedAt.getTime() + BRIEFING_TTL_MS);
+
+  const responseBody = {
+    advisory_notice: ADVISORY_NOTICE,
+    notice_detail:
+      "This output is generated from aggregated statistics and is provided for decision support only. It cannot approve, reject or modify any application, franchise record or account.",
+    generated_at: generatedAt.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    model,
+    period_months: months,
+    data_as_of: context?.generated_at ?? null,
+    descriptive_summary: advisory.descriptive_summary ?? "",
+    key_findings: Array.isArray(advisory.key_findings) ? advisory.key_findings.slice(0, 12) : [],
+    recommendations: Array.isArray(advisory.recommendations)
+      ? advisory.recommendations.slice(0, 8).map((item) => ({
+          title: String(item?.title ?? "Recommendation"),
+          detail: String(item?.detail ?? ""),
+          reason: String(item?.reason ?? ""),
+          data_basis: String(item?.data_basis ?? ""),
+          priority: ["high", "medium", "low"].includes(item?.priority as string)
+            ? item.priority
+            : "medium",
+        }))
+      : [],
+    limitations: Array.isArray(advisory.limitations) ? advisory.limitations.slice(0, 8) : [],
+    data_basis: summarizeContext(context),
+  };
+
+  // Keep the briefing so a refresh renders the same advisory instead of paying
+  // for another model call. One row per user; a new briefing replaces it.
+  const { error: saveError } = await adminClient.from("ai_briefings").upsert(
     {
-      advisory_notice: ADVISORY_NOTICE,
-      notice_detail:
-        "This output is generated from aggregated statistics and is provided for decision support only. It cannot approve, reject or modify any application, franchise record or account.",
-      generated_at: new Date().toISOString(),
+      requester_id: profile.id,
+      payload: responseBody,
       model,
       period_months: months,
-      data_as_of: context?.generated_at ?? null,
-      descriptive_summary: advisory.descriptive_summary ?? "",
-      key_findings: Array.isArray(advisory.key_findings) ? advisory.key_findings.slice(0, 12) : [],
-      recommendations: Array.isArray(advisory.recommendations)
-        ? advisory.recommendations.slice(0, 8).map((item) => ({
-            title: String(item?.title ?? "Recommendation"),
-            detail: String(item?.detail ?? ""),
-            reason: String(item?.reason ?? ""),
-            data_basis: String(item?.data_basis ?? ""),
-            priority: ["high", "medium", "low"].includes(item?.priority as string)
-              ? item.priority
-              : "medium",
-          }))
-        : [],
-      limitations: Array.isArray(advisory.limitations) ? advisory.limitations.slice(0, 8) : [],
-      data_basis: summarizeContext(context),
+      generated_at: responseBody.generated_at,
+      expires_at: responseBody.expires_at,
     },
-    200,
-    origin,
+    { onConflict: "requester_id" },
   );
+  if (saveError) {
+    // Saving is a convenience; never fail an advisory that was generated.
+    console.error("Could not save the AI briefing", saveError.message);
+  }
+
+  return json(responseBody, 200, origin);
 });
 
 /**

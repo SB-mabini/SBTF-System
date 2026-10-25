@@ -11,6 +11,7 @@ import type {
   AccountStatus,
   ActivityAction,
   ActivityLog,
+  AiAdvisory,
   AnalyticsOverview,
   ApplicationAppointment,
   ApplicationStatus,
@@ -848,6 +849,25 @@ export async function listSettings(): Promise<SystemSetting[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("system_settings").select("*").order("category");
   return (data ?? []) as unknown as SystemSetting[];
+}
+
+/**
+ * The caller's most recent AI briefing, provided it is still inside its
+ * 24-hour window. RLS limits the row to its owner, so no user filter is needed
+ * here; a missing table (migration not applied yet) simply yields null.
+ */
+export async function getSavedAiBriefing(): Promise<AiAdvisory | null> {
+  if (isDemoMode()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("ai_briefings")
+    .select("payload")
+    .gt("expires_at", new Date().toISOString())
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return (data as { payload: AiAdvisory }).payload;
 }
 
 /* -------------------------------------------------------------------------- */

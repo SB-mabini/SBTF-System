@@ -10,7 +10,7 @@
  *   1. environment         — is the app pointed at a real project at all?
  *   2. reachability        — does the project answer on the network?
  *   3. key acceptance      — does the project accept the configured key?
- *   4. tables              — are all 18 tables present in the live schema?
+ *   4. tables              - are all 19 tables present in the live schema?
  *   5. functions           — are all 35 public RPCs present?
  *   6. buckets             — are the two private storage buckets present?
  *   7. sign-in (optional)  — does a real account authenticate end to end?
@@ -32,11 +32,12 @@ const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
 
 const TIMEOUT_MS = 15_000;
 
-// The 18 tables the migrations create. Kept as an explicit list (rather than
+// The 19 tables the migrations create. Kept as an explicit list (rather than
 // scraped from the migrations) so a renamed table shows up as a mismatch the
 // reader has to resolve, not as a silently-moving target.
 const TABLES = [
   "activity_logs",
+  "ai_briefings",
   "ai_request_logs",
   "application_status_history",
   "barangays",

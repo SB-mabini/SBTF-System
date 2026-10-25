@@ -1,6 +1,6 @@
 import { AiAdvisoryPanel } from "@/components/ai/ai-advisory-panel";
 import { SectionTitle } from "@/components/ui";
-import { listSettings, listTodas } from "@/lib/data";
+import { getSavedAiBriefing, listSettings, listTodas } from "@/lib/data";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { AiAdvisory, SystemSetting } from "@/types/database";
 
@@ -64,7 +64,11 @@ function sampleAdvisory(settings: SystemSetting[]): AiAdvisory {
 export default async function AdminAiSupportPage() {
   await requireAdministrator();
 
-  const [settings, todas] = await Promise.all([listSettings(), listTodas()]);
+  const [settings, todas, savedAdvisory] = await Promise.all([
+    listSettings(),
+    listTodas(),
+    getSavedAiBriefing(),
+  ]);
 
   const enabled = Boolean(setting(settings, "ai_enabled")?.value ?? true);
   const limit = Number(setting(settings, "ai_max_requests_per_user_per_day")?.value ?? 20);
@@ -75,7 +79,12 @@ export default async function AdminAiSupportPage() {
         title="AI decision support"
         description={`Advisory briefings for the franchising office, generated from aggregated statistics of ${todas.length} associations. The model never approves, rejects or modifies anything.`}
       />
-      <AiAdvisoryPanel sampleAdvisory={sampleAdvisory(settings)} maxRequestsPerDay={limit} enabled={enabled} />
+      <AiAdvisoryPanel
+        sampleAdvisory={sampleAdvisory(settings)}
+        savedAdvisory={savedAdvisory}
+        maxRequestsPerDay={limit}
+        enabled={enabled}
+      />
     </div>
   );
 }

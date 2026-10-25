@@ -1,6 +1,6 @@
 import { AiAdvisoryPanel } from "@/components/ai/ai-advisory-panel";
 import { SectionTitle } from "@/components/ui";
-import { listSettings } from "@/lib/data";
+import { getSavedAiBriefing, listSettings } from "@/lib/data";
 import { requireStaff } from "@/lib/auth-guard";
 import type { AiAdvisory, SystemSetting } from "@/types/database";
 
@@ -48,7 +48,7 @@ function sampleAdvisory(settings: SystemSetting[]): AiAdvisory {
 
 export default async function StaffAiSupportPage() {
   await requireStaff();
-  const settings = await listSettings();
+  const [settings, savedAdvisory] = await Promise.all([listSettings(), getSavedAiBriefing()]);
   const enabled = Boolean(setting(settings, "ai_enabled")?.value ?? true);
   const limit = Number(setting(settings, "ai_max_requests_per_user_per_day")?.value ?? 20);
 
@@ -58,7 +58,12 @@ export default async function StaffAiSupportPage() {
         title="AI decision support"
         description="Operational briefings drawn from aggregated statistics. Use them to plan the day, never as a substitute for the documentary requirements."
       />
-      <AiAdvisoryPanel sampleAdvisory={sampleAdvisory(settings)} maxRequestsPerDay={limit} enabled={enabled} />
+      <AiAdvisoryPanel
+        sampleAdvisory={sampleAdvisory(settings)}
+        savedAdvisory={savedAdvisory}
+        maxRequestsPerDay={limit}
+        enabled={enabled}
+      />
     </div>
   );
 }

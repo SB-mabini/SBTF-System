@@ -36,10 +36,10 @@ the two `NEXT_PUBLIC_*` values are the **only** Supabase credentials it ever see
 2. Either the Supabase CLI logged in (`supabase link`) **or** access to the SQL Editor
    in the dashboard. Both routes are supported; pick one.
 
-### 2.2 Applying the 20 migrations
+### 2.2 Applying the migrations
 
-`supabase/migrations/` contains 20 files, `20260101090000_phase0_types.sql` through
-`20260101091900_phase1_rls_policies.sql`. They create the 18 tables,
+`supabase/migrations/` contains 26 files, `20260101090000_phase0_types.sql` through
+`20260101092500_ai_briefings.sql`. They create the 19 tables,
 the public RPC surface (35 functions), RLS policies, storage buckets, Realtime
 publication and the scheduled job.
 
@@ -262,6 +262,27 @@ SHA-256 hashes of prompt/context, aggregate `context_summary`, status/error code
 table is **append-only** and readable by administrators only. No prompt text and no
 personal data are stored.
 
+### Saved briefings
+
+A briefing costs a model call and several seconds, so the function saves the JSON it
+returned in `public.ai_briefings` before answering. Each user has at most one row
+(`requester_id` is unique): generating a new briefing replaces it immediately.
+
+- The row carries `expires_at`, set to 24 hours after generation. The page only loads a
+  saved briefing while it is inside that window, so after a day the panel starts empty
+  again until someone generates a new one.
+- The page fetches the saved row on the server and passes it to the panel, which renders
+  it unchanged after a refresh, a new sign-in or on another device.
+- RLS exposes a row only to its owner (`requester_id = current_profile_id()`). Writes come
+  from the Edge Function with the service role, so the table has **no** insert, update or
+  delete policy. The `payload` column holds the advisory text and aggregate statistics
+  only — no applicant records.
+- Saving is best-effort: if the upsert fails, the function logs the error and still
+  returns the advisory.
+
+Deploying the function requires the table to exist: apply
+`20260101092500_ai_briefings.sql` first.
+
 ### Troubleshooting
 
 | Symptom | Cause |
@@ -366,7 +387,7 @@ publishable key is embedded, which is safe because RLS is the authorisation boun
 | Command | What it proves | Needs a database |
 |---|---|---|
 | `npm run validate:sql` | Every migration, seed and pgTAP statement parses with the real PostgreSQL grammar | No |
-| `npm run db:check` | 8-step read-only diagnosis: env, reachability, key acceptance, 18 tables, 35 functions, buckets, optional sign-in, RLS probe. Stops at the first broken link | Yes |
+| `npm run db:check` | 8-step read-only diagnosis: env, reachability, key acceptance, 19 tables, 35 functions, buckets, optional sign-in, RLS probe. Stops at the first broken link | Yes |
 | `npm run db:verify` | Replays the console's actual queries against the live project and compares response shapes with the TypeScript interfaces | Yes |
 | `npm run test:verify` | Self-test of the verifier against a local mock — proves the guard works, no database | No |
 | `npm run test:rls` | pgTAP suites (requires Supabase CLI + a project) | Yes |

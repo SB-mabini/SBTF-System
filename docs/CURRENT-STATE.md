@@ -39,8 +39,10 @@ user-supplied. They should be rotated via the account page.
 
 ## 2. Database
 
-- **All 21 migrations applied** to the live project and matching remote history.
-- 18 tables, 34 public RLS policies, 69 functions, 2 storage buckets.
+- **All 26 migrations applied** to the live project and matching remote history.
+- 19 tables, 35 public RLS policies, 70 functions, 2 storage buckets.
+- Each staff member and administrator keeps their latest AI briefing for 24 hours in
+  `ai_briefings`; a new briefing replaces it.
 - 34 barangays seeded as reference data (from migrations, **not** from `seed.sql`).
 - **Seed data has never been applied** to any environment, by explicit user decision.
 

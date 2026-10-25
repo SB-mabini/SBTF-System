@@ -7,7 +7,7 @@ workflow. Phase 3 (mobile) cases live in [`mobile.md`](./mobile.md).
 with what happened and **Pass** with ✓ / ✗. The columns are intentionally empty
 here — this file is the plan, not the record.
 
-**Environment:** a Supabase project with all 20 migrations applied
+**Environment:** a Supabase project with all 26 migrations applied
 ([`deployment.md`](./deployment.md) §2.2) and the demonstration dataset loaded (§3
 below). Static checks that need no database: `npm run validate:sql`,
 `npm run test:verify`, `npm run web:test`.
@@ -31,7 +31,7 @@ Passwords for the seeded accounts are documented in [`deployment.md`](./deployme
 
 | # | Check | Command / place |
 |---|---|---|
-| 1 | Migrations applied (20 files) | `npm run db:check` steps 4–5 |
+| 1 | Migrations applied (26 files) | `npm run db:check` steps 4-5 |
 | 2 | RLS enforced for the anon key | `npm run db:check` step 8 |
 | 3 | Edge Function `admin-users` deployed | `supabase functions list` |
 | 4 | `SITE_URL` secret set on the project | `supabase secrets list` |
