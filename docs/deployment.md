@@ -216,7 +216,7 @@ claims mail was sent on a path that only returns a link.
 The AI screens (`/admin/ai-support` and `/staff/ai-support`) produce an advisory briefing
 from **aggregated, anonymised** statistics. The system uses **Groq**, not xAI Grok: the
 Edge Function calls `https://api.groq.com/openai/v1/chat/completions` with the model named
-in `system_settings.ai_model` (default `llama-3.3-70b-versatile`).
+in `system_settings.ai_model` (default `openai/gpt-oss-120b`).
 
 Flow: browser → `ai-decision-support` (caller's JWT) → `rpc_analytics_ai_context(months)`
 → Groq → structured JSON rendered by the panel. The API key never leaves the Edge
@@ -246,8 +246,14 @@ Administrator → **Settings** (`system_settings`, category `ai`):
 | Key | Default | Effect |
 |---|---|---|
 | `ai_enabled` | `true` | When `false`, every call returns HTTP 503 `ai_disabled` and the UI disables the button. |
-| `ai_model` | `llama-3.3-70b-versatile` | Groq model ID; must support JSON mode (`response_format`). |
+| `ai_model` | `openai/gpt-oss-120b` | Groq model ID; must support JSON mode (`response_format`). The Edge Function allows 4 000 completion tokens because reasoning models bill their hidden reasoning against the same budget. |
 | `ai_max_requests_per_user_per_day` | `20` | Per-user 24-hour limit. Excess calls are logged as `rejected`. |
+
+Model availability changes over time: Groq retired `llama-3.3-70b-versatile` and some
+keys no longer see it at all (`404 model_not_found`). Confirm the configured model is
+listed by `GET https://api.groq.com/openai/v1/models` with the project's key before
+changing it. Models must return a JSON object; the panel tolerates a missing section but
+logs it under `limitations` rather than inventing content.
 
 ### Audit trail
 

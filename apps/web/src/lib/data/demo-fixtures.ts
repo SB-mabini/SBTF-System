@@ -757,7 +757,7 @@ export const demoSettings: SystemSetting[] = [
   ["franchise_validity_months", 12, "number", "franchise", "Franchise validity (months)", "Validity applied to newly issued records.", true],
   ["franchise_number_prefix", "MAB-TR", "string", "franchise", "Franchise number prefix", "Prefix used when generating franchise numbers.", true],
   ["renewal_reminder_days", [90, 60, 30], "json", "notifications", "Renewal reminder windows (days)", "Days before expiry a reminder is raised.", true],
-  ["ai_model", "llama-3.3-70b-versatile", "string", "ai", "Groq model", "Model used by the AI decision-support function.", false],
+  ["ai_model", "openai/gpt-oss-120b", "string", "ai", "Groq model", "Model used by the AI decision-support function.", false],
   ["ai_enabled", true, "boolean", "ai", "AI decision support enabled", "When disabled the advisory endpoint refuses to run.", false],
   ["ai_max_requests_per_user_per_day", 20, "number", "ai", "AI requests per user per day", "Soft rate limit protecting the shared quota.", false],
   ["certificate_signatory_name", "HON. MARIA TERESA DELA CRUZ", "string", "certificate", "Certificate signatory", "Name printed on the certificate.", true],

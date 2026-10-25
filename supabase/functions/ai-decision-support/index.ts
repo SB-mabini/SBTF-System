@@ -26,7 +26,13 @@ import {
 } from "../_shared/http.ts";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+
+// Overridable at runtime through system_settings.ai_model. The default is a
+// reasoning model, so the completion budget also pays for hidden reasoning
+// tokens: a briefing costs 1 600–2 400 tokens in total and 1 600 truncated it
+// mid-object. Keep this comfortably above the observed maximum.
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const MAX_COMPLETION_TOKENS = 4000;
 
 const SYSTEM_PROMPT = `You are the decision-support analyst for the tricycle franchising office of the Municipality of Mabini, Batangas.
 
@@ -198,7 +204,7 @@ Provide the advisory briefing as specified.`;
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_tokens: 1600,
+        max_tokens: MAX_COMPLETION_TOKENS,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -259,6 +265,15 @@ Provide the advisory briefing as specified.`;
         "The model response could not be parsed as structured output; the raw text is shown instead.",
       ],
     };
+  }
+
+  // Smaller models sometimes return valid JSON that simply omits a section.
+  // Surface that instead of presenting a partial briefing as a complete one.
+  if (!Array.isArray(advisory.recommendations) || advisory.recommendations.length === 0) {
+    advisory.limitations = [
+      ...(Array.isArray(advisory.limitations) ? advisory.limitations : []),
+      "The model did not return structured recommendations for this dataset; treat the summary as descriptive only.",
+    ];
   }
 
   await adminClient.from("ai_request_logs").insert({

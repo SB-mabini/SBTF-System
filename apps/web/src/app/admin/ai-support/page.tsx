@@ -21,7 +21,7 @@ function sampleAdvisory(settings: SystemSetting[]): AiAdvisory {
     notice_detail:
       "Sample briefing shipped with the preview dataset. In a connected environment this content is produced by the configured Groq model from aggregated statistics.",
     generated_at: new Date().toISOString(),
-    model: String(setting(settings, "ai_model")?.value ?? "llama-3.3-70b-versatile"),
+    model: String(setting(settings, "ai_model")?.value ?? "openai/gpt-oss-120b"),
     period_months: 12,
     data_as_of: new Date().toISOString(),
     descriptive_summary:
