@@ -172,6 +172,14 @@ The `password-recovery` function keeps its response generic, so the browser cann
 these errors. It writes them to the function logs instead (Dashboard → Edge Functions →
 `password-recovery` → Logs); the same detail appears in Auth logs as `/recover`.
 
+Supabase only stores a hash of the SMTP password, so the dashboard cannot show whether the
+saved value is the one you think it is. To test a credential before saving it, run an
+`AUTH LOGIN` handshake against `smtp.gmail.com:587` (connect, `EHLO`, `STARTTLS`, upgrade
+to TLS, `EHLO`, `AUTH LOGIN`) and confirm `235 2.7.0 Accepted`. A correct password fails
+with `535`. A working recovery request ends `"status":200` in the Auth logs with no
+`error` field, and produces no `could not send the recovery e-mail` line in the function
+logs.
+
 ### b. URL configuration (the redirect allow-list)
 
 Dashboard → **Authentication → URL Configuration**:

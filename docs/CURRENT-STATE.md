@@ -31,8 +31,10 @@ These were pasted into chat and must be rotated once the outstanding work is ver
 - Supabase **personal access token** (platform admin scope)
 - **Database password**
 - **Groq API key** (used by `ai-decision-support`; revoke at <https://console.groq.com/keys>)
-- The **Google App Password** if it is ever pasted into chat for SMTP testing; revoke it at
-  <https://myaccount.google.com/apppasswords>
+- **Google App Password** for `sangguniangbayan.mabini.batangas@gmail.com` — pasted into chat
+  on 26 October 2026 to unblock SMTP and currently live in the Supabase config. Create a
+  replacement, save it, verify, then revoke this one at
+  <https://myaccount.google.com/apppasswords>.
 
 None is committed to the repository, but all are compromised by exposure. Treat rotation
 as a required follow-up task, not optional.
@@ -118,45 +120,41 @@ running, because both write to `.next`. Typecheck and lint pass.
 3. **Two Edge Functions are not deployed.** `admin-users` (account provisioning) and
    `renewal-reminders` (scheduled reminders) have no deployment in the live project.
    `ai-decision-support` and `password-recovery` are live.
-4. **Password-recovery e-mail is not delivered yet.** The function and URL configuration
-   are correct; Gmail rejects the stored SMTP credential. Details and the exact resume
-   steps are below.
+4. **The Gmail App Password used for SMTP was pasted into chat** and must be rotated. See
+   the rotation note below; do not revoke it before the replacement is saved, or recovery
+   stops working.
 
-### Password recovery — status on 25 October 2026
+### Password recovery — working since 26 October 2026
 
-Working:
+The whole chain is verified end to end:
 
-- `password-recovery` is deployed with **Verify JWT OFF** (v2) and the logging fix in
-  commit `0548b28`; preflight and the generic `200` response were verified from the Vercel
-  origin.
-- SMTP host/port/username/sender are correct: `smtp.gmail.com:587`, username and sender
-  both `sangguniangbayan.mabini.batangas@gmail.com`, sender name `Sangguniang Bayan`.
-- Requests reach GoTrue: `user_recovery_requested` appears in the Auth logs, and the
-  redirect `https://sbtf-system.vercel.app/auth/confirm` is in the Auth allow-list.
+| Step | State |
+|---|---|
+| `password-recovery` Edge Function | deployed v2, **Verify JWT OFF** |
+| SMTP host / port | `smtp.gmail.com:587` (STARTTLS) |
+| SMTP username / sender | `sangguniangbayan.mabini.batangas@gmail.com` |
+| SMTP sender name | `Sangguniang Bayan` |
+| SMTP password | valid 16-character Google App Password, verified against Gmail before saving |
+| Auth redirect allow-list | includes `https://sbtf-system.vercel.app/auth/confirm` |
+| `/recover` result | `status 200`, no `535`, no function-log error (26 Oct 2026 02:40 UTC) |
 
-Blocking:
+How it was diagnosed, for the next time it breaks:
 
-- Gmail rejects the stored password:
-  `535 5.7.8 Username and Password not accepted … BadCredentials`.
-- Supabase stores only a hash of the SMTP password. It still matches the earlier value
-  (prefix `9fb83e…`), so the **Password** field was not actually replaced with a new
-  Google App Password. The Gmail account password never works here.
+- The browser always shows the generic "request accepted" message, even on failure, by
+  design (anti-enumeration). Only the logs reveal the truth.
+- `source = 'auth_logs'`, filter `event_message ilike '%/recover%'` — a working request
+  ends `"status":200` with no `error`. `535 5.7.8 … BadCredentials` means the password is
+  the Gmail account password or a revoked App Password. `504 context deadline exceeded`
+  means the SMTP port is unreachable (a typo such as `585` hangs for 10 s).
+- `source = 'function_logs'` — commit `0548b28` logs
+  `password-recovery: could not send the recovery e-mail` with the underlying message,
+  while still returning the generic response.
+- Supabase stores only a hash of `smtp_pass`. The Management API returns it masked; a
+  changed prefix proves the Password field was actually saved.
 
-To finish:
-
-1. On `sangguniangbayan.mabini.batangas@gmail.com`, enable **2-Step Verification**, then
-   create an App Password at <https://myaccount.google.com/apppasswords>.
-2. Supabase → **Authentication → Emails → SMTP Settings** → paste the 16-character value
-   into **Password** → **Save**.
-3. Wait **60 seconds** (`smtp_max_frequency`), then request one recovery from
-   `/forgot-password`.
-4. Success = `/recover` returns `status 200` in the Auth logs and the mail arrives. The
-   function log line `password-recovery: could not send the recovery e-mail` stops.
-
-The browser always shows the generic "request accepted" message, even on failure, by
-design (anti-enumeration). Only the logs reveal the truth. The relevant sources in the
-unified `logs` table are `source = 'auth_logs'` (filter `event_message ilike '%/recover%'`)
-and `source = 'function_logs'`.
+**Rotating the exposed App Password** (no downtime): create a second App Password, save it
+in Supabase → Authentication → Emails → SMTP Settings → Password, send one test recovery,
+then revoke the old one at <https://myaccount.google.com/apppasswords>.
 
 ---
 
