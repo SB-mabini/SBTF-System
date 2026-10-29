@@ -23,11 +23,10 @@ import '../../core/widgets/section_header.dart';
 /// [ApplicationService.submit], which runs the same pre-validation again and
 /// classifies any refusal into an [AppFailure].
 class ApplicationFormScreen extends ConsumerStatefulWidget {
-  const ApplicationFormScreen({super.key, required this.applicationType});
+  const ApplicationFormScreen({super.key, this.applicationType});
 
-  /// [ApplicationType.newFranchise] or [ApplicationType.renewal]. The wizard
-  /// opens on this step but the driver may still switch type.
-  final String applicationType;
+  /// An optional type for entry points that already know the driver's choice.
+  final String? applicationType;
 
   @override
   ConsumerState<ApplicationFormScreen> createState() =>
@@ -71,7 +70,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _crNumber = TextEditingController();
   final _ctc = TextEditingController();
 
-  late String _type;
+  String? _type;
   String? _todaId;
   String? _barangayCode;
   String? _recordId;
@@ -138,6 +137,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
   void _next() {
     FocusScope.of(context).unfocus();
+    if (_step == 0 && _type == null) {
+      setState(() => _submitError = 'Select an application type.');
+      return;
+    }
     if (_step == 3) {
       final problems = _documentProblems();
       if (problems.isNotEmpty) {
@@ -235,9 +238,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   // Submission
   // -------------------------------------------------------------------------
 
-  ApplicationSubmission _buildSubmission() {
+  ApplicationSubmission _buildSubmission({required String applicationType}) {
     return ApplicationSubmission(
-      applicationType: _type,
+      applicationType: applicationType,
       todaId: _todaId ?? '',
       operatorFirstName: _firstName.text.trim(),
       operatorMiddleName: _emptyToNull(_middleName.text),
@@ -267,7 +270,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    final submission = _buildSubmission();
+    final applicationType = _type;
+    if (applicationType == null) {
+      setState(() => _submitError = 'Select an application type.');
+      return;
+    }
+    final submission = _buildSubmission(applicationType: applicationType);
 
     // The same rules the server applies, run before any network call.
     final problems = submission.validate();
@@ -316,7 +324,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isRenewal ? 'Renewal application' : 'New application'),
+        title: Text(
+          _isRenewal ? 'Renewal application' : 'New application',
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -378,13 +388,14 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       children: [
         const _SectionTitle('Application type'),
         _TypeOption(
-          selected: !_isRenewal,
+          selected: _type == ApplicationType.newFranchise,
           icon: Icons.note_add_outlined,
           title: 'New franchise',
           subtitle: 'First franchise for this tricycle',
           onTap: () => setState(() {
             _type = ApplicationType.newFranchise;
             _recordId = null;
+            _submitError = null;
           }),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -393,7 +404,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           icon: Icons.autorenew_outlined,
           title: 'Renewal',
           subtitle: 'Renew an existing franchise',
-          onTap: () => setState(() => _type = ApplicationType.renewal),
+          onTap: () => setState(() {
+            _type = ApplicationType.renewal;
+            _submitError = null;
+          }),
         ),
         const SizedBox(height: AppSpacing.md),
         const _SectionTitle('TODA & barangay'),
@@ -552,38 +566,60 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Widget _barangayPicker(List<Barangay> barangays) {
-    Barangay? selected;
-    for (final barangay in barangays) {
-      if (barangay.code == _barangayCode) {
-        selected = barangay;
-        break;
-      }
-    }
+    final initialCode =
+        barangays.any((barangay) => barangay.code == _barangayCode)
+            ? _barangayCode
+            : null;
 
-    return InkWell(
-      borderRadius: AppRadius.input,
-      onTap: barangays.isEmpty ? null : () => _showBarangayPicker(barangays),
-      child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Barangay',
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          suffixIcon: Icon(Icons.arrow_drop_down),
-        ),
-        isEmpty: selected == null,
-        child: Text(
-          selected?.name ?? 'Select your barangay',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color:
-                    selected == null ? AppColors.inkMuted : AppColors.inkStrong,
-              ),
-        ),
-      ),
+    return FormField<String>(
+      initialValue: initialCode,
+      validator: (value) =>
+          value == null || value.isEmpty ? 'Select a barangay.' : null,
+      builder: (field) {
+        Barangay? selected;
+        for (final barangay in barangays) {
+          if (barangay.code == field.value) {
+            selected = barangay;
+            break;
+          }
+        }
+
+        return InkWell(
+          borderRadius: AppRadius.input,
+          onTap: barangays.isEmpty
+              ? null
+              : () async {
+                  final selectedCode = await _showBarangayPicker(barangays);
+                  if (selectedCode != null && mounted) {
+                    setState(() => _barangayCode = selectedCode);
+                    field.didChange(selectedCode);
+                  }
+                },
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'Barangay',
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+              errorText: field.errorText,
+            ),
+            isEmpty: selected == null,
+            child: Text(
+              selected?.name ?? 'Select your barangay',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: selected == null
+                        ? AppColors.inkMuted
+                        : AppColors.inkStrong,
+                  ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Future<void> _showBarangayPicker(List<Barangay> barangays) async {
+  Future<String?> _showBarangayPicker(List<Barangay> barangays) async {
     final sortedBarangays = [...barangays]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final selectedCode = await showModalBottomSheet<String>(
@@ -660,9 +696,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       ),
     );
 
-    if (selectedCode != null && mounted) {
-      setState(() => _barangayCode = selectedCode);
-    }
+    return selectedCode;
   }
 
   Widget _renewalRecordField() {
@@ -917,7 +951,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Widget _stepReview() {
-    final submission = _buildSubmission();
+    final applicationType = _type;
+    if (applicationType == null) return const SizedBox.shrink();
+    final submission = _buildSubmission(applicationType: applicationType);
     final now = DateTime.now();
     final dateStr = '${_monthName(now.month)} ${now.day}, ${now.year}';
     final applicantName = _fullName(

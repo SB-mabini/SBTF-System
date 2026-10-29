@@ -120,7 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _openApplication(BuildContext context, String applicationType) {
+  void _openApplication(BuildContext context, String? applicationType) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ApplicationFormScreen(applicationType: applicationType),
@@ -247,9 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onOpenCertificates: () => _openCertificates(context),
                 onOpenNotifications: () => _openNotifications(context),
               ),
-              _ApplyTab(
-                onOpenApplication: (type) => _openApplication(context, type),
-              ),
+              const SizedBox.shrink(),
               _TrackTab(
                 upcoming: upcoming,
                 onOpenAppointments: () => _openAppointments(context),
@@ -267,6 +265,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
+          if (index == 1) {
+            _openApplication(context, null);
+            return;
+          }
           setState(() {
             _currentIndex = index;
           });
@@ -350,44 +352,6 @@ class _HomeTab extends ConsumerWidget {
           application: latest,
           onOpenStatus: onOpenStatus,
           onOpenApplication: onOpenApplication,
-        ),
-      ],
-    );
-  }
-}
-
-/// Apply tab - New and Renewal applications
-class _ApplyTab extends StatelessWidget {
-  const _ApplyTab({required this.onOpenApplication});
-
-  final void Function(String) onOpenApplication;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      children: [
-        const Text(
-          'Apply for Franchise',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.inkStrong,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _BottomNavTile(
-          icon: Icons.note_add_outlined,
-          title: 'New Franchise Application',
-          subtitle: 'Apply for a new tricycle franchise',
-          onTap: () => onOpenApplication(ApplicationType.newFranchise),
-        ),
-        const SizedBox(height: 8),
-        _BottomNavTile(
-          icon: Icons.autorenew_outlined,
-          title: 'Renewal Application',
-          subtitle: 'Renew an existing franchise',
-          onTap: () => onOpenApplication(ApplicationType.renewal),
         ),
       ],
     );
