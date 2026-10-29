@@ -22,7 +22,7 @@ void main() {
   );
 
   Widget harness({
-    String type = ApplicationType.newFranchise,
+    String? type,
     List<FranchiseRecord> records = const <FranchiseRecord>[],
     List<Barangay> barangays = const <Barangay>[barangay],
     List<Toda> todas = const <Toda>[toda],
@@ -40,20 +40,37 @@ void main() {
     );
   }
 
-  testWidgets('opens on the requested application type', (tester) async {
+  testWidgets('opens without a preselected application type', (tester) async {
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
 
     expect(find.text('New application'), findsOneWidget);
     expect(find.text('New franchise'), findsOneWidget);
     expect(find.text('Renewal'), findsOneWidget);
+    expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(2));
+    expect(find.byIcon(Icons.radio_button_checked), findsNothing);
     expect(find.text('Select your TODA'), findsOneWidget);
   });
 
+  testWidgets('requires an application type before continuing', (tester) async {
+    await tester.pumpWidget(harness());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select an application type.'), findsOneWidget);
+    expect(find.textContaining('Step 1 of 5'), findsOneWidget);
+
+    await tester.tap(find.text('Renewal'));
+    await tester.pump();
+    expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+  });
   testWidgets('blocks Next until a TODA is chosen', (tester) async {
     await tester.pumpWidget(harness());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('New franchise'));
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 

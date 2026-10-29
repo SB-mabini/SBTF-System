@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sbtf_mobile/core/models/toda.dart';
 import 'package:sbtf_mobile/core/models/profile.dart';
 import 'package:sbtf_mobile/core/providers.dart';
 import 'package:sbtf_mobile/features/home/home_screen.dart';
@@ -28,6 +29,8 @@ Widget _harness(int unread) => ProviderScope(
         profileProvider.overrideWith((ref) => _profile),
         unreadNotificationCountStreamProvider
             .overrideWith((ref) => Stream.value(unread)),
+        todaListProvider.overrideWith((ref) => const <Toda>[]),
+        barangayListProvider.overrideWith((ref) => const <Barangay>[]),
       ],
       child: const MaterialApp(home: HomeScreen()),
     );
@@ -79,5 +82,19 @@ void main() {
     );
     final cardSize = tester.getSize(cardFinder);
     expect(cardSize.height, inInclusiveRange(48, 72));
+  });
+
+  testWidgets('Apply navigation opens the application form directly',
+      (tester) async {
+    await _pumpTall(tester, _harness(0));
+
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New application'), findsOneWidget);
+    expect(find.text('Apply for Franchise'), findsNothing);
+    expect(find.text('New Franchise Application'), findsNothing);
+    expect(find.text('Renewal Application'), findsNothing);
+    expect(find.byIcon(Icons.radio_button_checked), findsNothing);
   });
 }
