@@ -331,6 +331,7 @@ Deploying the function requires the table to exist: apply
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) | publishable key | Both names are accepted; never the service-role key |
 | `NEXT_PUBLIC_SITE_URL` | production URL | Used for auth redirects and certificate QR links |
+| `NEXT_PUBLIC_VERIFICATION_BASE_URL` | optional public URL | Certificate QR address when certificates are generated from a different host (for example, locally). A `localhost` value in the `certificate_verification_base_url` setting is ignored in favour of this, `NEXT_PUBLIC_SITE_URL`, or the request origin. |
 | `NEXT_PUBLIC_DEMO_MODE` | unset | Must be absent or `false` in production |
 
 ### 4.2 Conditions for sign-in to work on Vercel

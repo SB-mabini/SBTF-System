@@ -17,7 +17,7 @@ import { isDemoMode } from "@/lib/env";
  * countdown modal first, giving them the chance to stay signed in. Any activity
  * (including using the buttons) resets the idle clock.
  */
-const TIMEOUT_MS = 3 * 60 * 1000; // total idle time before sign-out
+const TIMEOUT_MS = 5 * 60 * 1000; // total idle time before sign-out
 const WARNING_MS = 30 * 1000; // how long before sign-out the warning appears
 const ACTIVITY_EVENTS = ["keydown", "click", "scroll", "touchstart"] as const;
 

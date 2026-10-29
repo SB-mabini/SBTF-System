@@ -14,7 +14,8 @@ vi.mock("qrcode", () => ({
   },
 }));
 
-import { buildCertificatePdf, certificateStoragePath } from "./certificate";
+import { buildCertificateBody, buildCertificatePdf, certificateStoragePath } from "./certificate";
+import { MUNICIPALITY, PROVINCE } from "./constants";
 import { VERIFICATION_CODE_ALPHABET } from "./verification";
 
 const CODE = "ABCDEFGHJKMN";
@@ -79,6 +80,30 @@ describe("buildCertificatePdf", () => {
   it("keeps the certificate to a single page", async () => {
     const doc = await buildCertificatePdf(INPUT);
     expect(doc.getNumberOfPages()).toBe(1);
+  });
+});
+
+describe("buildCertificateBody", () => {
+  it("names the municipality once", () => {
+    const body = buildCertificateBody(INPUT);
+
+    expect(body).toContain(
+      "within the territorial jurisdiction of Municipality of Mabini, Batangas, described as follows:",
+    );
+    expect(body).not.toContain("Municipality of Municipality");
+  });
+
+  it("states the operator, address and TODA membership", () => {
+    const body = buildCertificateBody(INPUT);
+
+    expect(body).toContain("JUAN DELA CRUZ, of Barangay Poblacion, Mabini, Batangas");
+    expect(body).toContain("a member in good standing of TODA Poblacion");
+  });
+
+  it("uses the exact municipality and province constants", () => {
+    const body = buildCertificateBody(INPUT);
+
+    expect(body).toContain(`${MUNICIPALITY}, ${PROVINCE}`);
   });
 });
 

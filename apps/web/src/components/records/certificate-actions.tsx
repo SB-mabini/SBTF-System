@@ -10,6 +10,7 @@ import { buildCertificatePdf, certificateStoragePath } from "@/lib/certificate";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
 import { formatDate } from "@/lib/format";
+import { resolveVerificationBaseUrl } from "@/lib/verification";
 import type { FranchiseRecordDetail, SystemSetting } from "@/types/database";
 
 interface CertificateActionsProps {
@@ -68,10 +69,9 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
           "certificate_footer_note",
           "This certificate is verifiable through the QR code printed on it.",
         ),
-        verificationBaseUrl: settingValue(
-          settings,
-          "certificate_verification_base_url",
-          "https://sbtf-mabini.example.gov.ph/verify",
+        verificationBaseUrl: resolveVerificationBaseUrl(
+          settingValue(settings, "certificate_verification_base_url", ""),
+          { requestOrigin: window.location.origin },
         ),
       });
 

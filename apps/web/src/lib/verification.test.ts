@@ -7,8 +7,10 @@ import {
   VERIFICATION_CODE_LENGTH,
   buildVerificationUrl,
   isWellFormedVerificationCode,
+  isLoopbackBaseUrl,
   maskOperatorName,
   normaliseVerificationCode,
+  resolveVerificationBaseUrl,
   verificationStatusLabel,
 } from "./verification";
 
@@ -76,6 +78,56 @@ describe("buildVerificationUrl", () => {
     expect(buildVerificationUrl("https://example.gov.ph/verify/", "abcdefghjkmn")).toBe(
       "https://example.gov.ph/verify?code=ABCDEFGHJKMN",
     );
+  });
+});
+
+describe("resolveVerificationBaseUrl", () => {
+  it("uses the administrator's setting when it is a public address", () => {
+    expect(
+      resolveVerificationBaseUrl("https://sbtf-system.vercel.app/verify", {
+        siteUrl: "https://sbtf-system.vercel.app",
+      }),
+    ).toBe("https://sbtf-system.vercel.app/verify");
+  });
+
+  it("never gives a phone a loopback address", () => {
+    // The shipped default is localhost, which is exactly the bug this guards.
+    expect(
+      resolveVerificationBaseUrl("http://localhost:3000/verify", {
+        explicit: "",
+        siteUrl: "https://sbtf-system.vercel.app",
+      }),
+    ).toBe("https://sbtf-system.vercel.app/verify");
+    expect(isLoopbackBaseUrl("http://127.0.0.1:3000/verify")).toBe(true);
+    expect(isLoopbackBaseUrl("https://sbtf-system.vercel.app/verify")).toBe(false);
+  });
+
+  it("prefers an explicit public override over everything else", () => {
+    expect(
+      resolveVerificationBaseUrl("https://old.example.gov.ph/verify", {
+        explicit: "https://sbtf-system.vercel.app/verify/",
+        siteUrl: "http://localhost:3000",
+      }),
+    ).toBe("https://sbtf-system.vercel.app/verify");
+  });
+
+  it("keeps localhost while developing locally", () => {
+    expect(
+      resolveVerificationBaseUrl("http://localhost:3000/verify", {
+        explicit: "",
+        siteUrl: "http://localhost:3000",
+      }),
+    ).toBe("http://localhost:3000/verify");
+  });
+
+  it("falls back to the request origin when no public site URL is configured", () => {
+    expect(
+      resolveVerificationBaseUrl("http://localhost:3000/verify", {
+        explicit: "",
+        siteUrl: "http://localhost:3000",
+        requestOrigin: "https://sbtf-system.vercel.app",
+      }),
+    ).toBe("https://sbtf-system.vercel.app/verify");
   });
 });
 

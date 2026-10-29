@@ -7,6 +7,7 @@ import { BadgeCheck, CalendarClock, CircleSlash, QrCode, ShieldAlert } from "luc
 import { Alert, Badge, Button, Field, Spinner } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { isDemoMode } from "@/lib/env";
+import { verificationStatusLabel } from "@/lib/verification";
 import type { CertificateVerification } from "@/types/database";
 
 type Result = CertificateVerification | null;
@@ -116,7 +117,17 @@ function VerificationResult({ result }: { result: CertificateVerification }) {
 
   const tone = status === "valid" ? "success" : status === "expired" ? "warning" : "neutral";
   const label =
-    status === "valid" ? "Valid franchise" : status === "expired" ? "Expired franchise" : "Archived franchise";
+    status === "valid"
+      ? "Certificate verified"
+      : status === "expired"
+        ? "Expired franchise"
+        : "Archived franchise";
+  const summary =
+    status === "valid"
+      ? "This franchise is registered with the Municipality and is currently valid."
+      : status === "expired"
+        ? "This franchise is registered but its validity period has ended. A renewal may be pending."
+        : "This franchise is registered but has been archived and is no longer in effect.";
   const Icon = status === "valid" ? BadgeCheck : status === "expired" ? CalendarClock : ShieldAlert;
 
   return (
@@ -135,9 +146,11 @@ function VerificationResult({ result }: { result: CertificateVerification }) {
           <p className="text-sm font-semibold text-ink">{label}</p>
         </div>
         <Badge tone={tone === "success" ? "success" : tone === "warning" ? "warning" : "neutral"}>
-          {status}
+          {verificationStatusLabel(status)}
         </Badge>
       </div>
+
+      <p className="mt-2 text-[0.8125rem] text-muted">{summary}</p>
 
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
         <Detail label="Franchise number" value={result.franchise_number ?? "—"} mono />

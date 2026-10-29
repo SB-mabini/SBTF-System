@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Archive, CalendarCheck, FileText, Link2, ShieldCheck, Stamp } from "lucide-react";
 
@@ -8,7 +9,7 @@ import { VerificationQr } from "@/components/records/verification-qr";
 import { Alert, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
 import { getCertificateSignedUrl, getFranchiseRecord, listSettings } from "@/lib/data";
 import { formatDate, formatDateTime, humanizeKey } from "@/lib/format";
-import { buildVerificationUrl } from "@/lib/verification";
+import { buildVerificationUrl, resolveVerificationBaseUrl } from "@/lib/verification";
 import { isDemoMode } from "@/lib/env";
 import type { SystemSetting } from "@/types/database";
 
@@ -35,10 +36,17 @@ export async function RecordDetail({
     listSettings(),
   ]);
 
-  const verificationBaseUrl = settingValue(
-    settings,
-    "certificate_verification_base_url",
-    "https://sbtf-mabini.example.gov.ph/verify",
+  // Used only when neither the setting nor NEXT_PUBLIC_SITE_URL names a public
+  // host — without it a deployment missing that variable would print QR codes
+  // pointing at localhost.
+  const requestHeaders = await headers();
+  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const forwardedProto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const requestOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : null;
+
+  const verificationBaseUrl = resolveVerificationBaseUrl(
+    settingValue(settings, "certificate_verification_base_url", ""),
+    { requestOrigin },
   );
 
   return (

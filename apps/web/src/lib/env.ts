@@ -23,6 +23,17 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
 /**
+ * The public address encoded in every certificate QR code.
+ *
+ * It is deliberately separate from NEXT_PUBLIC_SITE_URL: a certificate printed
+ * from a developer machine must still scan into the deployed verification page,
+ * not into http://localhost:3000. When this is unset the resolver falls back to
+ * NEXT_PUBLIC_SITE_URL (production) and then to the value stored in settings.
+ */
+export const VERIFICATION_BASE_URL =
+  process.env.NEXT_PUBLIC_VERIFICATION_BASE_URL?.replace(/\/+$/, "") ?? "";
+
+/**
  * Preview mode is opt-in and must be spelled exactly.
  *
  * The comparison is deliberately strict: only the literal string "true" enables
