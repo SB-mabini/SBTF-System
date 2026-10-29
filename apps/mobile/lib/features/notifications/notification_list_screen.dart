@@ -253,8 +253,6 @@ class _NotificationListScreenState
     }
   }
 
-  /// Asks the driver to confirm an irreversible action, matching the sign-out
-  /// dialog's shape: a plain Cancel and a danger-filled confirm.
   Future<bool?> _confirm({
     required String title,
     required String message,
@@ -263,46 +261,82 @@ class _NotificationListScreenState
     return showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.card),
+        backgroundColor: AppColors.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.compact,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.inkStrong,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.inkMuted,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColors.greyFill,
+                        foregroundColor: AppColors.inkStrong,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppRadius.input,
+                        ),
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                SizedBox(
-                  height: 40,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.dangerFill,
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                    child: Text(confirmLabel),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.dangerFill,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: AppRadius.input,
+                        ),
+                      ),
+                      child: Text(
+                        confirmLabel,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
