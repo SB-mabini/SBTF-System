@@ -180,7 +180,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mabini Franchise'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo.jpg',
+              height: 32,
+              width: 32,
+            ),
+            const SizedBox(width: 8),
+            const Text('Mabini Franchise'),
+          ],
+        ),
         actions: [
           Stack(
             children: [
