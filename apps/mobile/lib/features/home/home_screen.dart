@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/models/app_notification.dart';
 import '../../core/models/franchise_application.dart';
 import '../../core/models/profile.dart';
 import '../../core/providers.dart';
@@ -177,6 +178,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.watch(myAppointmentsStreamProvider).valueOrNull ?? const [];
     final upcoming =
         appointments.where((appointment) => appointment.isUpcoming).length;
+
+    ref.listen<AsyncValue<List<AppNotification>>>(notificationsStreamProvider,
+        (previous, next) {
+      final prevUnread =
+          previous?.valueOrNull?.where((n) => !n.read).length ?? 0;
+      final currUnread =
+          next.valueOrNull?.where((n) => !n.read).length ?? 0;
+      if (currUnread > prevUnread && next.valueOrNull != null) {
+        final all = next.valueOrNull!;
+        final newOnes = all.where((n) => !n.read).toList()
+          ..sort((a, b) {
+            final ad = a.createdAt;
+            final bd = b.createdAt;
+            if (ad == null && bd == null) return 0;
+            if (ad == null) return 1;
+            if (bd == null) return -1;
+            return bd.compareTo(ad);
+          });
+        if (newOnes.isNotEmpty && mounted) {
+          final notif = newOnes.first;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(notif.title),
+              action: SnackBarAction(
+                label: 'View',
+                onPressed: () => _openNotifications(context),
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
