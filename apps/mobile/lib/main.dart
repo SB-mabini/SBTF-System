@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/env.dart';
+import 'core/services/push_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,4 +20,9 @@ Future<void> main() async {
   }
 
   runApp(const ProviderScope(child: SbtfApp()));
+
+  final container = ProviderContainer();
+  try {
+    await container.read(pushNotificationServiceProvider).initialize();
+  } catch (_) {}
 }
