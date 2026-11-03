@@ -13,6 +13,9 @@ void main() {
 
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+
     // The banner explains why sign-in is disabled — the form is never hidden.
     expect(find.textContaining('Preview mode'), findsOneWidget);
 
