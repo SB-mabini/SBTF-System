@@ -359,7 +359,7 @@ Deploying the function requires the table to exist: apply
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) | publishable key | Both names are accepted; never the service-role key |
-| `NEXT_PUBLIC_SITE_URL` | production URL | Used for auth redirects and certificate QR links |
+| `NEXT_PUBLIC_SITE_URL` | production URL | Used for certificate QR links; auth redirects now follow the request origin instead, so a missing value no longer breaks the reset flow |
 | `NEXT_PUBLIC_VERIFICATION_BASE_URL` | optional public URL | Certificate QR address when certificates are generated from a different host (for example, locally). A `localhost` value in the `certificate_verification_base_url` setting is ignored in favour of this, `NEXT_PUBLIC_SITE_URL`, or the request origin. |
 | `NEXT_PUBLIC_DEMO_MODE` | unset | Must be absent or `false` in production |
 
@@ -373,8 +373,13 @@ Checklist, in the order things actually break:
 2. `NEXT_PUBLIC_DEMO_MODE` is not `"true"`. The check is strict: only the exact
    string `true` enables preview mode, but a stale `true` from a preview deployment
    silently serves sample data with every write disabled.
-3. `NEXT_PUBLIC_SITE_URL` matches the real hostname, or recovery links redirect to the
-   wrong origin.
+3. `NEXT_PUBLIC_SITE_URL` matches the real hostname. Since `apps/web/src/lib/env.ts`
+   falls back to `http://localhost:3000`, an unset value in a production build used to
+   send `/auth/confirm` and the document route to the developer machine after a successful
+   token check — the visitor saw a dead link while the session cookie sat unused on the
+   Vercel host. Both routes now derive the origin from the incoming request, so the
+   redirect stays on the host that served the link; still set the variable, because the
+   QR-code path reads it.
 4. The Edge Functions are deployed (§3) — `admin-users` for account creation and
    in-console resets, and `password-recovery` (Verify JWT **off**) for the "Forgot your
    password?" screen. A missing `password-recovery` surfaces as "the recovery service
