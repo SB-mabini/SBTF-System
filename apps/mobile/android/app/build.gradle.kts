@@ -3,9 +3,17 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Firebase Cloud Messaging needs android/app/google-services.json, which holds
+// project-specific Firebase config and is not committed (see README). When the
+// file is present the Google Services plugin is applied; when it is absent we
+// skip it so debug/CI builds still work. The Dart side already tolerates
+// Firebase being unavailable (PushNotificationService catches init failures).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 // Release signing — slice 8.
@@ -28,6 +36,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications uses java.time APIs that are not available
+        // on older Android versions; desugaring provides them.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -71,6 +82,10 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
