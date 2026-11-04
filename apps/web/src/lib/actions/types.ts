@@ -5,6 +5,14 @@ export interface ActionState {
   details?: Record<string, unknown>;
 }
 
+/** Extra fields the sign-in screen needs to render its lockout countdown. */
+export interface SignInState extends ActionState {
+  locked?: boolean;
+  retryAfterSeconds?: number;
+  remainingAttempts?: number;
+  destination?: string;
+}
+
 export const DEMO_WRITE_BLOCKED: ActionState = {
   ok: false,
   message:
