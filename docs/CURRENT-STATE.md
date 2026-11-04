@@ -135,9 +135,11 @@ running, because both write to `.next`. Typecheck and lint pass.
 | SMTP password | rotated App Password (never pasted in chat), `/recover` returns `200` |
 | Auth `site_url` | `https://sbtf-system.vercel.app` — no trailing slash |
 | Recovery e-mail template | `supabase/templates/recovery.html`, builds `?token_hash=…` |
-| Delivery | proven — the 29 October attempt was received and clicked |
+| Delivery | proven — received and clicked on 29 October and 4 November |
+| Redirect host | the request origin, not `SITE_URL` (fixed 4 November) |
 
-Two separate faults were fixed here, and they produce very different symptoms.
+Three separate faults were fixed here, and they produce very different symptoms. Only the
+third looked like "the link expires too fast".
 
 **1. Delivery (`535` / `504`).** The SMTP port was `585` (unreachable, so GoTrue returned
 `504 context deadline exceeded`) and the username was the sender name instead of the Gmail
@@ -155,6 +157,27 @@ along but were never applied to the hosted project — `config.toml` is local-on
 on 4 November via the Management API (`mailer_templates_recovery_content`,
 `mailer_subjects_recovery`, `site_url`).
 
+**3. The redirect host (looks exactly like an expiry).** With a correct template the token
+verified — a `POST /verify` from the app answered `200` and set a session — and then
+`/auth/confirm` redirected to **`http://localhost:3000/reset-password`**. `SITE_URL`
+(`apps/web/src/lib/env.ts`) falls back to localhost when `NEXT_PUBLIC_SITE_URL` is absent
+from the build, and the production build does not have it. The browser followed the
+redirect to a host that does not hold the new cookie, so the reset form never found a
+session. The visitor re-clicked, and because a recovery token is **single-use** every
+re-click answered `403 "One-time token not found"` — from the outside, a link that expires
+instantly.
+
+`/auth/confirm` and the document route now build redirects from `request.nextUrl.origin`,
+so they stay on whatever host served the link. `NEXT_PUBLIC_SITE_URL` should still be set
+in Vercel, because the certificate QR path reads it, but a missing value no longer breaks
+recovery.
+
+Verified end to end on 4 November without involving the mailbox: a token minted with
+`POST /auth/v1/admin/generate_link` (`type: recovery`) produced
+`307 → https://sbtf-system.vercel.app/reset-password` with two session cookies, the cookie
+decoded to a session whose access token returned `200` from `/auth/v1/user`, and the cookie
+is not `HttpOnly`, so the browser client can read it and render the form.
+
 Reading the logs, for the next time it breaks:
 
 - `source = 'auth_logs'`, filter `event_message ilike '%/recover%'` — `"status":200` means
@@ -166,6 +189,10 @@ Reading the logs, for the next time it breaks:
 - A **`GET /verify` answering `303` with `"login_method":"implicit"`** is the template fault
   above. A healthy click produces a **`POST /verify` issued by the app**, followed by
   `/reset-password`.
+- `403 "One-time token not found"` **after** one successful `POST /verify` is the token
+  being reused, not an expiry — recovery tokens are single-use, and the browser retries the
+  same URL when a step fails further down. An expiry looks different: every attempt fails,
+  including the first.
 - Supabase stores only a hash of `smtp_pass`; a changed prefix is the proof the Password
   field was really saved. The template and `site_url` values, by contrast, are returned
   verbatim — read them back rather than trusting the repo copy.
