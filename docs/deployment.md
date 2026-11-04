@@ -186,6 +186,9 @@ Dashboard → **Authentication → URL Configuration**:
 
 - **Site URL** — the current environment: `https://sbtf-system.vercel.app` in
   production, `http://localhost:3000` while testing locally against the hosted project.
+  **No trailing slash.** The e-mail templates concatenate it directly
+  (`{{ .SiteURL }}/auth/confirm`), so a stored value ending in `/` produces
+  `//auth/confirm`.
 - **Redirect URLs** — add both:
   - `https://sbtf-system.vercel.app/auth/confirm`
   - `http://localhost:3000/auth/confirm`
@@ -215,8 +218,34 @@ Email Templates**:
 
 | Template | Source file | Subject |
 |---|---|---|
-| Reset Password | `supabase/templates/recovery.html` | `Pag-reset ng password — SBTF System \| Reset your password — SBTF System` |
+| Reset Password | `supabase/templates/recovery.html` | `Reset your password — SBTF System` |
 | Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
+
+**The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
+only configures `supabase start` locally; the hosted project keeps its own copies. Until
+November 2026 the live project still held Supabase's defaults, so every recovery e-mail
+carried `{{ .ConfirmationURL }}` and dead-ended on "This link is no longer valid".
+
+That failure is silent and easy to misread: delivery works, `/recover` returns `200`, and
+the mail arrives. Only the click fails. The signature in the logs is a **`GET /verify`
+that answers `303`** with `"login_method":"implicit"` — GoTrue signs the visitor in and
+returns the tokens in the URL **fragment** (`#access_token=…`), which never reaches the
+server, so `/auth/confirm` finds neither `code` nor `token_hash` and redirects to
+`/auth/confirmed?status=invalid`.
+
+Check what the project actually holds (Management API, `/v1/projects/{ref}/config/auth`):
+
+| Key | Must contain |
+|---|---|
+| `mailer_templates_recovery_content` | `{{ .TokenHash }}` and `/auth/confirm` |
+| `mailer_subjects_recovery` | the subject shown to users |
+| `site_url` | the production origin, **without** a trailing slash |
+| `mailer_templates_magic_link_content` | `{{ .Token }}` |
+
+A correct link renders as
+`https://sbtf-system.vercel.app/auth/confirm?token_hash=…&type=recovery&next=/reset-password`,
+and clicking it produces a **`POST /verify` issued by the app**, not a `GET` from the
+browser.
 
 The Magic Link template **must contain `{{ .Token }}`** — the mobile app signs in by
 typing the 6-digit code. Keep `otp_length = 6` in the dashboard to match

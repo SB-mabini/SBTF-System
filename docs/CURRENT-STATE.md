@@ -31,10 +31,10 @@ These were pasted into chat and must be rotated once the outstanding work is ver
 - Supabase **personal access token** (platform admin scope)
 - **Database password**
 - **Groq API key** (used by `ai-decision-support`; revoke at <https://console.groq.com/keys>)
-- **Google App Password** for `sangguniangbayan.mabini.batangas@gmail.com` — pasted into chat
-  on 26 October 2026 to unblock SMTP and currently live in the Supabase config. Create a
-  replacement, save it, verify, then revoke this one at
-  <https://myaccount.google.com/apppasswords>.
+
+The **Google App Password** that was pasted into chat on 26 October 2026 was replaced and
+revoked on the same day; the value now stored in the Supabase config was never exposed.
+Nothing else needs rotating for SMTP.
 
 None is committed to the repository, but all are compromised by exposure. Treat rotation
 as a required follow-up task, not optional.
@@ -112,49 +112,63 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 ## 5. Known broken, not yet fixed
 
-1. **Add-staff UI does not exist.** `createStaffUserAction` has zero call sites. Covered by
-   the invitation plan.
-2. **Three UI strings claim an email was sent when none is.** `users.ts:122`,
-   `admin-users/index.ts:151`, `verify-email/page.tsx:24-25`. Re-check once SMTP delivery
-   works.
-3. **Two Edge Functions are not deployed.** `admin-users` (account provisioning) and
-   `renewal-reminders` (scheduled reminders) have no deployment in the live project.
-   `ai-decision-support` and `password-recovery` are live.
-4. **The Gmail App Password used for SMTP was pasted into chat** and must be rotated. See
-   the rotation note below; do not revoke it before the replacement is saved, or recovery
-   stops working.
+1. **The add-staff dialog is dead because its function is not deployed.** The UI exists and
+   is wired (`users-toolbar.tsx` → `create-staff-dialog.tsx` → `createStaffUserAction` →
+   `functions.invoke("admin-users")`), but `admin-users` is not deployed, so every attempt
+   fails with the "did not answer … No account has been created" message.
+2. **`/verify-email` claims an invitation e-mail is sent when none is.**
+   `apps/web/src/app/(auth)/verify-email/page.tsx:24-26` tells staff that created accounts
+   receive a Supabase invitation e-mail. `create_staff` deliberately does **not** send one:
+   it returns `setup_link` for manual handover. Fix the copy, or start sending the mail.
+3. **`renewal-reminders` is not deployed, and does not need to be.** `pg_cron` job 1 runs
+   `public.rpc_generate_renewal_reminders(array[90, 60, 30])` daily at 01:15 in-database.
+   Deploy the function only if an HTTP entry point is wanted; it also requires the
+   `REMINDER_CRON_SECRET` secret, which is not set.
 
-### Password recovery — working since 26 October 2026
-
-The whole chain is verified end to end:
+### Password recovery — status on 4 November 2026
 
 | Step | State |
 |---|---|
 | `password-recovery` Edge Function | deployed v2, **Verify JWT OFF** |
 | SMTP host / port | `smtp.gmail.com:587` (STARTTLS) |
 | SMTP username / sender | `sangguniangbayan.mabini.batangas@gmail.com` |
-| SMTP sender name | `Sangguniang Bayan` |
-| SMTP password | valid 16-character Google App Password, verified against Gmail before saving |
-| Auth redirect allow-list | includes `https://sbtf-system.vercel.app/auth/confirm` |
-| `/recover` result | `status 200`, no `535`, no function-log error (26 Oct 2026 02:40 UTC) |
+| SMTP password | rotated App Password (never pasted in chat), `/recover` returns `200` |
+| Auth `site_url` | `https://sbtf-system.vercel.app` — no trailing slash |
+| Recovery e-mail template | `supabase/templates/recovery.html`, builds `?token_hash=…` |
+| Delivery | proven — the 29 October attempt was received and clicked |
 
-How it was diagnosed, for the next time it breaks:
+Two separate faults were fixed here, and they produce very different symptoms.
 
-- The browser always shows the generic "request accepted" message, even on failure, by
-  design (anti-enumeration). Only the logs reveal the truth.
-- `source = 'auth_logs'`, filter `event_message ilike '%/recover%'` — a working request
-  ends `"status":200` with no `error`. `535 5.7.8 … BadCredentials` means the password is
-  the Gmail account password or a revoked App Password. `504 context deadline exceeded`
-  means the SMTP port is unreachable (a typo such as `585` hangs for 10 s).
+**1. Delivery (`535` / `504`).** The SMTP port was `585` (unreachable, so GoTrue returned
+`504 context deadline exceeded`) and the username was the sender name instead of the Gmail
+address. Once corrected, Gmail answered `535 5.7.8 … BadCredentials` because the stored
+password was not an App Password. Fixed on 26 October.
+
+**2. The link (`/auth/confirmed?status=invalid`).** Delivery worked but every link
+dead-ended with "This link is no longer valid". The live project still held Supabase's
+**default** recovery template, which uses `{{ .ConfirmationURL }}`. That link goes through
+GoTrue's `/verify`, signs the visitor in with the **implicit** flow, and returns the tokens
+in the URL **fragment** (`#access_token=…`). A fragment never reaches the server, so
+`/auth/confirm` saw neither `code` nor `token_hash` and redirected to
+`/auth/confirmed?status=invalid`. The files in `supabase/templates/` had been correct all
+along but were never applied to the hosted project — `config.toml` is local-only. Applied
+on 4 November via the Management API (`mailer_templates_recovery_content`,
+`mailer_subjects_recovery`, `site_url`).
+
+Reading the logs, for the next time it breaks:
+
+- `source = 'auth_logs'`, filter `event_message ilike '%/recover%'` — `"status":200` means
+  GoTrue accepted the request. `535 … BadCredentials` is a wrong App Password;
+  `504 context deadline exceeded` is an unreachable SMTP port.
 - `source = 'function_logs'` — commit `0548b28` logs
-  `password-recovery: could not send the recovery e-mail` with the underlying message,
-  while still returning the generic response.
-- Supabase stores only a hash of `smtp_pass`. The Management API returns it masked; a
-  changed prefix proves the Password field was actually saved.
-
-**Rotating the exposed App Password** (no downtime): create a second App Password, save it
-in Supabase → Authentication → Emails → SMTP Settings → Password, send one test recovery,
-then revoke the old one at <https://myaccount.google.com/apppasswords>.
+  `password-recovery: could not send the recovery e-mail` while the browser still sees the
+  generic confirmation (anti-enumeration).
+- A **`GET /verify` answering `303` with `"login_method":"implicit"`** is the template fault
+  above. A healthy click produces a **`POST /verify` issued by the app**, followed by
+  `/reset-password`.
+- Supabase stores only a hash of `smtp_pass`; a changed prefix is the proof the Password
+  field was really saved. The template and `site_url` values, by contrast, are returned
+  verbatim — read them back rather than trusting the repo copy.
 
 ---
 
