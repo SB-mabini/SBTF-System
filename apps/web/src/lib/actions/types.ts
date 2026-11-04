@@ -13,6 +13,17 @@ export interface SignInState extends ActionState {
   destination?: string;
 }
 
+/**
+ * Result of checking an e-mailed recovery code.
+ *
+ * `expired` means the pending-address cookie is gone, so the visitor has to
+ * start again from the recovery screen; it is a different action from a wrong
+ * digit, and the form words it differently.
+ */
+export interface RecoveryCodeState extends ActionState {
+  expired?: boolean;
+}
+
 export const DEMO_WRITE_BLOCKED: ActionState = {
   ok: false,
   message:

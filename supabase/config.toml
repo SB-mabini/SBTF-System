@@ -68,20 +68,22 @@ double_confirm_changes = true
 secure_password_change = true
 max_frequency = "1s"
 otp_length = 6
-otp_expiry = 900
+otp_expiry = 600
 
 # Custom templates (bilingual; Tagalog first). These apply to local development
 # only — `supabase start` serves them through Inbucket and ignores the hosted
 # dashboard builder. For the hosted project, paste the same HTML from
 # supabase/templates/ into Dashboard → Authentication → Email Templates.
 #
-# recovery  : the link is built from {{ .TokenHash }} and points at the app's
-#             /auth/confirm route, NOT {{ .ConfirmationURL }} — see the file header
-#             for why the PKCE `?code=` path cannot be used here.
+# recovery  : a 6-digit code ({{ .Token }}), typed back into the app's
+#             /verify-otp screen. Do NOT put a link in this template — a
+#             single-use link can be consumed by a mail scanner before the human
+#             opens it. Administrator-issued setup links are built by the
+#             admin-users Edge Function and still use /auth/confirm.
 # magic_link: the body must contain {{ .Token }}; the mobile app verifies it with
 #             auth.verifyOTP({ type: 'email' }).
 [auth.email.template.recovery]
-subject = "Pag-reset ng password — SBTF System | Reset your password — SBTF System"
+subject = "Your SBTF verification code — SBTF System"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.magic_link]

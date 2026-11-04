@@ -7,6 +7,8 @@ import { DatabaseNotReadyError, toDatabaseNotReadyError } from "@/lib/supabase/e
 const PUBLIC_PATHS = [
   "/login",
   "/forgot-password",
+  "/verify-otp",
+  "/recovery-choice",
   "/reset-password",
   "/verify-email",
   "/verify",

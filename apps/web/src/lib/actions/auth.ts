@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
@@ -10,16 +11,26 @@ import {
   loginAttemptKey,
   recordFailedLogin,
 } from "@/lib/auth/login-guard";
-import type { ActionState, SignInState } from "@/lib/actions/types";
+import {
+  clearRecoveryEmail,
+  readRecoveryEmail,
+  saveRecoveryEmail,
+} from "@/lib/auth/recovery";
+import { resolveWebAccess } from "@/lib/auth/web-access";
+import type { ActionState, RecoveryCodeState, SignInState } from "@/lib/actions/types";
 
 /**
  * Requests a password recovery for an e-mail address.
  *
- * The role-specific decision (administrator/staff get a link, drivers use a
- * one-time password, pending staff wait for approval) is made inside the
+ * The role-specific decision (administrator/active staff get a code, drivers
+ * use a one-time password, pending staff wait for approval) is made inside the
  * `password-recovery` Edge Function, which is the only place that can read a
  * profile without a session. The reply is always the same generic message, so
  * this screen cannot be used to find out which addresses have accounts.
+ *
+ * On an accepted request the address is remembered in an httpOnly cookie for the
+ * ten minutes the code is valid, so the next screen can ask for the digits
+ * without putting the address in the URL.
  */
 export async function requestPasswordRecoveryAction(email: string): Promise<ActionState> {
   if (isDemoMode()) {
@@ -54,13 +65,133 @@ export async function requestPasswordRecoveryAction(email: string): Promise<Acti
     return { ok: false, message: String(data.message ?? data.error) };
   }
 
+  await saveRecoveryEmail(normalized);
+
   return {
     ok: true,
     message: String(
       data?.message ??
-        "If an account exists for that address, recovery instructions have been sent.",
+        "If an account exists for that address, a verification code has been sent.",
     ),
   };
+}
+
+/**
+ * Checks the 6-digit code GoTrue e-mailed and, on success, signs the visitor in.
+ *
+ * A verified recovery code *is* a session, which is why the next screen offers a
+ * choice: continue to the console, or set a new password. The browser is trusted
+ * only for the digits; GoTrue matches them against the account named in the
+ * httpOnly cookie. The code is single-use and expires after ten minutes.
+ */
+export async function verifyRecoveryCodeAction(code: string): Promise<RecoveryCodeState> {
+  if (isDemoMode()) {
+    return {
+      ok: false,
+      message: "Password recovery is disabled in preview mode because Supabase is not connected.",
+    };
+  }
+
+  const email = await readRecoveryEmail();
+  if (!email) {
+    return {
+      ok: false,
+      expired: true,
+      message: "This code entry has expired. Request a new code from the password recovery screen.",
+    };
+  }
+
+  const token = code.replace(/\D/g, "");
+  if (token.length !== 6) {
+    return { ok: false, message: "Enter the 6-digit code from the e-mail." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "recovery",
+  });
+
+  if (error || !data.user) {
+    // Keep the pending address: a mistyped digit should not restart the flow.
+    return {
+      ok: false,
+      message:
+        "That code is incorrect or has expired. Check the six digits, or send a new code.",
+    };
+  }
+
+  const access = await resolveWebAccess(supabase, data.user.id);
+  if (!access.ok) {
+    await supabase.auth.signOut();
+    return { ok: false, message: access.message };
+  }
+
+  await clearRecoveryEmail();
+  await supabase.rpc("rpc_log_activity", { p_action: "login" });
+
+  // The session exists now; the choice screen decides what happens next.
+  // Redirecting from the action keeps the browser and the new cookies in step.
+  redirect("/recovery-choice");
+}
+
+/** Sends a fresh code to the address already waiting on the verification screen. */
+export async function resendRecoveryCodeAction(): Promise<RecoveryCodeState> {
+  if (isDemoMode()) {
+    return {
+      ok: false,
+      message: "Password recovery is disabled in preview mode because Supabase is not connected.",
+    };
+  }
+
+  const email = await readRecoveryEmail();
+  if (!email) {
+    return {
+      ok: false,
+      expired: true,
+      message: "Request a new code from the password recovery screen.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke("password-recovery", {
+    body: { email },
+  });
+
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    return {
+      ok: false,
+      message:
+        `The recovery service did not answer${status ? ` (HTTP ${status})` : ""}: ${error.message}. ` +
+        "Check that the password-recovery Edge Function is deployed with Verify JWT disabled.",
+    };
+  }
+  if (data?.error) {
+    return { ok: false, message: String(data.message ?? data.error) };
+  }
+
+  // Restart the ten-minute window alongside the new code.
+  await saveRecoveryEmail(email);
+
+  return {
+    ok: true,
+    message: `A new code has been sent to ${email}. It expires in 10 minutes.`,
+  };
+}
+
+/** Ends the session and returns to the sign-in screen. */
+export async function signOutAction(): Promise<void> {
+  if (!isDemoMode()) {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      await supabase.rpc("rpc_log_activity", { p_action: "logout" });
+    }
+    await supabase.auth.signOut();
+  }
+  redirect("/login");
 }
 
 /**
@@ -143,41 +274,11 @@ export async function signInAction(
   }
 
   // The profile decides where the session may go; RLS decides what it can see.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, account_status")
-    .eq("auth_user_id", data.user.id)
-    .maybeSingle();
-
-  if (!profile) {
+  const access = await resolveWebAccess(supabase, data.user.id);
+  if (!access.ok) {
     await supabase.auth.signOut();
     clearLoginFailures(key);
-    return {
-      ok: false,
-      message: "No profile is linked to this account. Contact the municipal office.",
-    };
-  }
-
-  if (profile.account_status !== "active") {
-    await supabase.auth.signOut();
-    clearLoginFailures(key);
-    return {
-      ok: false,
-      message:
-        profile.account_status === "pending"
-          ? "This account is awaiting approval by a municipal administrator. You will be able to sign in once it has been approved."
-          : "This account is not active. Contact the administrator of the SBTF System at the municipal office.",
-    };
-  }
-
-  if (profile.role !== "administrator" && profile.role !== "staff") {
-    await supabase.auth.signOut();
-    clearLoginFailures(key);
-    return {
-      ok: false,
-      message:
-        "Tricycle drivers and operators use the SBTF mobile application. The web console is for municipal staff and administrators only.",
-    };
+    return { ok: false, message: access.message };
   }
 
   clearLoginFailures(key);
@@ -186,7 +287,8 @@ export async function signInAction(
   return {
     ok: true,
     message: "Signed in. Loading your console…",
-    destination: safeNextPath(nextPath) ?? (profile.role === "administrator" ? "/admin" : "/staff"),
+    destination:
+      safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
   };
 }
 

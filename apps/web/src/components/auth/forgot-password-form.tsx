@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert, Button, Field } from "@/components/ui";
@@ -8,9 +9,8 @@ import { requestPasswordRecoveryAction } from "@/lib/actions/auth";
 import { isDemoMode } from "@/lib/env";
 
 export function ForgotPasswordForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,34 +27,22 @@ export function ForgotPasswordForm() {
     setLoading(true);
     setError(null);
 
-    const result = await requestPasswordRecoveryAction(email);
+    try {
+      const result = await requestPasswordRecoveryAction(email);
 
-    setLoading(false);
-    if (!result.ok) {
-      setError(result.message);
-      return;
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+
+      // The action stored the address in an httpOnly cookie, so the next screen
+      // only has to ask for the six digits.
+      router.push("/verify-otp");
+    } catch {
+      setError("The request could not be sent. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setNotice(result.message);
-    setSent(true);
-  }
-
-  if (sent) {
-    return (
-      <div className="space-y-4">
-        <Alert tone="success" title="Request accepted">
-          {notice ??
-            "If an account exists for that address, recovery instructions have been sent."}
-        </Alert>
-        <p className="text-[0.8125rem] text-muted">
-          Administrators and approved staff receive a recovery link by e-mail. Staff accounts that
-          are still awaiting approval cannot be recovered until an administrator approves them.
-          Drivers and operators sign in with a one-time password in the SBTF mobile app.
-        </p>
-        <Link className="text-[0.8125rem] text-primary hover:underline" href="/login">
-          Back to sign in
-        </Link>
-      </div>
-    );
   }
 
   return (
@@ -64,20 +52,22 @@ export function ForgotPasswordForm() {
       <Field
         label="Official e-mail address"
         htmlFor="email"
-        hint="Recovery instructions are sent to this address if it belongs to an account."
+        hint="A 6-digit code is sent to this address if it belongs to an account."
       >
         <input
           id="email"
           className="sbtf-input"
           type="email"
+          autoComplete="username"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          placeholder="name@mabini.gov.ph"
         />
       </Field>
 
       <Button type="submit" loading={loading} className="w-full">
-        Send recovery instructions
+        Send verification code
       </Button>
 
       <p className="text-center text-[0.8125rem]">

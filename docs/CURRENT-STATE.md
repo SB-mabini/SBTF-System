@@ -125,60 +125,66 @@ running, because both write to `.next`. Typecheck and lint pass.
    Deploy the function only if an HTTP entry point is wanted; it also requires the
    `REMINDER_CRON_SECRET` secret, which is not set.
 
-### Password recovery — status on 4 November 2026
+### Password recovery — e-mail code (changed 4 November 2026)
 
-| Step | State |
+Recovery no longer sends a link. The visitor receives a **6-digit code**, types it back into
+the app, and then chooses whether to continue to the console or set a new password.
+
+| Step | Where | What happens |
+|---|---|---|
+| 1 | `/forgot-password` | the address is submitted to the `password-recovery` Edge Function |
+| 2 | Edge Function | role filter: administrator or **active** staff → send; pending staff → nothing; driver/operator → nothing |
+| 3 | Supabase mailer | `supabase/templates/recovery.html` renders `{{ .Token }}`; valid 10 minutes |
+| 4 | `/verify-otp` | address kept in an httpOnly cookie; `verifyRecoveryCodeAction` calls `verifyOtp({ type: "recovery" })` |
+| 5 | `/recovery-choice` | **Continue to the console** (`/admin` or `/staff`) or **Set a new password** |
+| 6 | `/reset-password` | server-guarded; `updateUser({ password })`, then back to the console |
+
+Configuration the hosted project must hold (check it with the Management API, as in
+`deployment.md` §3.1c — the repo copy is not what serves production):
+
+| Key | Value |
 |---|---|
-| `password-recovery` Edge Function | deployed v2, **Verify JWT OFF** |
-| SMTP host / port | `smtp.gmail.com:587` (STARTTLS) |
-| SMTP username / sender | `sangguniangbayan.mabini.batangas@gmail.com` |
-| SMTP password | rotated App Password (never pasted in chat), `/recover` returns `200` |
-| Auth `site_url` | `https://sbtf-system.vercel.app` — no trailing slash |
-| Recovery e-mail template | `supabase/templates/recovery.html`, builds `?token_hash=…` |
-| Delivery | proven — received and clicked on 29 October and 4 November |
-| Redirect host | the request origin, not `SITE_URL` (fixed 4 November) |
+| `mailer_otp_length` | `6` |
+| `mailer_otp_exp` | `600` seconds |
+| `mailer_subjects_recovery` | `Your SBTF verification code — SBTF System` |
+| `mailer_templates_recovery_content` | `supabase/templates/recovery.html`, contains `{{ .Token }}` and no link |
+| `site_url` | `https://sbtf-system.vercel.app` — no trailing slash |
 
-Three separate faults were fixed here, and they produce very different symptoms. Only the
-third looked like "the link expires too fast".
+SMTP is unchanged: `smtp.gmail.com:587`, sender
+`sangguniangbayan.mabini.batangas@gmail.com`, App Password rotated 26 October — delivery is
+proven. The `password-recovery` function must be redeployed for its message to mention a code,
+but the flow itself does not depend on that copy.
 
-**1. Delivery (`535` / `504`).** The SMTP port was `585` (unreachable, so GoTrue returned
-`504 context deadline exceeded`) and the username was the sender name instead of the Gmail
-address. Once corrected, Gmail answered `535 5.7.8 … BadCredentials` because the stored
-password was not an App Password. Fixed on 26 October.
+**Why a code replaced the link.** A single-use link can be consumed before the human sees
+it: mail gateways and antivirus scanners pre-fetch URLs. A code cannot be pre-fetched. The
+change also removes both link-specific failure modes below from the recovery path.
 
-**2. The link (`/auth/confirmed?status=invalid`).** Delivery worked but every link
-dead-ended with "This link is no longer valid". The live project still held Supabase's
-**default** recovery template, which uses `{{ .ConfirmationURL }}`. That link goes through
-GoTrue's `/verify`, signs the visitor in with the **implicit** flow, and returns the tokens
-in the URL **fragment** (`#access_token=…`). A fragment never reaches the server, so
-`/auth/confirm` saw neither `code` nor `token_hash` and redirected to
-`/auth/confirmed?status=invalid`. The files in `supabase/templates/` had been correct all
-along but were never applied to the hosted project — `config.toml` is local-only. Applied
-on 4 November via the Management API (`mailer_templates_recovery_content`,
-`mailer_subjects_recovery`, `site_url`).
+`/auth/confirm` still exists, but now serves only the setup links that `admin-users`
+returns for manually handed-over staff accounts. Do not remove it.
 
-**3. The redirect host (looks exactly like an expiry).** With a correct template the token
-verified — a `POST /verify` from the app answered `200` and set a session — and then
-`/auth/confirm` redirected to **`http://localhost:3000/reset-password`**. `SITE_URL`
-(`apps/web/src/lib/env.ts`) falls back to localhost when `NEXT_PUBLIC_SITE_URL` is absent
-from the build, and the production build does not have it. The browser followed the
-redirect to a host that does not hold the new cookie, so the reset form never found a
-session. The visitor re-clicked, and because a recovery token is **single-use** every
-re-click answered `403 "One-time token not found"` — from the outside, a link that expires
-instantly.
+#### The three link faults, for context
 
-`/auth/confirm` and the document route now build redirects from `request.nextUrl.origin`,
-so they stay on whatever host served the link. `NEXT_PUBLIC_SITE_URL` should still be set
-in Vercel, because the certificate QR path reads it, but a missing value no longer breaks
-recovery.
+They are fixed, and the code flow does not touch them, but they explain the history and
+will matter if a link is ever reintroduced.
 
-Verified end to end on 4 November without involving the mailbox: a token minted with
-`POST /auth/v1/admin/generate_link` (`type: recovery`) produced
-`307 → https://sbtf-system.vercel.app/reset-password` with two session cookies, the cookie
-decoded to a session whose access token returned `200` from `/auth/v1/user`, and the cookie
-is not `HttpOnly`, so the browser client can read it and render the form.
+1. **Delivery (`535` / `504`).** The SMTP port was `585` (unreachable → `504 context
+   deadline exceeded`) and the username was the sender name instead of the Gmail address.
+   Then Gmail answered `535 5.7.8 … BadCredentials` because the stored password was not an
+   App Password. Fixed 26 October.
+2. **The template.** The hosted project still held Supabase's default, which uses
+   `{{ .ConfirmationURL }}`. That goes through GoTrue `/verify`, signs the visitor in with
+   the **implicit** flow and returns the tokens in the URL **fragment**
+   (`#access_token=…`), which never reaches the server. `/auth/confirm` saw neither `code`
+   nor `token_hash` and redirected to `/auth/confirmed?status=invalid`. The repo templates
+   had been correct all along; `config.toml` is local-only. Applied 4 November.
+3. **The redirect host.** With a correct link, `/auth/confirm` verified the token and then
+   redirected to `http://localhost:3000/reset-password`, because `SITE_URL`
+   (`apps/web/src/lib/env.ts`) falls back to localhost when `NEXT_PUBLIC_SITE_URL` is
+   absent from the build. The cookie lived on the Vercel host, so the form found no
+   session; every re-click then answered `403 "One-time token not found"` because the
+   token is single-use. Both auth redirects now use `request.nextUrl.origin`.
 
-Reading the logs, for the next time it breaks:
+#### Reading the logs
 
 - `source = 'auth_logs'`, filter `event_message ilike '%/recover%'` — `"status":200` means
   GoTrue accepted the request. `535 … BadCredentials` is a wrong App Password;
@@ -186,16 +192,12 @@ Reading the logs, for the next time it breaks:
 - `source = 'function_logs'` — commit `0548b28` logs
   `password-recovery: could not send the recovery e-mail` while the browser still sees the
   generic confirmation (anti-enumeration).
-- A **`GET /verify` answering `303` with `"login_method":"implicit"`** is the template fault
-  above. A healthy click produces a **`POST /verify` issued by the app**, followed by
-  `/reset-password`.
-- `403 "One-time token not found"` **after** one successful `POST /verify` is the token
-  being reused, not an expiry — recovery tokens are single-use, and the browser retries the
-  same URL when a step fails further down. An expiry looks different: every attempt fails,
-  including the first.
-- Supabase stores only a hash of `smtp_pass`; a changed prefix is the proof the Password
-  field was really saved. The template and `site_url` values, by contrast, are returned
-  verbatim — read them back rather than trusting the repo copy.
+- A code flow that works produces a **`POST /verify` issued by the app** answering `200`,
+  followed by `/recovery-choice`. `403 "One-time token not found"` after one success means
+  the code was reused; an expired code fails on the first attempt too.
+- Supabase stores only a hash of `smtp_pass`; a changed prefix proves the Password field
+  was really saved. Template and `site_url` values are returned verbatim — read them back
+  rather than trusting the repo copy.
 
 ---
 

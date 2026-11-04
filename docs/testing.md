@@ -181,22 +181,30 @@ defect.
 |---|---|---|
 | 1 | Custom SMTP saved (Gmail + App Password) and a **test e-mail arrives** | Dashboard → Authentication → Emails → SMTP Settings |
 | 2 | Site URL is the origin under test, and `/auth/confirm` is in the redirect allow-list | Dashboard → Authentication → URL Configuration |
-| 3 | Reset Password template uses `{{ .TokenHash }}` (copied from `recovery.html`); Magic Link template contains `{{ .Token }}` | Dashboard → Authentication → Email Templates |
-| 4 | `password-recovery` Edge Function deployed with **Verify JWT off** | Dashboard → Edge Functions |
-| 5 | `SITE_URL` function secret set to the origin under test | `supabase secrets list` |
-| 6 | `NEXT_PUBLIC_SUPABASE_URL` is the deployed project and `NEXT_PUBLIC_SITE_URL` matches the Site URL | `apps/web/.env.local` |
+| 3 | Reset Password template contains `{{ .Token }}` and **no** `ConfirmationURL` / `TokenHash` (copied from `recovery.html`); Magic Link template contains `{{ .Token }}` | Dashboard → Authentication → Email Templates |
+| 4 | OTP expiry is `600` seconds and OTP length is `6` | Dashboard → Authentication → Providers → Email |
+| 5 | `password-recovery` Edge Function deployed with **Verify JWT off** | Dashboard → Edge Functions |
+| 6 | `SITE_URL` function secret set to the origin under test | `supabase secrets list` |
+| 7 | `NEXT_PUBLIC_SUPABASE_URL` is the deployed project and `NEXT_PUBLIC_SITE_URL` matches the Site URL | `apps/web/.env.local` |
 
-### 9.2 Cases (E-01 … E-07)
+### 9.2 Cases (E-01 … E-14)
 
 | ID | Action | Expected result | Actual | Pass |
 |---|---|---|---|---|
-| E-01 | **Forgot your password?** with an administrator's address | Generic "Request accepted" — never reveals whether the account exists; recovery e-mail arrives | | |
-| E-02 | Same with an **active staff** address | Same generic response; recovery e-mail arrives | | |
-| E-03 | Same with a **pending staff** address | Same generic response; **no** e-mail is sent | | |
+| E-01 | **Forgot your password?** with an administrator's address | Generic "request accepted" — never reveals whether the account exists; a 6-digit code arrives | | |
+| E-02 | Same with an **active staff** address | Same generic response; a 6-digit code arrives | | |
+| E-03 | Same with a **pending staff** address | Same generic response; **no** e-mail is sent (the function filters it out) | | |
 | E-04 | Same with a **driver/operator** address | Same generic response; **no** e-mail is sent (drivers use the mobile OTP) | | |
-| E-05 | Open the recovery e-mail link | Lands on `/reset-password`; setting a password succeeds and sign-in works with it | | |
-| E-06 | Re-open the same recovery link | Refused — single-use/expired; lands on `/auth/confirmed?status=invalid` | | |
-| E-07 | Mobile: "Sign in with one-time password" | 6-digit code arrives; entering it signs the driver in | | |
+| E-05 | Open the e-mail | It contains a **6-digit code**, no link, and says 10 minutes | | |
+| E-06 | Enter that code on `/verify-otp` | Accepted → `/recovery-choice`, which offers "Continue to the … console" and "Set a new password" | | |
+| E-07 | Choose **Continue** | The console for the account's role opens (`/admin` or `/staff`) | | |
+| E-08 | Submit a code that was **already accepted** | Refused — a code is single-use; the form stays and asks for a new code | | |
+| E-09 | Enter a **wrong** 6-digit code | Refused; the form stays on `/verify-otp` with the address intact, so no restart is needed | | |
+| E-10 | Click **Resend code** | Disabled for 60 s (`smtp_max_frequency`); after that a new code arrives and the previous one stops working | | |
+| E-11 | Wait more than 10 minutes, then enter the code | Refused on the **first** attempt — this is expiry, not reuse | | |
+| E-12 | Choose **Set a new password** after a valid code | `/reset-password` accepts the new password, then opens the console; the new password works at sign-in | | |
+| E-13 | Open `/verify-otp` with no pending address cookie | Redirects to `/forgot-password` (or to the console if a session exists) | | |
+| E-14 | Mobile: "Sign in with one-time password" | 6-digit code arrives; entering it signs the driver in | | |
 
 ### 9.3 Failure triage
 
@@ -209,7 +217,9 @@ The "Forgot your password?" error line reports the real cause.
 | `HTTP 500` | Function runtime error — read the function logs |
 | Fetch/network error | Wrong project URL, or Supabase unreachable |
 | E-02 e-mail never arrives | SMTP not saved/verified, or the Gmail App Password is wrong |
-| E-05 lands on `/auth/confirmed?status=invalid` | Template still uses `{{ .ConfirmationURL }}`, or Site URL / redirect allow-list mismatch |
+| E-06 always lands on `/forgot-password` | The pending-address cookie is missing or older than 10 minutes; recovery was started in a different browser |
+| A code is refused although it is correct | `mailer_otp_length` in the dashboard does not match what the template shows (must be 6), or the code was already used |
+| Magic Link code refused | The template no longer contains `{{ .Token }}` |
 
 Logs: Dashboard → Edge Functions → `password-recovery` → Logs.
 

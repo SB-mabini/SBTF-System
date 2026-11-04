@@ -8,8 +8,8 @@
 // the service role — the web app has no service-role key, and RLS blocks an
 // anonymous caller from reading another user's profile:
 //
-//   administrator     → a recovery link is e-mailed (set a new password)
-//   staff (approved)  → a recovery link is e-mailed
+//   administrator     → a 6-digit verification code is e-mailed
+//   staff (approved)  → a 6-digit verification code is e-mailed
 //   staff (pending)   → nothing is sent; an administrator must approve first
 //   driver / operator → nothing is sent; they use a one-time password in the
 //                       mobile application instead
@@ -23,10 +23,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, errorResponse, json } from "../_shared/http.ts";
 
-const SITE_URL = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
-
 const GENERIC_MESSAGE =
-  "If an account exists for that address, recovery instructions have been sent. " +
+  "If an account exists for that address, a verification code has been sent. " +
   "Drivers and operators set access through the one-time password option in the SBTF mobile app.";
 
 Deno.serve(async (request: Request) => {
@@ -67,19 +65,20 @@ Deno.serve(async (request: Request) => {
     .eq("email", email)
     .maybeSingle();
 
-  const mayReceiveLink =
+  const mayRecover =
     profile !== null &&
     (profile.role === "administrator" ||
       (profile.role === "staff" && profile.account_status === "active"));
 
-  if (mayReceiveLink) {
+  if (mayRecover) {
     // Fire and forget: delivery is Supabase's mailer, and any failure (rate
     // limit, missing SMTP) must still answer with the same generic confirmation
     // so the response cannot be used to probe the account. The failure is
     // logged here because the caller deliberately never sees it.
-    const { error: sendError } = await anonClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${SITE_URL}/auth/confirm`,
-    });
+    //
+    // No `redirectTo` is passed: the recovery template mails `{{ .Token }}` and
+    // the visitor types it into /verify-otp, so there is no link to redirect.
+    const { error: sendError } = await anonClient.auth.resetPasswordForEmail(email);
     if (sendError) {
       console.error(
         "password-recovery: could not send the recovery e-mail:",

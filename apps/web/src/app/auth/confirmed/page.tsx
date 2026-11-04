@@ -5,9 +5,13 @@ import { Alert } from "@/components/ui";
 export const metadata = { title: "E-mail confirmed — SBTF System" };
 
 /**
- * Landing page for a confirmed address. Password recovery and invitations are
- * redirected to /reset-password instead, so this page only reports that the
- * address is now usable for sign-in.
+ * Landing page for a confirmed address.
+ *
+ * Self-service recovery no longer uses links — it e-mails a 6-digit code and
+ * never reaches this route. The only link that still lands here is the one-time
+ * setup link an administrator hands to a new staff member (built by the
+ * `admin-users` function and verified by `/auth/confirm`), so `status=invalid`
+ * means that setup link, not a recovery link, has to be reissued.
  */
 export default async function ConfirmedPage({
   searchParams,
@@ -24,12 +28,12 @@ export default async function ConfirmedPage({
           <>
             <h1 className="text-lg font-semibold text-ink">This link is no longer valid</h1>
             <p className="mt-1 text-[0.8125rem] text-muted">
-              The link was already used, has expired, or was copied incompletely. Request a new one
-              and open it in the same browser.
+              This setup link was already used, has expired, or was copied incompletely. Ask the
+              municipal administrator to issue a new one from the Users screen.
             </p>
             <p className="mt-4 text-[0.8125rem]">
               <Link className="text-primary hover:underline" href="/forgot-password">
-                Request a new recovery link
+                Reset a password with a verification code
               </Link>
             </p>
           </>

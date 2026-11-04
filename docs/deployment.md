@@ -104,7 +104,7 @@ supabase secrets set GROQ_API_KEY=gsk_...      # only for ai-decision-support
 | Function | Purpose | Required secrets |
 |---|---|---|
 | `admin-users` | Create staff/administrator accounts, deactivate/reactivate, generate password links | `SITE_URL` |
-| `password-recovery` | Role-aware self-service recovery behind "Forgot your password?" (Verify JWT **off**) | `SITE_URL` |
+| `password-recovery` | Role-aware self-service recovery behind "Forgot your password?" — sends a 6-digit code (Verify JWT **off**) | none (shares `SITE_URL`) |
 | `ai-decision-support` | Advisory analytics through the LLM | `GROQ_API_KEY` |
 | `renewal-reminders` | Scheduled 90/60/30-day reminder run | none (uses service role) |
 
@@ -121,14 +121,18 @@ origin must be listed or the browser rejects the response. See §3.2.
 
 ### `SITE_URL`
 
-Both functions build links as `${SITE_URL}/auth/confirm?token_hash=…&type=…`. Set
-`SITE_URL` as a function secret to the origin being used (production:
+`admin-users` builds setup/reset links as `${SITE_URL}/auth/confirm?token_hash=…&type=…`.
+Set `SITE_URL` as a function secret to the origin being used (production:
 `https://sbtf-system.vercel.app`; local testing against the hosted project:
 `http://localhost:3000`). It falls back to `http://localhost:3000`.
 
+`password-recovery` no longer returns or e-mails a link, so it no longer needs
+`SITE_URL` for that purpose; keep the secret set anyway, since both functions share the
+same environment.
+
 The web app's `NEXT_PUBLIC_SITE_URL` is a **separate** value with the same shape — set
 both, and keep them on the same origin. Mixing them is the most common cause of a
-recovery link that lands on the wrong host.
+setup link that lands on the wrong host.
 
 ---
 
@@ -186,22 +190,31 @@ Dashboard → **Authentication → URL Configuration**:
 
 - **Site URL** — the current environment: `https://sbtf-system.vercel.app` in
   production, `http://localhost:3000` while testing locally against the hosted project.
-  **No trailing slash.** The e-mail templates concatenate it directly
+  **No trailing slash.** The administrator-issued setup link is built from `SITE_URL`
   (`{{ .SiteURL }}/auth/confirm`), so a stored value ending in `/` produces
   `//auth/confirm`.
 - **Redirect URLs** — add both:
   - `https://sbtf-system.vercel.app/auth/confirm`
   - `http://localhost:3000/auth/confirm`
 
-If `/auth/confirm` is not on this list, Supabase silently redirects the e-mail link
-back to the Site URL and the token is never consumed.
+If `/auth/confirm` is not on this list, Supabase silently redirects the administrator's
+setup link back to the Site URL and the token is never consumed. Self-service recovery no
+longer depends on this list, because it mails a code instead of a link.
 
 ### c. Email templates
 
-The `{{ .ConfirmationURL }}` in the default templates returns a PKCE `?code=` that the
-app cannot exchange, because recovery is requested **server-side** (no browser
-`code_verifier` exists). The templates therefore build the link from `{{ .TokenHash }}`
-and point at the app's own `/auth/confirm` route, which verifies it with `verifyOtp()`.
+Three things send mail or links out of this project, and they no longer share a mechanism:
+
+| Purpose | Template | What the user receives |
+|---|---|---|
+| Self-service password recovery | `supabase/templates/recovery.html` | a **6-digit code**, typed into `/verify-otp` |
+| Mobile sign-in | `supabase/templates/magic_link.html` | a 6-digit code, typed into the mobile app |
+| Administrator-issued staff setup link | *not a template* | the `admin-users` function returns `setup_link`, built from `generateLink()` and pointing at `/auth/confirm` |
+
+The recovery message deliberately contains **no link**. A single-use link can be
+consumed before the human sees it — mail gateways and antivirus scanners pre-fetch URLs —
+and it also reintroduces redirect-host and URL-fragment failure modes. A code cannot be
+pre-fetched and must be typed by the person holding the mailbox.
 
 For **local development** the templates are wired in `supabase/config.toml`:
 
@@ -218,47 +231,48 @@ Email Templates**:
 
 | Template | Source file | Subject |
 |---|---|---|
-| Reset Password | `supabase/templates/recovery.html` | `Reset your password — SBTF System` |
+| Reset Password | `supabase/templates/recovery.html` | `Your SBTF verification code — SBTF System` |
 | Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
 
 **The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
-only configures `supabase start` locally; the hosted project keeps its own copies. Until
-November 2026 the live project still held Supabase's defaults, so every recovery e-mail
-carried `{{ .ConfirmationURL }}` and dead-ended on "This link is no longer valid".
-
-That failure is silent and easy to misread: delivery works, `/recover` returns `200`, and
-the mail arrives. Only the click fails. The signature in the logs is a **`GET /verify`
-that answers `303`** with `"login_method":"implicit"` — GoTrue signs the visitor in and
-returns the tokens in the URL **fragment** (`#access_token=…`), which never reaches the
-server, so `/auth/confirm` finds neither `code` nor `token_hash` and redirects to
-`/auth/confirmed?status=invalid`.
+only configures `supabase start` locally; the hosted project keeps its own copies.
 
 Check what the project actually holds (Management API, `/v1/projects/{ref}/config/auth`):
 
-| Key | Must contain |
+| Key | Value |
 |---|---|
-| `mailer_templates_recovery_content` | `{{ .TokenHash }}` and `/auth/confirm` |
-| `mailer_subjects_recovery` | the subject shown to users |
+| `mailer_templates_recovery_content` | contains `{{ .Token }}`; contains **no** `ConfirmationURL` or `TokenHash` |
+| `mailer_subjects_recovery` | `Your SBTF verification code — SBTF System` |
+| `mailer_otp_length` | `6` — must match `otp_length` in `config.toml` |
+| `mailer_otp_exp` | `600` seconds — must match `otp_expiry` |
 | `site_url` | the production origin, **without** a trailing slash |
 | `mailer_templates_magic_link_content` | `{{ .Token }}` |
 
-A correct link renders as
-`https://sbtf-system.vercel.app/auth/confirm?token_hash=…&type=recovery&next=/reset-password`,
-and clicking it produces a **`POST /verify` issued by the app**, not a `GET` from the
-browser.
+The code is single-use, so a second `POST /verify` with the same digits answers
+`403 "One-time token not found"`. That is reuse, not an early expiry. An expired code
+fails on the **first** attempt too.
 
-The Magic Link template **must contain `{{ .Token }}`** — the mobile app signs in by
-typing the 6-digit code. Keep `otp_length = 6` in the dashboard to match
-`config.toml`.
+History, because it explains two dead ends that are easy to reintroduce:
+
+- Supabase's default `{{ .ConfirmationURL }}` goes through GoTrue `/verify` and signs the
+  visitor in with the **implicit** flow, returning tokens in the URL **fragment**
+  (`#access_token=…`) that never reaches the server. `/auth/confirm` then finds neither
+  `code` nor `token_hash` and redirects to `/auth/confirmed?status=invalid`.
+- With a correct link, `/auth/confirm` used to redirect to `SITE_URL`, which falls back to
+  `http://localhost:3000` when `NEXT_PUBLIC_SITE_URL` is missing from the build — so a
+  verified production link landed on the developer machine, where the new session cookie
+  does not exist. Both auth redirects now derive the origin from the incoming request.
+
+Neither applies to the code flow, but keep them in mind if a link is ever reintroduced.
 
 ### d. What still hands over a link
 
-`create_staff` still **returns** the setup link (`setup_link`) instead of e-mailing it,
-because a new staff account is `pending` and unusable until an administrator approves
-it — e-mailing a single-use link at creation time would let it expire before the
-account could be used. The console shows the link for manual handover. Self-service
-recovery (`password-recovery`) and driver OTP do send e-mail. Do not add copy that
-claims mail was sent on a path that only returns a link.
+Only one path does: `create_staff` **returns** the setup link (`setup_link`) instead of
+e-mailing it, because a new staff account is `pending` and unusable until an administrator
+approves it — e-mailing a single-use link at creation time would let it expire before the
+account could be used. The console shows the link for manual handover, and it still lands
+on `/auth/confirm` → `/reset-password`. Self-service recovery and driver OTP send codes.
+Do not add copy that claims mail was sent on a path that only returns a link.
 
 ---
 
@@ -459,10 +473,11 @@ publishable key is embedded, which is safe because RLS is the authorisation boun
   self-tests the live verifier against a mock (`test:verify`). Applying migrations and
   running the pgTAP suites still requires a Supabase project; those steps were last run
   by hand, and the results belong in `docs/CURRENT-STATE.md`.
-- **SMTP is configured for self-service recovery only.** Password-recovery and driver
-  one-time-password e-mails are delivered through the project's Gmail SMTP (§3.1).
-  Staff *invitations* still hand over a link in the console (§3.1d), because the account
-  is `pending` until an administrator approves it. This is deliberate, not a bug.
+- **SMTP is configured for self-service recovery and driver sign-in only.** Recovery
+  sends a 6-digit code and driver sign-in sends a one-time password; both are delivered
+  through the project's Gmail SMTP (§3.1). Staff *invitations* still hand over a link in
+  the console (§3.1d), because the account is `pending` until an administrator approves
+  it. This is deliberate, not a bug.
 - The scheduled renewal job (`rpc_generate_renewal_reminders`) needs a pg_cron /
   scheduled-job registration on the project; the migration declares the function but
   registration on a brand-new project should be confirmed after deploy.

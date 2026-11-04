@@ -62,15 +62,16 @@ docs/              Deployment, testing and mobile documentation
 - **`supabase/config.toml` applies to local development only.** Per its own header it is
   consumed by `supabase start` and `functions serve`. The cloud project has its own
   settings, including an empty `uri_allow_list` that this file does not reflect.
-- **E-mail is sent for self-service recovery and driver one-time passwords, but not for
-  staff invitations.** Recovery and OTP mail go through the project's Gmail SMTP
-  (`docs/deployment.md` §3.1). `admin-users` still **returns** the invitation link
-  (`setup_link` / `reset_link`) for manual handover, because a new staff account is
-  `pending` until an administrator approves it.
-- **Auth links are consumed by `/auth/confirm`**, which handles both
-  `?token_hash=…&type=…` (the links this repo builds) and `?code=…` (Supabase's PKCE
-  flow), then forwards recovery to `/reset-password`. See
-  `apps/web/src/app/auth/confirm/route.ts`.
+- **Self-service recovery e-mails a 6-digit code, not a link.** The visitor types it back into
+  `/verify-otp`, then chooses to continue to the console or set a new password. E-mail is also
+  used for driver one-time passwords, but not for staff invitations. Mail goes through the
+  project's Gmail SMTP (`docs/deployment.md` §3.1). `admin-users` still **returns** the
+  invitation link (`setup_link` / `reset_link`) for manual handover, because a new staff
+  account is `pending` until an administrator approves it.
+- **The only auth link left is an administrator-issued setup link.** `/auth/confirm` handles
+  `?token_hash=…&type=…` (the links `admin-users` builds) and Supabase's `?code=…` PKCE flow,
+  then forwards to `/reset-password`. See `apps/web/src/app/auth/confirm/route.ts`. Recovery
+  never reaches it.
 - **`seed.sql` has never been applied to production.** Do not apply it there. It is
   additive and idempotent in development; see `docs/testing.md` §3–4 for the traps it
   sets for testers.
