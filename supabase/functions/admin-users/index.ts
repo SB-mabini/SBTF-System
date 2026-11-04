@@ -150,21 +150,43 @@ Deno.serve(async (request: Request) => {
     // The profiles trigger creates new rows as `active`. A staff account created
     // here is not usable until an administrator approves it, so it is demoted to
     // `pending`; approval runs through rpc_admin_set_account_status from the UI.
-    await adminClient
+    //
+    // If this update fails, the auth user is rolled back. Leaving it behind would
+    // make every retry fail with "already registered" while no usable account
+    // exists — the exact half-created state this function must avoid.
+    const { data: profile, error: profileError } = await adminClient
       .from("profiles")
       .update({
         account_status: "pending",
         status_reason: "Invited by an administrator; awaiting approval.",
       })
-      .eq("auth_user_id", created.user.id);
+      .eq("auth_user_id", created.user.id)
+      .select("id")
+      .maybeSingle();
 
-    await adminClient.from("activity_logs").insert({
+    if (profileError || !profile) {
+      await adminClient.from("profiles").delete().eq("auth_user_id", created.user.id);
+      await adminClient.auth.admin.deleteUser(created.user.id);
+
+      const detail = profileError?.message ?? "The profile row was not created.";
+      const hint = /pending|account_status/i.test(detail)
+        ? " Apply supabase/migrations/20260101091400_pending_account_status.sql and redeploy this function."
+        : " Check that the auth-user trigger is installed, then redeploy this function.";
+
+      return errorResponse("profile_setup_failed", detail + hint, 500, origin);
+    }
+
+    const { error: logError } = await adminClient.from("activity_logs").insert({
       user_id: callerProfile.id,
       action: "user_created",
       target_type: "profile",
-      target_id: created.user.id,
+      target_id: profile.id,
       metadata: { email, role, account_status: "pending", created_by: "admin-users edge function" },
     });
+
+    if (logError) {
+      console.error("admin-users: could not write the activity log", logError.message);
+    }
 
     // Build the password-setup link and hand it back to the console.
     //

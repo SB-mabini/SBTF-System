@@ -73,12 +73,7 @@ async function deactivateThroughEdgeFunction(input: {
   revalidatePath(`/admin/users/${input.profileId}`);
 
   if (error) {
-    return {
-      ok: false,
-      message:
-        "The account could not be deactivated through the admin-users function. " +
-        (error.message ?? "Check that the Edge Function is deployed."),
-    };
+    return edgeFunctionFailure(error, "The account could not be deactivated");
   }
   if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
 
@@ -102,19 +97,109 @@ function linkDetails(payload: unknown, keys: string[]): Record<string, unknown> 
   return Object.keys(details).length > 0 ? details : undefined;
 }
 
+interface EdgeFunctionFailure {
+  status?: number;
+  code?: string;
+  detail: string;
+}
+
 /**
- * supabase.functions.invoke throws a FunctionsHttpError when the function is not
- * deployed or answers with a non-2xx status. Both are reported as failures: a
- * half-created account would leave an auth user with no profile, so nothing is
- * presented as success unless the function said so.
+ * supabase.functions.invoke wraps every non-2xx answer in a FunctionsHttpError
+ * whose `context` is the original Response. The function's own JSON body — the
+ * useful part ("already registered", "reason required", "environment missing")
+ * — is not in `error.message`, so it has to be read from the response.
  */
-function edgeFunctionUnavailable(error: { message?: string } | null): ActionState {
+async function readEdgeFunctionFailure(error: unknown): Promise<EdgeFunctionFailure> {
+  const fallback = error instanceof Error ? error.message : "unknown error";
+  const context = (error as { context?: unknown }).context;
+  const response = asResponse(context);
+
+  if (!response) {
+    return { detail: fallback };
+  }
+
+  let body: unknown = null;
+  try {
+    body = await response.clone().json();
+  } catch {
+    try {
+      body = await response.clone().text();
+    } catch {
+      body = null;
+    }
+  }
+
+  if (body && typeof body === "object") {
+    const record = body as Record<string, unknown>;
+    return {
+      status: response.status,
+      code: typeof record.error === "string" ? record.error : undefined,
+      detail: typeof record.message === "string" ? record.message : fallback,
+    };
+  }
+
+  return { status: response.status, detail: fallback };
+}
+
+/**
+ * `instanceof Response` is not reliable across runtimes (the error may be built
+ * by a different Response implementation), so fall back to its shape.
+ */
+function asResponse(value: unknown): Response | null {
+  if (typeof Response !== "undefined" && value instanceof Response) return value;
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof (value as Response).clone === "function" &&
+    typeof (value as Response).status === "number"
+  ) {
+    return value as Response;
+  }
+  return null;
+}
+
+/**
+ * Turns a failed Edge Function call into an actionable message. A 404 is almost
+ * always a deployment problem; anything else is reported with the function's
+ * own explanation instead of the old catch-all "did not answer" sentence.
+ */
+async function edgeFunctionFailure(
+  error: unknown,
+  fallbackAction: string,
+): Promise<ActionState> {
+  const failure = await readEdgeFunctionFailure(error);
+
+  if (failure.status === 404) {
+    return {
+      ok: false,
+      message:
+        "The admin-users Edge Function is not deployed on this Supabase project (HTTP 404). " +
+        "Deploy it with `supabase functions deploy admin-users`, set the SITE_URL secret, " +
+        "then try again. No account has been created.",
+    };
+  }
+
+  if (failure.status === 401) {
+    return {
+      ok: false,
+      message:
+        "The admin-users function rejected the session (HTTP 401). Sign out and sign in again, then retry.",
+    };
+  }
+
+  if (failure.status === 403) {
+    return {
+      ok: false,
+      message:
+        "The admin-users function refused the request (HTTP 403). Only an active administrator can perform this action.",
+    };
+  }
+
   return {
     ok: false,
     message:
-      `The admin-users Edge Function did not answer: ${error?.message ?? "unknown error"}. ` +
-      "Deploy it with `supabase functions deploy admin-users` and set the SITE_URL secret. " +
-      "No account has been created.",
+      `${fallbackAction} ` +
+      `(${failure.status ? `HTTP ${failure.status}` : "no response"}): ${failure.detail}`,
   };
 }
 
@@ -158,7 +243,7 @@ export async function createStaffUserAction(input: {
     },
   });
 
-  if (error) return edgeFunctionUnavailable(error);
+  if (error) return edgeFunctionFailure(error, "The account could not be created");
 
   revalidatePath("/admin/users");
 
@@ -181,7 +266,7 @@ export async function sendPasswordResetAction(input: { email: string }): Promise
     body: { action: "send_password_reset", email: input.email.trim().toLowerCase() },
   });
 
-  if (error) return edgeFunctionUnavailable(error);
+  if (error) return edgeFunctionFailure(error, "A password reset link could not be created");
   if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
 
   return {
