@@ -64,7 +64,7 @@ export function Sidebar({
   const items = role === "administrator" ? ADMIN_NAV : STAFF_NAV;
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-white lg:flex">
+    <aside className="sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-white lg:flex">
       <div className="flex h-16 items-center gap-2.5 border-b border-line px-5">
         <BrandMark size="sm" priority />
         <div className="leading-tight">
