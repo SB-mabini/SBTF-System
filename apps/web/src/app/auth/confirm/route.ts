@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
-import { SITE_URL, isDemoMode } from "@/lib/env";
+import { isDemoMode } from "@/lib/env";
 
 /**
  * Single verified entry point for every Supabase auth link.
@@ -27,8 +27,20 @@ import { SITE_URL, isDemoMode } from "@/lib/env";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
+  /**
+   * Stay on the host that received the link.
+   *
+   * This used to redirect to `SITE_URL`, which falls back to http://localhost:3000
+   * when NEXT_PUBLIC_SITE_URL is missing from the build. A production link then
+   * verified successfully, set its session cookie for the Vercel domain, and
+   * redirected to localhost — where that cookie does not exist, so the reset form
+   * never found a session and the visitor saw a dead link. Deriving the origin
+   * from the request also keeps preview deployments and custom domains working
+   * without extra configuration, and it guarantees the redirect target matches
+   * the host the cookie was just written for.
+   */
   const redirectTo = (path: string) =>
-    NextResponse.redirect(new URL(path, SITE_URL));
+    NextResponse.redirect(new URL(path, request.nextUrl.origin));
 
   if (isDemoMode()) return redirectTo("/login");
 

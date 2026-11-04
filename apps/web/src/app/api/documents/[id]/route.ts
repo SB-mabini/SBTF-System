@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { SITE_URL, isDemoMode } from "@/lib/env";
+import { isDemoMode } from "@/lib/env";
 import { STORAGE_BUCKETS } from "@/lib/constants";
 
 /**
@@ -20,7 +20,7 @@ import { STORAGE_BUCKETS } from "@/lib/constants";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   if (isDemoMode()) {
@@ -32,7 +32,10 @@ export async function GET(
 
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) {
-    return NextResponse.redirect(new URL("/login", SITE_URL));
+    // Resolve against the request so the sign-in page is on the host the visitor
+    // is actually using; SITE_URL falls back to localhost when the build has no
+    // NEXT_PUBLIC_SITE_URL.
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   const { data: document, error } = await supabase
