@@ -199,6 +199,32 @@ will matter if a link is ever reintroduced.
   was really saved. Template and `site_url` values are returned verbatim — read them back
   rather than trusting the repo copy.
 
+#### Verified on 5 November 2026
+
+Applied through the Management API and read back: template with exactly two `{{ .Token }}`
+placeholders and no link placeholders, subject, `mailer_otp_length = 6`, `mailer_otp_exp =
+600`, `site_url = https://sbtf-system.vercel.app`. `password-recovery` redeployed with Verify
+JWT off.
+
+Then, without touching the mailbox:
+
+- `POST /auth/v1/admin/generate_link {type: "recovery"}` returned `email_otp` as **6 digits**.
+- `POST /auth/v1/verify {type: "recovery"}` with it answered `200` and an access token.
+- The same code again answered `403`; a wrong code answered `403` on the first attempt.
+- With the resulting session, `/recovery-choice` rendered its heading, the `/admin` button and
+  `/reset-password`; `/reset-password` rendered the form; `/verify-otp` without the pending
+  address redirected to `/`; `/recovery-choice` without a session redirected to
+  `/forgot-password`.
+
+Not exercised: the actual `updateUser({ password })`. Changing the live administrator's
+password just to test it is not acceptable, so the first real password change will be the
+first observation of that step. The session is created by `verifyOtp` seconds earlier, which
+is what `secure_password_change` requires.
+
+Template note: never put a Go-template placeholder inside an HTML comment. GoTrue renders it
+there too, so a `ConfirmationURL` in a comment would put a live recovery link into the message
+source — exactly what the code flow exists to avoid.
+
 ---
 
 ## 6. Staff-driven workflow rebuild (Phases 1–3)

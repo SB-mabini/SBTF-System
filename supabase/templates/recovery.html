@@ -10,11 +10,13 @@
     - There is no redirect host to get wrong, and no PKCE `?code=` / URL-fragment
       problem, so nothing can dead-end on "this link is no longer valid".
 
-  Variables: {{ .Token }} is the code; its length follows the project's
-  `mailer_otp_length` (6) and its lifetime follows `mailer_otp_exp` (600 s).
-  Do NOT add {{ .ConfirmationURL }} or {{ .TokenHash }} here: the web flow no
-  longer consumes links. Administrator-issued setup links are built separately by
-  the admin-users Edge Function and still land on /auth/confirm.
+  The body uses exactly one Go-template variable: the Token placeholder, written
+  with double braces. Its length follows `mailer_otp_length` (6) and its
+  lifetime follows `mailer_otp_exp` (600 s). Do NOT add a ConfirmationURL or
+  TokenHash placeholder, even inside a comment: Go template substitutes those
+  wherever they appear, so the link would end up in the message source, and the
+  web flow no longer consumes links. Administrator-issued setup links are built
+  separately by the admin-users Edge Function and still land on /auth/confirm.
 
   This body is pasted into Dashboard → Authentication → Email Templates for the
   hosted project; supabase/config.toml only applies it to `supabase start`.
