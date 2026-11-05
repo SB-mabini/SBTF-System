@@ -22,6 +22,14 @@ type Action = "create_staff" | "deactivate" | "activate" | "send_password_reset"
 const ALLOWED_ROLES = ["administrator", "staff"] as const;
 
 /**
+ * The two statuses the console can choose when deactivating an account. Both
+ * stop the profile from resolving under RLS; the distinction is administrative
+ * (a suspension is usually temporary, an inactive account is not).
+ */
+const DEACTIVATION_STATUSES = ["inactive", "suspended"] as const;
+type DeactivationStatus = (typeof DEACTIVATION_STATUSES)[number];
+
+/**
  * Where Supabase Auth sends the holder after they follow a recovery link.
  *
  * Set SITE_URL as a function secret (`supabase secrets set SITE_URL=https://…`).
@@ -154,17 +162,26 @@ Deno.serve(async (request: Request) => {
     // If this update fails, the auth user is rolled back. Leaving it behind would
     // make every retry fail with "already registered" while no usable account
     // exists — the exact half-created state this function must avoid.
+    // The auth-user trigger normally creates the profile, but it falls back to
+    // `driver` when it cannot read the role from app_metadata. Write the role
+    // here as well, so an administrator-created account is always Staff even on
+    // a project whose trigger predates the app_metadata logic.
     const { data: profile, error: profileError } = await adminClient
       .from("profiles")
       .update({
+        role,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        contact_number: contactNumber || null,
         account_status: "pending",
         status_reason: "Invited by an administrator; awaiting approval.",
       })
       .eq("auth_user_id", created.user.id)
-      .select("id")
+      .select("id, role")
       .maybeSingle();
 
-    if (profileError || !profile) {
+    if (profileError || !profile || profile.role !== role) {
       await adminClient.from("profiles").delete().eq("auth_user_id", created.user.id);
       await adminClient.auth.admin.deleteUser(created.user.id);
 
@@ -228,9 +245,23 @@ Deno.serve(async (request: Request) => {
   if (action === "deactivate" || action === "activate") {
     const profileId = String(payload.profile_id ?? "");
     const reason = String(payload.reason ?? "").trim();
+    // Older callers did not send a status. Keep them working by defaulting to
+    // `inactive`, but honour `suspended` when the console supplies it.
+    const requestedStatus = String(payload.status ?? "inactive").trim().toLowerCase();
 
     if (!/^[0-9a-f-]{36}$/i.test(profileId)) {
       return errorResponse("invalid_profile", "A valid profile id is required.", 400, origin);
+    }
+    if (
+      action === "deactivate" &&
+      !DEACTIVATION_STATUSES.includes(requestedStatus as DeactivationStatus)
+    ) {
+      return errorResponse(
+        "invalid_status",
+        "Deactivation status must be either inactive or suspended.",
+        400,
+        origin,
+      );
     }
     if (action === "deactivate" && reason.length < 5) {
       return errorResponse("reason_required", "A reason is required when deactivating an account.", 400, origin);
@@ -242,7 +273,7 @@ Deno.serve(async (request: Request) => {
       "rpc_admin_set_account_status",
       {
         p_profile_id: profileId,
-        p_status: action === "deactivate" ? "inactive" : "active",
+        p_status: action === "deactivate" ? requestedStatus : "active",
         p_reason: action === "deactivate" ? reason : null,
       },
     );

@@ -65,6 +65,7 @@ async function deactivateThroughEdgeFunction(input: {
     body: {
       action: "deactivate",
       profile_id: input.profileId,
+      status: input.status === "suspended" ? "suspended" : "inactive",
       reason: input.reason,
     },
   });
@@ -166,6 +167,7 @@ function asResponse(value: unknown): Response | null {
 async function edgeFunctionFailure(
   error: unknown,
   fallbackAction: string,
+  consequence = "",
 ): Promise<ActionState> {
   const failure = await readEdgeFunctionFailure(error);
 
@@ -173,9 +175,9 @@ async function edgeFunctionFailure(
     return {
       ok: false,
       message:
-        "The admin-users Edge Function is not deployed on this Supabase project (HTTP 404). " +
-        "Deploy it with `supabase functions deploy admin-users`, set the SITE_URL secret, " +
-        "then try again. No account has been created.",
+        `${fallbackAction}: the admin-users Edge Function is not deployed on this Supabase project (HTTP 404). ` +
+        "Deploy it with `supabase functions deploy admin-users` (add `--use-api` if Docker is unavailable), " +
+        `set the SITE_URL secret, then try again.${consequence}`,
     };
   }
 
@@ -243,7 +245,9 @@ export async function createStaffUserAction(input: {
     },
   });
 
-  if (error) return edgeFunctionFailure(error, "The account could not be created");
+  if (error) {
+    return edgeFunctionFailure(error, "The account could not be created", " No account has been created.");
+  }
 
   revalidatePath("/admin/users");
 

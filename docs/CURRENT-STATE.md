@@ -112,18 +112,35 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 ## 5. Known broken, not yet fixed
 
-1. **The add-staff dialog is dead because its function is not deployed.** The UI exists and
-   is wired (`users-toolbar.tsx` → `create-staff-dialog.tsx` → `createStaffUserAction` →
-   `functions.invoke("admin-users")`), but `admin-users` is not deployed, so every attempt
-   fails with the "did not answer … No account has been created" message.
-2. **`/verify-email` claims an invitation e-mail is sent when none is.**
+1. **`/verify-email` claims an invitation e-mail is sent when none is.**
    `apps/web/src/app/(auth)/verify-email/page.tsx:24-26` tells staff that created accounts
    receive a Supabase invitation e-mail. `create_staff` deliberately does **not** send one:
    it returns `setup_link` for manual handover. Fix the copy, or start sending the mail.
-3. **`renewal-reminders` is not deployed, and does not need to be.** `pg_cron` job 1 runs
+2. **`renewal-reminders` is not deployed, and does not need to be.** `pg_cron` job 1 runs
    `public.rpc_generate_renewal_reminders(array[90, 60, 30])` daily at 01:15 in-database.
    Deploy the function only if an HTTP entry point is wanted; it also requires the
    `REMINDER_CRON_SECRET` secret, which is not set.
+
+### `admin-users` deployment (fixed 5 November 2026)
+
+`admin-users` is deployed to project `qdtmzgaxktebyhsxrgvf` (version 1) with
+`SITE_URL=https://sbtf-system.vercel.app` and `ALLOWED_WEB_ORIGINS` set. The endpoint now
+answers HTTP 401 without a user JWT instead of HTTP 404. Redeploy after changing the
+function with:
+
+```bash
+npm run functions:deploy -- --site-url https://sbtf-system.vercel.app
+```
+
+The script sets the secrets before deploying and uses `--use-api`, so Docker is not
+required. The deactivation action now also honours the `suspended` status instead of
+always writing `inactive`.
+
+`create_staff` now writes `role = 'staff'` on the profile explicitly, instead of relying
+only on the `auth.users` trigger. The trigger falls back to `driver` when it cannot read
+the role from `app_metadata`, which produced staff accounts that appeared under Operators.
+One account created before this fix (`659ec9e9-33b3-4b01-b61c-9d21606ce45f`) was corrected
+to `staff` directly.
 
 ### Password recovery — e-mail code (changed 4 November 2026)
 

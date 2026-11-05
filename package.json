@@ -15,6 +15,8 @@
     "test:verify": "node scripts/test-verify-live.mjs",
     "db:bundle": "node scripts/bundle-sql.mjs",
     "db:bundle:seed": "node scripts/bundle-sql.mjs --with-seed",
+    "functions:deploy": "node scripts/deploy-functions.mjs",
+    "functions:deploy:all": "node scripts/deploy-functions.mjs --all",
     "test:rls": "supabase test db supabase/tests",
     "web:dev": "npm --workspace @sbtf/web run dev",
     "web:build": "npm --workspace @sbtf/web run build",

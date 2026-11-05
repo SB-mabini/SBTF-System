@@ -93,13 +93,30 @@ deploy `ai-decision-support` to enable the AI advisory screens; `renewal-reminde
 only needed when the scheduled reminder job runs.
 
 ```bash
-supabase functions deploy admin-users
-supabase functions deploy ai-decision-support
-supabase functions deploy password-recovery    # keep Verify JWT OFF (see below)
-supabase secrets set SITE_URL=https://sbtf-system.vercel.app
-supabase secrets set ALLOWED_WEB_ORIGINS=https://sbtf-system.vercel.app
+# Preferred: sets SITE_URL / ALLOWED_WEB_ORIGINS first, then deploys admin-users.
+# SITE_URL is taken from --site-url, then $SITE_URL, then NEXT_PUBLIC_SITE_URL
+# in apps/web/.env.local. Requires SUPABASE_ACCESS_TOKEN (or `supabase login`).
+npm run functions:deploy -- --site-url https://sbtf-system.vercel.app
+
+# Every function, with the correct Verify JWT setting for each.
+npm run functions:deploy:all -- --site-url https://sbtf-system.vercel.app
+```
+
+The script uses `--use-api`, so Docker is not required. The equivalent manual
+commands are:
+
+```bash
+supabase secrets set SITE_URL=https://sbtf-system.vercel.app \
+  ALLOWED_WEB_ORIGINS=https://sbtf-system.vercel.app
+supabase functions deploy admin-users --use-api
+supabase functions deploy ai-decision-support --use-api
+supabase functions deploy password-recovery --use-api --no-verify-jwt  # off (see below)
 supabase secrets set GROQ_API_KEY=gsk_...      # only for ai-decision-support
 ```
+
+A deployed function is not the same as a linked local directory: verify it with
+`supabase functions list --project-ref <project-ref>` (the script does this
+automatically).
 
 | Function | Purpose | Required secrets |
 |---|---|---|
