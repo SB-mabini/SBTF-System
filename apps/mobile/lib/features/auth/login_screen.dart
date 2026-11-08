@@ -4,7 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
+import 'auth_messages.dart';
 import 'email_verification_screen.dart';
+import 'forgot_password_screen.dart';
 import 'registration_screen.dart';
 
 /// Sign-in for drivers and operators.
@@ -56,10 +58,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (error) {
       setState(() {
         _loading = false;
-        _error = _friendlyMessage(error.message);
+        _error = friendlyAuthMessage(error.message);
       });
 
-      // An unconfirmed e-mail is not a failure — route to verification.
+      // An unconfirmed e-mail is not a failure — route to the OTP screen.
       if (error.message.toLowerCase().contains('email not confirmed')) {
         if (mounted) {
           Navigator.of(context).push(
@@ -77,24 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = 'Could not sign in. Check your connection and try again.';
       });
     }
-  }
-
-  String _friendlyMessage(String message) {
-    if (message.toLowerCase().contains('invalid login credentials')) {
-      return 'The e-mail address or password is incorrect.';
-    }
-    if (message.toLowerCase().contains('email not confirmed')) {
-      return 'Your e-mail address has not been confirmed yet.';
-    }
-    // Network / offline errors — Supabase wraps SocketException inside
-    // AuthException on Android, so the raw OS error leaks into the message.
-    if (message.toLowerCase().contains('socketexception') ||
-        message.toLowerCase().contains('failed host lookup') ||
-        message.toLowerCase().contains('no address associated') ||
-        message.toLowerCase().contains('clientexception')) {
-      return 'No internet connection. Please check your network and try again.';
-    }
-    return message;
   }
 
   @override
@@ -230,7 +214,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _demo
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ForgotPasswordScreen(
+                                      initialEmail:
+                                          _emailController.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     FilledButton(
                       onPressed: (_demo || _loading) ? null : _signIn,
                       child: _loading

@@ -229,7 +229,7 @@ flutter build appbundle --release    # Play Store bundle (.aab)
 
 ---
 
-## 6. Functional acceptance cases (MA-01 … MA-54)
+## 6. Functional acceptance cases (MA-01 … MA-56)
 
 Record **Actual** and **Pass** per run; note device, Flutter version and project ref.
 
@@ -237,10 +237,10 @@ Record **Actual** and **Pass** per run; note device, Flutter version and project
 |---|---|---|---|---|
 | MA-01 | Launch a build with no `--dart-define` values | Config-missing screen with the exact run command and a copy button | | |
 | MA-02 | Launch with `SBTF_DEMO_MODE=true` | Sign-in form visible but disabled under a preview banner; nothing hidden | | |
-| MA-03 | Register with valid details | Account created; e-mail verification screen shown; resend available | | |
+| MA-03 | Register with valid details | Account created; the 6-digit code screen opens; entering the code confirms the address and signs the driver in automatically | | |
 | MA-04 | Register with a password shorter than 8 characters | Client-side validation refuses before any network call | | |
 | MA-05 | Register with mismatched confirmation password | Client-side validation refuses | | |
-| MA-06 | Sign in before confirming the e-mail | Routed to the verification screen; resend issues a new confirmation | | |
+| MA-06 | Sign in before confirming the e-mail | Routed to the code screen; entering the code confirms the address and signs the driver in; "Send a new code" issues a fresh one | | |
 | MA-07 | Sign in as a confirmed, active driver | Home dashboard with the hero card showing the driver's name, e-mail, "Driver / Operator" pill and account-state pill | | |
 | MA-08 | Sign in with a wrong password | Clear inline error; no navigation, no crash | | |
 | MA-09 | Sign in with a staff/administrator account | `refuseNonDriver` card: municipal roles belong on the web console | | |
@@ -289,6 +289,8 @@ Record **Actual** and **Pass** per run; note device, Flutter version and project
 | MA-52 | The office schedules, moves or closes out an appointment | The visit reaches the phone on the next Realtime event, without a manual refresh; a cancelled appointment is not counted as upcoming and sits under Past | | |
 | MA-53 | Open an `appointment_scheduled` / `appointment_updated` notification | The notice deep-links into the appointment's detail, re-read by id, so a stale link can only ever resolve to the caller's own row; a withdrawn appointment shows a "no longer available" message instead of navigating | | |
 | MA-54 | Inspect the Past scope | Completed, missed and cancelled visits appear with their outcome and close-out date; with none yet, the empty state explains that they show up once the office closes them out | | |
+| MA-55 | Tap **Forgot password?**, enter a driver address, then submit the received code | The recovery e-mail has a 6-digit code and no link; a valid code opens "Set a new password"; after saving, the driver is signed in with the new password | | |
+| MA-56 | Sign out, then sign in as a different driver | The previous driver's applications, notifications, certificates and appointments are gone immediately; no cached row from the first account appears | | |
 
 ---
 

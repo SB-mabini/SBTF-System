@@ -82,6 +82,9 @@ otp_expiry = 600
 #             admin-users Edge Function and still use /auth/confirm.
 # magic_link: the body must contain {{ .Token }}; the mobile app verifies it with
 #             auth.verifyOTP({ type: 'email' }).
+# confirmation: the signup template; carries {{ .Token }} and is verified with
+#             auth.verifyOtp({ type: 'signup' }). A successful verification also
+#             creates the session, so the driver is signed in automatically.
 [auth.email.template.recovery]
 subject = "Your SBTF verification code — SBTF System"
 content_path = "./supabase/templates/recovery.html"
@@ -89,6 +92,10 @@ content_path = "./supabase/templates/recovery.html"
 [auth.email.template.magic_link]
 subject = "One-time password — SBTF System"
 content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your SBTF account — verification code"
+content_path = "./supabase/templates/confirmation.html"
 
 [auth.sms]
 enable_signup = false

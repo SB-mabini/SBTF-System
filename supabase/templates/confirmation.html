@@ -1,0 +1,95 @@
+<!--
+  Confirm Signup / Registration OTP email — SBTF System (bilingual).
+
+  Used by: the mobile app when a driver or operator registers. Supabase sends
+  this "Confirmation" template; the app then calls
+  auth.verifyOtp({ type: 'signup', token }) with the 6-digit code below.
+  Verifying it marks the address confirmed AND creates the session, so the
+  driver is signed in immediately.
+
+  The body must contain the numeric Token placeholder: the mobile app needs the
+  code, not a link. OTP length is 6 digits (supabase/config.toml →
+  auth.email.otp_length; set the same in the hosted dashboard) and its lifetime
+  is 10 minutes (otp_expiry = 600).
+
+  Keep this file link-free. A single-use link can be consumed by a mail scanner
+  before the person opens the message, and it reintroduces redirect-host and
+  URL-fragment failures. This body is pasted into Dashboard → Authentication →
+  Email Templates for the hosted project; supabase/config.toml applies it only
+  to `supabase start`.
+-->
+<div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+
+  <p style="font-size: 15px; line-height: 1.6;">Magandang araw,</p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    Maligayang pagdating sa <strong>SBTF System</strong> ng Munisipalidad ng
+    Mabini. Gamitin ang code sa ibaba upang kumpirmahin ang iyong e-mail at
+    makapasok sa <strong>SBTF mobile app</strong>:
+  </p>
+
+  <p style="margin: 26px 0 8px; font-size: 13px; color: #555;">
+    Ang iyong confirmation code:
+  </p>
+
+  <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+              font-size: 30px; font-weight: 700; letter-spacing: 10px;
+              text-align: center; color: #271564; background: #f4f2fb;
+              border: 1px solid #dcd6f3; border-radius: 10px;
+              padding: 16px 8px 16px 18px;">
+    {{ .Token }}
+  </div>
+
+  <p style="margin: 10px 0 0; font-size: 13px; color: #666;">
+    May bisa lamang ito nang <strong>10 minuto</strong> at isang beses lang
+    magagamit. Kapag naipasok mo ang code, awtomatiko kang makakapasok sa app.
+  </p>
+
+  <p style="font-size: 13px; color: #666; line-height: 1.6; margin-top: 18px;">
+    <em>Kung hindi ikaw ang gumawa ng account na ito, maaari mong i-ignore ang
+    mensaheng ito. Walang account na magagamit hangga't hindi nakumpirma ang
+    e-mail.</em>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+  <p style="font-size: 15px; line-height: 1.6;">Good day,</p>
+
+  <p style="font-size: 15px; line-height: 1.6;">
+    Welcome to the <strong>SBTF System</strong> of the Municipality of Mabini.
+    Use the code below to confirm your e-mail address and enter the
+    <strong>SBTF mobile app</strong>:
+  </p>
+
+  <p style="margin: 26px 0 8px; font-size: 13px; color: #555;">
+    Your confirmation code:
+  </p>
+
+  <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+              font-size: 30px; font-weight: 700; letter-spacing: 10px;
+              text-align: center; color: #271564; background: #f4f2fb;
+              border: 1px solid #dcd6f3; border-radius: 10px;
+              padding: 16px 8px 16px 18px;">
+    {{ .Token }}
+  </div>
+
+  <p style="margin: 10px 0 0; font-size: 13px; color: #666;">
+    It is valid for <strong>10 minutes</strong> and can be used once. Once the
+    code is accepted, you are signed in to the app automatically.
+  </p>
+
+  <p style="font-size: 13px; color: #666; line-height: 1.6; margin-top: 18px;">
+    <em>If you did not create this account, you can ignore this message. No
+    account can be used until the e-mail address is confirmed.</em>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
+
+  <p style="font-size: 14px; line-height: 1.6;">
+    Salamat,<br />
+    <strong>SBTF System</strong><br />
+    <span style="color: #666; font-size: 13px;">Municipality of Mabini, Batangas</span>
+  </p>
+
+</div>

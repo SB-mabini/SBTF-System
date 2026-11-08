@@ -86,9 +86,12 @@ lib/
     auth/
       session_guard.dart        pure session policy (unit-tested)
       auth_gate.dart            maps decisions to screens
-      login_screen.dart         sign-in
+      login_screen.dart         sign-in + forgot-password entry point
       registration_screen.dart  driver self-registration
-      email_verification_screen.dart
+      forgot_password_screen.dart  send the recovery code
+      reset_password_screen.dart   set the new password
+      email_verification_screen.dart  6-digit OTP (signup and recovery)
+      auth_messages.dart        one friendly wording for Supabase Auth errors
     home/
       home_screen.dart          profile header + feature tiles
 test/

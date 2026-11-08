@@ -25,6 +25,10 @@ class AuthGate extends ConsumerWidget {
       return const LoginScreen();
     }
 
+    // Keeps one listener alive for the whole app so cached driver data is
+    // cleared on sign-in, sign-out and token refresh.
+    ref.watch(authSessionSyncProvider);
+
     final authState = ref.watch(authStateChangesProvider);
 
     return authState.when(

@@ -60,6 +60,62 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
   return Profile.fromMap(row);
 });
 
+/// Auth events that can change which rows the driver is allowed to see.
+///
+/// `tokenRefreshed` is included deliberately: the token is also refreshed after
+/// a permission/profile change, and re-reading then is cheap and keeps stale
+/// data from surviving.
+const Set<AuthChangeEvent> _driverDataRefreshEvents = {
+  AuthChangeEvent.signedIn,
+  AuthChangeEvent.signedOut,
+  AuthChangeEvent.tokenRefreshed,
+  AuthChangeEvent.userUpdated,
+  AuthChangeEvent.passwordRecovery,
+};
+
+/// Clears every driver-owned cache when the session changes.
+///
+/// Without this, Riverpod keeps the previous account's applications,
+/// notifications, certificates and appointments in memory after a sign-out or
+/// account switch, and the next user briefly sees or reuses that data. The
+/// AuthGate keeps this provider alive; the actual invalidation happens on the
+/// auth event, not on every widget build.
+final authSessionSyncProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<AuthState>>(authStateChangesProvider, (previous, next) {
+    final event = next.value?.event;
+    if (event == null) return;
+    if (!_driverDataRefreshEvents.contains(event)) return;
+    _invalidateDriverData(ref);
+  });
+});
+
+/// Invalidates every user-scoped provider. Kept in one place so a newly added
+/// data provider cannot be forgotten in the sign-out path.
+void _invalidateDriverData(Ref ref) {
+  ref.invalidate(profileProvider);
+
+  ref.invalidate(myApplicationsProvider);
+  ref.invalidate(activeApplicationProvider);
+  ref.invalidate(applicationDetailProvider);
+  ref.invalidate(myApplicationsStreamProvider);
+
+  ref.invalidate(myFormRequestsProvider);
+  ref.invalidate(openFormRequestProvider);
+  ref.invalidate(latestRejectedFormRequestProvider);
+  ref.invalidate(myFormRequestsStreamProvider);
+
+  ref.invalidate(myRecordsProvider);
+  ref.invalidate(activeRecordProvider);
+  ref.invalidate(myRecordsStreamProvider);
+
+  ref.invalidate(notificationsProvider);
+  ref.invalidate(unreadNotificationCountProvider);
+  ref.invalidate(notificationsStreamProvider);
+  ref.invalidate(unreadNotificationCountStreamProvider);
+
+  ref.invalidate(myAppointmentsStreamProvider);
+}
+
 // ---------------------------------------------------------------------------
 // Slice services
 //

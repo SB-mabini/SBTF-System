@@ -165,9 +165,11 @@ where a.status in ('approved', 'rejected');
 
 ## 9. Email, password recovery and one-time password
 
-Self-service password recovery, driver one-time passwords, and the staff-approval gate
-are covered here. Configuration lives in [`deployment.md`](./deployment.md) §3.1; the
-templates are `supabase/templates/recovery.html` and `supabase/templates/magic_link.html`.
+Self-service password recovery, driver one-time passwords, mobile registration and the
+staff-approval gate are covered here. Configuration lives in
+[`deployment.md`](./deployment.md) §3.1; the templates are
+`supabase/templates/recovery.html`, `supabase/templates/magic_link.html` and
+`supabase/templates/confirmation.html`.
 
 Use only addresses you can actually open (for example the configured Gmail account). The
 seeded `@mabini-sbtf.test` accounts cannot receive mail.
@@ -181,13 +183,13 @@ defect.
 |---|---|---|
 | 1 | Custom SMTP saved (Gmail + App Password) and a **test e-mail arrives** | Dashboard → Authentication → Emails → SMTP Settings |
 | 2 | Site URL is the origin under test, and `/auth/confirm` is in the redirect allow-list | Dashboard → Authentication → URL Configuration |
-| 3 | Reset Password template contains `{{ .Token }}` and **no** `ConfirmationURL` / `TokenHash` (copied from `recovery.html`); Magic Link template contains `{{ .Token }}` | Dashboard → Authentication → Email Templates |
+| 3 | Reset Password template contains `{{ .Token }}` and **no** `ConfirmationURL` / `TokenHash` (copied from `recovery.html`); Magic Link and **Confirm signup** templates contain `{{ .Token }}` | Dashboard → Authentication → Email Templates |
 | 4 | OTP expiry is `600` seconds and OTP length is `6` | Dashboard → Authentication → Providers → Email |
 | 5 | `password-recovery` Edge Function deployed with **Verify JWT off** | Dashboard → Edge Functions |
 | 6 | `SITE_URL` function secret set to the origin under test | `supabase secrets list` |
 | 7 | `NEXT_PUBLIC_SUPABASE_URL` is the deployed project and `NEXT_PUBLIC_SITE_URL` matches the Site URL | `apps/web/.env.local` |
 
-### 9.2 Cases (E-01 … E-14)
+### 9.2 Cases (E-01 … E-16)
 
 | ID | Action | Expected result | Actual | Pass |
 |---|---|---|---|---|
@@ -205,6 +207,8 @@ defect.
 | E-12 | Choose **Set a new password** after a valid code | `/reset-password` accepts the new password, then opens the console; the new password works at sign-in | | |
 | E-13 | Open `/verify-otp` with no pending address cookie | Redirects to `/forgot-password` (or to the console if a session exists) | | |
 | E-14 | Mobile: "Sign in with one-time password" | 6-digit code arrives; entering it signs the driver in | | |
+| E-15 | Mobile: **Create an account** with a real address | The **Confirm signup** e-mail arrives; it has a 6-digit code, no link, and says 10 minutes | | |
+| E-16 | Enter that registration code in the app | Accepted → the driver is signed in automatically and lands on the dashboard; no second sign-in | | |
 
 ### 9.3 Failure triage
 
@@ -220,6 +224,7 @@ The "Forgot your password?" error line reports the real cause.
 | E-06 always lands on `/forgot-password` | The pending-address cookie is missing or older than 10 minutes; recovery was started in a different browser |
 | A code is refused although it is correct | `mailer_otp_length` in the dashboard does not match what the template shows (must be 6), or the code was already used |
 | Magic Link code refused | The template no longer contains `{{ .Token }}` |
+| Registration code refused | The **Confirm signup** template does not contain `{{ .Token }}`, or the code was already used |
 
 Logs: Dashboard → Edge Functions → `password-recovery` → Logs.
 

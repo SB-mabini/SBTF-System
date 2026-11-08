@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
+import 'auth_messages.dart';
 import 'email_verification_screen.dart';
 
 /// Self-registration for drivers and operators.
@@ -59,7 +60,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     try {
       final client = Supabase.instance.client;
-      await client.auth.signUp(
+      final response = await client.auth.signUp(
         email: email,
         password: _passwordController.text,
         data: {
@@ -70,15 +71,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       );
 
       if (!mounted) return;
+
+      // Normally e-mail confirmation is enabled, so signUp returns no session
+      // and Supabase sends the confirmation template containing {{ .Token }}.
+      // The OTP screen verifies it and the resulting session signs the driver
+      // in automatically. If confirmations are disabled the session is already
+      // present, so return to the gate, which will show the home screen.
+      if (response.session != null) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      }
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => EmailVerificationScreen(email: email),
+          builder: (_) => EmailVerificationScreen(
+            email: email,
+            purpose: EmailOtpPurpose.signup,
+          ),
         ),
       );
     } on AuthException catch (error) {
       setState(() {
         _loading = false;
-        _error = error.message;
+        _error = friendlyAuthMessage(error.message);
       });
     } catch (_) {
       setState(() {

@@ -226,12 +226,13 @@ Three things send mail or links out of this project, and they no longer share a 
 |---|---|---|
 | Self-service password recovery | `supabase/templates/recovery.html` | a **6-digit code**, typed into `/verify-otp` |
 | Mobile sign-in | `supabase/templates/magic_link.html` | a 6-digit code, typed into the mobile app |
+| Mobile registration | `supabase/templates/confirmation.html` | a 6-digit code; entering it confirms the address **and signs the driver in** |
 | Administrator-issued staff setup link | *not a template* | the `admin-users` function returns `setup_link`, built from `generateLink()` and pointing at `/auth/confirm` |
 
-The recovery message deliberately contains **no link**. A single-use link can be
-consumed before the human sees it — mail gateways and antivirus scanners pre-fetch URLs —
-and it also reintroduces redirect-host and URL-fragment failure modes. A code cannot be
-pre-fetched and must be typed by the person holding the mailbox.
+The recovery and registration messages deliberately contain **no link**. A single-use
+link can be consumed before the human sees it — mail gateways and antivirus scanners
+pre-fetch URLs — and it also reintroduces redirect-host and URL-fragment failure modes. A
+code cannot be pre-fetched and must be typed by the person holding the mailbox.
 
 For **local development** the templates are wired in `supabase/config.toml`:
 
@@ -241,6 +242,9 @@ content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.magic_link]
 content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+content_path = "./supabase/templates/confirmation.html"
 ```
 
 For the **hosted project**, paste the same HTML into Dashboard → **Authentication →
@@ -250,6 +254,7 @@ Email Templates**:
 |---|---|---|
 | Reset Password | `supabase/templates/recovery.html` | `Your SBTF verification code — SBTF System` |
 | Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
+| Confirm signup | `supabase/templates/confirmation.html` | `Confirm your SBTF account — verification code` |
 
 **The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
 only configures `supabase start` locally; the hosted project keeps its own copies.
@@ -259,6 +264,7 @@ Check what the project actually holds (Management API, `/v1/projects/{ref}/confi
 | Key | Value |
 |---|---|
 | `mailer_templates_recovery_content` | contains `{{ .Token }}`; contains **no** `ConfirmationURL` or `TokenHash` |
+| `mailer_templates_confirmation_content` | contains `{{ .Token }}`; contains **no** `ConfirmationURL` or `TokenHash` |
 | `mailer_subjects_recovery` | `Your SBTF verification code — SBTF System` |
 | `mailer_otp_length` | `6` — must match `otp_length` in `config.toml` |
 | `mailer_otp_exp` | `600` seconds — must match `otp_expiry` |
