@@ -5,9 +5,10 @@ import { Archive, CalendarCheck, FileText, Link2, ShieldCheck, Stamp } from "luc
 
 import { CertificateActions } from "@/components/records/certificate-actions";
 import { ArchiveActions } from "@/components/records/archive-actions";
+import { RecordPayment } from "@/components/records/record-payment";
 import { VerificationQr } from "@/components/records/verification-qr";
 import { Alert, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
-import { getCertificateSignedUrl, getFranchiseRecord, listSettings } from "@/lib/data";
+import { getCertificateSignedUrl, getFranchiseRecord, getStorageSignedUrl, listSettings } from "@/lib/data";
 import { formatDate, formatDateTime, humanizeKey } from "@/lib/format";
 import { buildVerificationUrl, resolveVerificationBaseUrl } from "@/lib/verification";
 import { isDemoMode } from "@/lib/env";
@@ -31,9 +32,10 @@ export async function RecordDetail({
 
   const readOnly = basePath === "/admin";
 
-  const [certificateUrl, settings] = await Promise.all([
+  const [certificateUrl, settings, signatureUrl] = await Promise.all([
     getCertificateSignedUrl(recordId),
     listSettings(),
+    getStorageSignedUrl(record.application?.applicant_signature_storage_path),
   ]);
 
   // Used only when neither the setting nor NEXT_PUBLIC_SITE_URL names a public
@@ -123,7 +125,15 @@ export async function RecordDetail({
             </dl>
           </Card>
 
-          <CertificateActions record={record} certificateUrl={certificateUrl} settings={settings} readOnly={readOnly} />
+          <CertificateActions
+            record={record}
+            certificateUrl={certificateUrl}
+            settings={settings}
+            readOnly={readOnly}
+            signatureUrl={signatureUrl}
+          />
+
+          <RecordPayment record={record} readOnly={readOnly} />
 
           <Card>
             <CardHeader title="Archive" description="Operational status only — the documentary record is preserved." icon={Archive} />

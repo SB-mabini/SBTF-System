@@ -25,6 +25,7 @@ ApplicationSubmission _valid(
   return ApplicationSubmission(
     applicationType: applicationType,
     todaId: 'toda-1',
+    appliedRoute: 'Mainaga - Poblacion',
     operatorFirstName: 'Juan',
     operatorMiddleName: 'Perez',
     operatorLastName: 'Dela Cruz',
@@ -58,6 +59,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.renewal,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -82,6 +84,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -114,6 +117,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -145,6 +149,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -171,6 +176,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -212,6 +218,7 @@ void main() {
       final submission = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -234,6 +241,7 @@ void main() {
       final payload = ApplicationSubmission(
         applicationType: ApplicationType.newFranchise,
         todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
         operatorFirstName: 'Juan',
         operatorLastName: 'Dela Cruz',
         operatorContactNumber: '09171234567',
@@ -261,6 +269,68 @@ void main() {
 
       expect(renewal['renewal_of_record_id'], 'record-1');
       expect(_valid().toPayload().containsKey('renewal_of_record_id'), isFalse);
+    });
+  });
+
+  group('ApplicationSubmission with an approved request', () {
+    test('accepts only the three client documents when OR/CR is supplied', () {
+      final submission = ApplicationSubmission(
+        applicationType: ApplicationType.newFranchise,
+        todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
+        operatorFirstName: 'Juan',
+        operatorLastName: 'Dela Cruz',
+        operatorContactNumber: '09171234567',
+        operatorAddressLine: 'Purok 1, Barangay San Juan',
+        vehicleMake: 'Honda',
+        vehicleModel: 'TMX',
+        vehicleYear: 2020,
+        vehicleColor: 'Blue',
+        plateNumber: 'ABC 123',
+        engineNumber: 'ENG12345',
+        chassisNumber: 'CHS12345',
+        orCrFromRequest: true,
+        documents: requiredDocumentTypes
+            .where((type) => type != 'or_cr')
+            .map(_upload)
+            .toList(),
+      );
+
+      expect(submission.validate(), isEmpty);
+      expect(submission.toPayload()['documents'], hasLength(3));
+    });
+
+    test('still requires the other three documents', () {
+      final submission = ApplicationSubmission(
+        applicationType: ApplicationType.newFranchise,
+        todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
+        operatorFirstName: 'Juan',
+        operatorLastName: 'Dela Cruz',
+        operatorContactNumber: '09171234567',
+        operatorAddressLine: 'Purok 1, Barangay San Juan',
+        vehicleMake: 'Honda',
+        vehicleModel: 'TMX',
+        vehicleYear: 2020,
+        vehicleColor: 'Blue',
+        plateNumber: 'ABC 123',
+        engineNumber: 'ENG12345',
+        chassisNumber: 'CHS12345',
+        orCrFromRequest: true,
+        documents: const [],
+      );
+
+      final problems = submission.validate();
+      expect(
+        problems,
+        contains(
+          'Missing documentary requirement: ${documentLabels['cedula']}.',
+        ),
+      );
+      expect(
+        problems.any((problem) => problem.contains(documentLabels['or_cr']!)),
+        isFalse,
+      );
     });
   });
 }

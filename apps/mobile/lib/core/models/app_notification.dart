@@ -48,6 +48,11 @@ class AppNotification {
   bool get targetsAppointment =>
       targetType == 'appointment' && targetId != null;
 
+  /// True when it points at one of the driver's form requests (approval,
+  /// rejection or resubmission).
+  bool get targetsFormRequest =>
+      targetType == 'form_request' && targetId != null;
+
   factory AppNotification.fromMap(Map<String, dynamic> map) {
     return AppNotification(
       id: (map['id'] ?? '').toString(),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_error.dart';
 import '../../core/constants.dart';
 import '../../core/models/franchise_application.dart';
+import '../../core/models/form_request.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -23,10 +24,15 @@ import '../../core/widgets/section_header.dart';
 /// [ApplicationService.submit], which runs the same pre-validation again and
 /// classifies any refusal into an [AppFailure].
 class ApplicationFormScreen extends ConsumerStatefulWidget {
-  const ApplicationFormScreen({super.key, this.applicationType});
+  const ApplicationFormScreen({super.key, this.applicationType, this.formRequest});
 
   /// An optional type for entry points that already know the driver's choice.
   final String? applicationType;
+
+  /// The staff-approved request that unlocked this application. When present,
+  /// its type, TODA, vehicle identity, contact and OR/CR are pre-filled and
+  /// locked, and the driver uploads only the three remaining documents.
+  final FormRequest? formRequest;
 
   @override
   ConsumerState<ApplicationFormScreen> createState() =>
@@ -51,6 +57,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _contact = TextEditingController();
   final _address = TextEditingController();
   final _email = TextEditingController();
+  final _citizenship = TextEditingController(text: 'Filipino');
+  final _route = TextEditingController();
+  final _registeredOwner = TextEditingController();
+
+  String _ownershipType = 'single_proprietorship';
 
   // Vehicle
   final _vehicleMake = TextEditingController();
@@ -89,6 +100,19 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     super.initState();
     _type = widget.applicationType;
 
+    final approved = widget.formRequest;
+    if (approved != null) {
+      _type = approved.applicationType;
+      _todaId = approved.todaId;
+      _crNumber.text = approved.crNumber ?? '';
+      _ctc.text = approved.ctcNumber ?? '';
+      _vehicleMake.text = approved.vehicleMake ?? '';
+      _vehicleModel.text = approved.vehicleModel ?? '';
+      _plate.text = approved.plateNumber ?? '';
+      _engine.text = approved.engineNumber ?? '';
+      _chassis.text = approved.chassisNumber ?? '';
+    }
+
     // Prefill the operator from the signed-in profile where it is known; the
     // driver completes the address, which the profile does not carry.
     final profile = ref.read(profileProvider).valueOrNull;
@@ -96,10 +120,22 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _firstName.text = profile.firstName;
       _middleName.text = profile.middleName ?? '';
       _lastName.text = profile.lastName;
-      _contact.text = profile.contactNumber ?? '';
+      _contact.text = approved?.contactNumber ?? profile.contactNumber ?? '';
       _email.text = profile.email;
     }
   }
+
+  bool get _hasApprovedRequest => widget.formRequest != null;
+
+  /// True when the approved request owns the OR/CR. Legacy requests without a
+  /// stored file still require the driver to upload it.
+  bool get _orCrFromRequest => widget.formRequest?.hasOrCr ?? false;
+
+  /// The documents the driver still has to upload. The OR/CR comes from the
+  /// approved request when it carries one and is never uploaded again.
+  List<String> get _requiredUploadTypes => _orCrFromRequest
+      ? requiredDocumentTypes.where((type) => type != 'or_cr').toList()
+      : requiredDocumentTypes;
 
   @override
   void dispose() {
@@ -110,6 +146,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _contact,
       _address,
       _email,
+      _citizenship,
+      _route,
+      _registeredOwner,
       _vehicleMake,
       _vehicleModel,
       _vehicleYear,
@@ -170,7 +209,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
   List<String> _documentProblems() {
     return <String>[
-      for (final type in requiredDocumentTypes)
+      for (final type in _requiredUploadTypes)
         if (!_uploads.containsKey(type))
           'Upload the ${documentLabels[type] ?? type}.',
     ];
@@ -261,8 +300,15 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       bodyNumber: _emptyToNull(_body.text),
       renewalOfRecordId: _isRenewal ? _recordId : null,
       remarks: _emptyToNull(_remarks.text),
+      orCrFromRequest: _orCrFromRequest,
+      operatorCitizenship: _citizenship.text.trim().isEmpty
+          ? 'Filipino'
+          : _citizenship.text.trim(),
+      appliedRoute: _route.text.trim(),
+      registeredOwner: _emptyToNull(_registeredOwner.text),
+      ownershipType: _ownershipType,
       documents: <ApplicationDocumentUpload>[
-        for (final type in requiredDocumentTypes)
+        for (final type in _requiredUploadTypes)
           if (_uploads.containsKey(type)) _uploads[type]!,
       ],
     );
@@ -295,6 +341,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       if (!mounted) return;
       ref.invalidate(myApplicationsProvider);
       ref.invalidate(activeApplicationProvider);
+      ref.invalidate(openFormRequestProvider);
+      ref.invalidate(myFormRequestsProvider);
+      ref.invalidate(latestRejectedFormRequestProvider);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => _ApplicationSubmittedScreen(application: application),
@@ -386,17 +435,46 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_hasApprovedRequest) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.successTint,
+              borderRadius: AppRadius.box,
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lock_outline, color: AppColors.success),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'These details come from your approved request form and '
+                    'cannot be changed here.',
+                    style: TextStyle(
+                      color: AppColors.inkStrong,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         const _SectionTitle('Application type'),
         _TypeOption(
           selected: _type == ApplicationType.newFranchise,
           icon: Icons.note_add_outlined,
           title: 'New franchise',
           subtitle: 'First franchise for this tricycle',
-          onTap: () => setState(() {
-            _type = ApplicationType.newFranchise;
-            _recordId = null;
-            _submitError = null;
-          }),
+          onTap: _hasApprovedRequest
+              ? null
+              : () => setState(() {
+                    _type = ApplicationType.newFranchise;
+                    _recordId = null;
+                    _submitError = null;
+                  }),
         ),
         const SizedBox(height: AppSpacing.xs),
         _TypeOption(
@@ -404,10 +482,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           icon: Icons.autorenew_outlined,
           title: 'Renewal',
           subtitle: 'Renew an existing franchise',
-          onTap: () => setState(() {
-            _type = ApplicationType.renewal;
-            _submitError = null;
-          }),
+          onTap: _hasApprovedRequest
+              ? null
+              : () => setState(() {
+                    _type = ApplicationType.renewal;
+                    _submitError = null;
+                  }),
         ),
         const SizedBox(height: AppSpacing.md),
         const _SectionTitle('TODA & barangay'),
@@ -455,7 +535,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
         return InkWell(
           borderRadius: AppRadius.input,
-          onTap: todas.isEmpty
+          onTap: todas.isEmpty || _hasApprovedRequest
               ? null
               : () async {
                   final selectedId = await _showTodaPicker(todas);
@@ -753,6 +833,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     int maxLines = 1,
     TextCapitalization textCapitalization = TextCapitalization.none,
     String? Function(String?)? validator,
+    bool readOnly = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -773,7 +854,13 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             keyboardType: keyboardType,
             maxLines: maxLines,
             textCapitalization: textCapitalization,
-            decoration: InputDecoration(hintText: hint),
+            readOnly: readOnly,
+            decoration: InputDecoration(
+              hintText: hint,
+              suffixIcon: readOnly
+                  ? const Icon(Icons.lock_outline, size: 18)
+                  : null,
+            ),
             validator: validator,
           ),
         ],
@@ -820,7 +907,65 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           controller: _ctc,
           hint: 'e.g. 1234567',
           keyboardType: TextInputType.text,
+          readOnly: _hasApprovedRequest,
           validator: (value) => _optional(value, 'CTC number', 60),
+        ),
+        _field(
+          label: 'Citizenship',
+          controller: _citizenship,
+          hint: 'Filipino',
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'Citizenship', max: 40),
+        ),
+        _field(
+          label: 'Applied route / service area',
+          controller: _route,
+          hint: 'e.g. Mainaga - Poblacion',
+          textCapitalization: TextCapitalization.words,
+          validator: (value) => _required(value, 'Applied route', min: 3, max: 120),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        DropdownButtonFormField<String>(
+          initialValue: _ownershipType,
+          decoration: const InputDecoration(labelText: 'Type of ownership'),
+          items: const <DropdownMenuItem<String>>[
+            DropdownMenuItem(
+              value: 'single_proprietorship',
+              child: Text('Single proprietorship'),
+            ),
+            DropdownMenuItem(
+              value: 'cooperative',
+              child: Text('Cooperative'),
+            ),
+            DropdownMenuItem(
+              value: 'corporation',
+              child: Text('Corporation'),
+            ),
+            DropdownMenuItem(
+              value: 'not_applicable',
+              child: Text('N/A'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value != null) setState(() => _ownershipType = value);
+          },
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _field(
+          label: _ownershipType == 'cooperative' ||
+                  _ownershipType == 'corporation'
+              ? 'Registered owner (entity name)'
+              : 'Registered owner (optional)',
+          controller: _registeredOwner,
+          hint: 'Juan Dela Cruz',
+          textCapitalization: TextCapitalization.words,
+          validator: (value) {
+            if (_ownershipType == 'cooperative' ||
+                _ownershipType == 'corporation') {
+              return _required(value, 'Registered owner', max: 160);
+            }
+            return _optional(value, 'Registered owner', 160);
+          },
         ),
         _field(
           label: 'Address',
@@ -852,18 +997,21 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           hint: 'e.g. 1234567890',
           keyboardType: TextInputType.text,
           textCapitalization: TextCapitalization.characters,
+          readOnly: _hasApprovedRequest,
           validator: (value) => _optional(value, 'CR number', 60),
         ),
         _field(
           label: 'Make',
           controller: _vehicleMake,
           hint: 'Honda',
+          readOnly: _hasApprovedRequest,
           validator: (value) => _required(value, 'Vehicle make', max: 60),
         ),
         _field(
           label: 'Model',
           controller: _vehicleModel,
           hint: 'TMX',
+          readOnly: _hasApprovedRequest,
           validator: (value) => _required(value, 'Vehicle model', max: 60),
         ),
         _field(
@@ -886,6 +1034,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           controller: _plate,
           hint: 'ABC 123',
           textCapitalization: TextCapitalization.characters,
+          readOnly: _hasApprovedRequest,
           validator: (value) =>
               _required(value, 'Plate number', min: 3, max: 20),
         ),
@@ -893,6 +1042,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           label: 'Engine number',
           controller: _engine,
           hint: 'ENG-12345',
+          readOnly: _hasApprovedRequest,
           validator: (value) =>
               _required(value, 'Engine number', min: 3, max: 40),
         ),
@@ -900,6 +1050,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           label: 'Chassis number',
           controller: _chassis,
           hint: 'CHS-12345',
+          readOnly: _hasApprovedRequest,
           validator: (value) =>
               _required(value, 'Chassis number', min: 3, max: 40),
         ),
@@ -936,7 +1087,34 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               TextStyle(color: AppColors.inkMuted, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: AppSpacing.sm),
-        for (final type in requiredDocumentTypes) ...[
+        if (_orCrFromRequest) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.successTint,
+              borderRadius: AppRadius.box,
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_outlined, color: AppColors.success),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'The OR/CR from your approved request is already attached '
+                    '(${documentLabels['or_cr']}).',
+                    style: const TextStyle(
+                      color: AppColors.inkStrong,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        for (final type in _requiredUploadTypes) ...[
           _DocumentTile(
             label: documentLabels[type] ?? type,
             upload: _uploads[type],
@@ -961,21 +1139,19 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       submission.operatorMiddleName,
       submission.operatorLastName,
     );
-    final makeModel =
-        '${_vehicleMake.text.trim()} ${_vehicleModel.text.trim()}'.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('Application letter preview'),
+        const _SectionTitle('Application form preview'),
         const Text(
-          'Review the letter below before submitting. '
-          'Your documents are attached automatically.',
+          'Review the official application form below before submitting. '
+          'Your CTC and signature from the approved request are used automatically.',
           style:
               TextStyle(color: AppColors.inkMuted, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: AppSpacing.sm),
-        // ---------- Paper letter ----------
+        // ---------- Official application form (Image 1) ----------
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -989,129 +1165,146 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Date line
-              const SizedBox(
-                width: 200,
-                child: Divider(color: Colors.black87, thickness: 0.8),
+              const Text(
+                'Republic of the Philippines',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Colors.black87),
               ),
               const Text(
-                'Date',
+                'Province of Batangas',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Colors.black87),
+              ),
+              const Text(
+                'Municipality of Mabini',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: Colors.black87),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'OFFICE OF THE SANGGUNIANG BAYAN',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
                   color: Colors.black87,
-                  letterSpacing: 0.2,
                 ),
               ),
-              const SizedBox(height: 24),
-              // Addressee
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    height: 1.6,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'Hon. Presiding Officer\n',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(
-                      text: 'and Hon. Members',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: ' of the Sangguniang Bayan\n'),
-                    TextSpan(text: 'Municipality of Mabini\n'),
-                    TextSpan(text: 'Mabini, Batangas'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               const Text(
-                'Dear Sir/Madame:',
-                style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
+                'APPLICATION FOR FRANCHISE\nTRICYCLE SERVICE',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.4,
+                  color: Colors.black87,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _letterFieldRow(
+                'Family Name',
+                _lastName.text.trim(),
+              ),
+              _letterFieldRow(
+                'Given Name',
+                '${_firstName.text.trim()} ${_middleName.text.trim()}'.trim(),
+              ),
+              _letterFieldRow('Citizenship', _citizenship.text.trim()),
+              _letterFieldRow('Address', _address.text.trim()),
+              _letterFieldRow('Applied Route', _route.text.trim()),
+              _letterFieldRow('No. of Units Applied For', 'ONE (1)'),
+              const SizedBox(height: 8),
+              const Text(
+                'MOTORCYCLE / TRICYCLE PARTICULARS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _letterFieldRow('Make', _vehicleMake.text.trim()),
+              _letterFieldRow('Model', _vehicleModel.text.trim()),
+              _letterFieldRow('Motor No.', _engine.text.trim()),
+              _letterFieldRow('Chassis No.', _chassis.text.trim()),
+              _letterFieldRow('Plate No.', _plate.text.trim()),
+              _letterFieldRow(
+                'Registered Owner',
+                _registeredOwner.text.trim().isEmpty
+                    ? applicantName
+                    : _registeredOwner.text.trim(),
+              ),
+              _letterFieldRow(
+                'Type of Ownership',
+                _ownershipLabel(_ownershipType),
               ),
               const SizedBox(height: 14),
               const Text(
-                'I am applying for the approval of my application for franchise '
-                'of that tricycle, more particularly described as follows:',
+                'I hereby certify that the above information are true and correct '
+                'and that I am applying for a franchise to operate the '
+                'above-described tricycle for public service.',
                 textAlign: TextAlign.justify,
                 style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
+                    TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.5),
               ),
               const SizedBox(height: 18),
-              // Vehicle detail rows
-              _letterFieldRow(
-                'Certificate of Registration',
-                _crNumber.text.trim(),
-              ),
-              _letterFieldRow('Model/Make', makeModel),
-              _letterFieldRow('Engine No.', _engine.text.trim()),
-              _letterFieldRow('Chassis No.', _chassis.text.trim()),
-              _letterFieldRow('Plate No.', _plate.text.trim()),
-              const SizedBox(height: 18),
               const Text(
-                'The above-described tricycle is hereby requested to be given a '
-                'franchise to be able to provide service of convenience to the public.',
-                textAlign: TextAlign.justify,
-                style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
+                'Mabini, Batangas',
+                style: TextStyle(fontSize: 12.5, color: Colors.black87),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Pertinent documents are attached herewith for your perusal.',
-                textAlign: TextAlign.justify,
-                style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
+              const SizedBox(height: 14),
+              _letterInlineField('CTC No.', _ctc.text.trim()),
+              const SizedBox(height: 6),
+              _letterInlineField(
+                'Issued at',
+                widget.formRequest?.ctcIssuedAt ?? 'Mabini, Batangas',
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Thank you and More Power.',
-                style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
+              const SizedBox(height: 6),
+              _letterInlineField(
+                'Issued on',
+                _formatDate(widget.formRequest?.ctcIssuedOn) ?? dateStr,
               ),
-              const SizedBox(height: 28),
-              const Text(
-                'Respectfully yours,',
-                style:
-                    TextStyle(fontSize: 13, color: Colors.black87, height: 1.6),
-              ),
-              const SizedBox(height: 36),
-              // Signature block
-              SizedBox(
-                width: 220,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Divider(
-                      color: Colors.black87,
-                      thickness: 0.8,
-                    ),
-                    Text(
-                      applicantName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black87,
+              const SizedBox(height: 30),
+              Align(
+                alignment: Alignment.centerRight,
+                child: SizedBox(
+                  width: 220,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        applicantName.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                    const Text(
-                      'Applicant',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
-                  ],
+                      const Divider(color: Colors.black87, thickness: 0.8),
+                      const Text(
+                        'Applicant',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              _letterInlineField('Contact No.', _contact.text.trim()),
-              const SizedBox(height: 8),
-              _letterInlineField('CTC.', _ctc.text.trim()),
-              const SizedBox(height: 8),
-              _letterInlineField('Date:', dateStr),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Application No.: ${_applicationNumberPreview()}',
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+              ),
             ],
           ),
         ),
@@ -1274,6 +1467,30 @@ String _fullName(String first, String? middle, String last) {
   return parts.where((part) => part.trim().isNotEmpty).join(' ');
 }
 
+String _ownershipLabel(String value) {
+  switch (value) {
+    case 'cooperative':
+      return 'Cooperative';
+    case 'corporation':
+      return 'Corporation';
+    case 'not_applicable':
+      return 'N/A';
+    default:
+      return 'Single Proprietorship';
+  }
+}
+
+String? _formatDate(DateTime? date) {
+  if (date == null) return null;
+  const months = <String>[
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  return '${months[date.month - 1]} ${date.day}, ${date.year}';
+}
+
+String _applicationNumberPreview() => 'Generated on submission (APP-YYYY-NNNNNN)';
+
 // ---------------------------------------------------------------------------
 // Small widgets
 // ---------------------------------------------------------------------------
@@ -1430,7 +1647,7 @@ class _TypeOption extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

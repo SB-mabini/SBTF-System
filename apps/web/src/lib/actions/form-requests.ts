@@ -31,7 +31,47 @@ export async function issueFormRequestAction(formRequestId: string): Promise<Act
   refreshFormRequestViews(formRequestId);
   return error
     ? { ok: false, message: error.message }
-    : { ok: true, message: "Form request issued. The applicant has been notified to collect the form." };
+    : { ok: true, message: "Form request approved. The driver can now submit the application." };
+}
+
+export async function rejectFormRequestAction(input: {
+  formRequestId: string;
+  reason: string;
+}): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const reason = input.reason.trim();
+  if (reason.length < 10) {
+    return { ok: false, message: "Enter a reason of at least 10 characters so the driver knows what to fix." };
+  }
+  if (reason.length > 1000) {
+    return { ok: false, message: "The reason must not exceed 1000 characters." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rpc_staff_reject_form_request", {
+    p_form_request_id: input.formRequestId,
+    p_reason: reason,
+  });
+
+  refreshFormRequestViews(input.formRequestId);
+  return error
+    ? { ok: false, message: error.message }
+    : { ok: true, message: "Form request returned. The driver has been notified with the reason." };
+}
+
+export async function markFormRequestPrintedAction(formRequestId: string): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rpc_staff_mark_form_request_printed", {
+    p_form_request_id: formRequestId,
+  });
+
+  refreshFormRequestViews(formRequestId);
+  return error
+    ? { ok: false, message: error.message }
+    : { ok: true, message: "Form request marked as printed." };
 }
 
 export async function convertFormRequestAction(input: {

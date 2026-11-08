@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/error_view.dart';
 import '../application/application_form_screen.dart';
 import '../application/application_list_screen.dart';
+import '../application/request_form_screen.dart';
 import '../appointments/appointment_list_screen.dart';
 import '../certificate/certificate_list_screen.dart';
 import '../documents/document_manager_screen.dart';
@@ -121,12 +122,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _openApplication(BuildContext context, String? applicationType) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ApplicationFormScreen(applicationType: applicationType),
-      ),
-    );
+  /// Opens the request-form-first flow.
+  ///
+  /// An approved (issued) request unlocks the application wizard, prefilled
+  /// from the request. A pending request opens the waiting view. A rejected
+  /// request opens the form pre-filled for the same-row resubmission. With no
+  /// request at all, the driver starts a new request form.
+  Future<void> _openApplication(
+    BuildContext context,
+    String? applicationType,
+  ) async {
+    try {
+      final open = await ref.read(openFormRequestProvider.future);
+      if (!context.mounted) return;
+
+      if (open != null && open.isIssued) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ApplicationFormScreen(formRequest: open),
+          ),
+        );
+        return;
+      }
+
+      if (open != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => RequestFormScreen(existing: open),
+          ),
+        );
+        return;
+      }
+
+      final rejected = await ref.read(latestRejectedFormRequestProvider.future);
+      if (!context.mounted) return;
+
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => RequestFormScreen(
+            existing: rejected,
+            initialType: applicationType,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not load your request form. Check your connection and try again.',
+          ),
+        ),
+      );
+    }
   }
 
   void _openStatus(BuildContext context) {
@@ -483,51 +531,6 @@ class _DocumentsTab extends StatelessWidget {
           title: 'Certificate & QR Code',
           subtitle: 'View your franchise certificate',
           onTap: onOpenCertificates,
-        ),
-      ],
-    );
-  }
-}
-
-/// More tab
-class _MoreTab extends StatelessWidget {
-  const _MoreTab({
-    required this.unread,
-    required this.onOpenNotifications,
-    required this.onSignOut,
-  });
-
-  final int unread;
-  final VoidCallback onOpenNotifications;
-  final VoidCallback onSignOut;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      children: [
-        const Text(
-          'More',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.inkStrong,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _BottomNavTile(
-          icon: Icons.notifications_outlined,
-          title: 'Notifications',
-          subtitle: 'Decisions and reminders',
-          onTap: onOpenNotifications,
-          badge: unread > 0 ? _CountBadge(count: unread) : null,
-        ),
-        const SizedBox(height: 8),
-        _BottomNavTile(
-          icon: Icons.logout,
-          title: 'Sign Out',
-          subtitle: 'Sign out of your account',
-          onTap: onSignOut,
         ),
       ],
     );

@@ -4,7 +4,7 @@
 // The only place where Supabase Auth administrative operations happen, because
 // they require the service-role key:
 //
-//   create_staff      → create a staff account (or another administrator)
+//   create_staff      → create a staff account and e-mail the invitation
 //   deactivate        → ban the account in Supabase Auth + mark the profile
 //   activate          → lift the ban + reactivate the profile
 //   send_password_reset → issue a recovery link for an account
@@ -30,7 +30,7 @@ const DEACTIVATION_STATUSES = ["inactive", "suspended"] as const;
 type DeactivationStatus = (typeof DEACTIVATION_STATUSES)[number];
 
 /**
- * Where Supabase Auth sends the holder after they follow a recovery link.
+ * The public web origin used for Auth redirects.
  *
  * Set SITE_URL as a function secret (`supabase secrets set SITE_URL=https://…`).
  * It falls back to localhost so local development still produces a usable, if
@@ -131,41 +131,99 @@ Deno.serve(async (request: Request) => {
       return errorResponse("invalid_name", "First and last name are required.", 400, origin);
     }
 
-    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      // raw_app_meta_data is written only here (service role). The database
-      // trigger reads the role from app_metadata, so a client can never
-      // self-register an elevated role by supplying user metadata.
-      app_metadata: { role, provider: "email", providers: ["email"] },
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        contact_number: contactNumber,
-        account_origin: "admin_users_function",
-      },
-    });
+    // Refuse an address that already has a profile before touching Auth. The
+    // unique index on lower(email) means the invitation would fail anyway, and
+    // an explicit answer points the administrator at the existing account
+    // instead of surfacing GoTrue's "already registered" message.
+    const { data: existingProfile, error: existingError } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
 
-    if (createError || !created?.user) {
+    if (existingError) {
+      return errorResponse("lookup_failed", existingError.message, 500, origin);
+    }
+    if (existingProfile) {
       return errorResponse(
-        "creation_failed",
-        createError?.message ?? "The account could not be created.",
+        "already_registered",
+        "An account with this e-mail address already exists. Use “Send password reset” on that account instead of creating a new one.",
+        409,
+        origin,
+      );
+    }
+
+    // inviteUserByEmail creates the Auth user AND sends the invitation through
+    // the project's SMTP. The custom invite template
+    // (supabase/templates/invite.html) builds its link from the token hash and
+    // points at /auth/confirm, which routes the recipient to /accept-invitation
+    // to choose a password. Do NOT switch this back to generateLink(): that only
+    // creates a link and sends nothing, which is why staff invitations used to
+    // be copied and handed over by hand.
+    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+      email,
+      {
+        redirectTo: `${SITE_URL}/auth/confirm`,
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          contact_number: contactNumber,
+          account_origin: "admin_users_function",
+        },
+      },
+    );
+
+    if (inviteError || !invited?.user) {
+      const alreadyRegistered = /already|registered|exists/i.test(inviteError?.message ?? "");
+
+      // A failed *send* can leave the Auth user behind on some GoTrue versions.
+      // The pre-check above proved the address had no profile before this call,
+      // so anything created by this request is safe to remove. Never do this for
+      // a duplicate-address error: that account belongs to somebody else.
+      if (!alreadyRegistered) {
+        const { data: orphan } = await adminClient
+          .from("profiles")
+          .select("id, auth_user_id")
+          .eq("email", email)
+          .maybeSingle();
+
+        if (orphan?.auth_user_id) {
+          await adminClient.from("profiles").delete().eq("id", orphan.id);
+          await adminClient.auth.admin.deleteUser(orphan.auth_user_id);
+        }
+      }
+
+      return errorResponse(
+        "invite_failed",
+        alreadyRegistered
+          ? "An account with this e-mail address already exists. Use “Send password reset” on that account instead."
+          : (inviteError?.message ?? "The invitation e-mail could not be sent."),
         400,
         origin,
       );
     }
 
-    // The profiles trigger creates new rows as `active`. A staff account created
-    // here is not usable until an administrator approves it, so it is demoted to
-    // `pending`; approval runs through rpc_admin_set_account_status from the UI.
+    // The Admin invite API does not accept app_metadata, so the role is written
+    // after the user exists. The profile update below is what the web app
+    // authorises on; this keeps Auth metadata consistent for the sign-up trigger
+    // and for support tooling.
+    const { error: metadataError } = await adminClient.auth.admin.updateUserById(
+      invited.user.id,
+      { app_metadata: { role, provider: "email", providers: ["email"] } },
+    );
+    if (metadataError) {
+      console.error("admin-users: could not write app_metadata.role", metadataError.message);
+    }
+
+    // The profiles trigger creates new rows as `active` and falls back to
+    // `driver` when it cannot read the role from app_metadata. Write the full
+    // record here so an administrator-created account is always Staff, and start
+    // it as `pending`; approval runs through rpc_admin_set_account_status from
+    // the Users screen.
     //
-    // If this update fails, the auth user is rolled back. Leaving it behind would
+    // If this update fails, the Auth user is rolled back. Leaving it behind would
     // make every retry fail with "already registered" while no usable account
     // exists — the exact half-created state this function must avoid.
-    // The auth-user trigger normally creates the profile, but it falls back to
-    // `driver` when it cannot read the role from app_metadata. Write the role
-    // here as well, so an administrator-created account is always Staff even on
-    // a project whose trigger predates the app_metadata logic.
     const { data: profile, error: profileError } = await adminClient
       .from("profiles")
       .update({
@@ -177,20 +235,25 @@ Deno.serve(async (request: Request) => {
         account_status: "pending",
         status_reason: "Invited by an administrator; awaiting approval.",
       })
-      .eq("auth_user_id", created.user.id)
+      .eq("auth_user_id", invited.user.id)
       .select("id, role")
       .maybeSingle();
 
     if (profileError || !profile || profile.role !== role) {
-      await adminClient.from("profiles").delete().eq("auth_user_id", created.user.id);
-      await adminClient.auth.admin.deleteUser(created.user.id);
+      await adminClient.from("profiles").delete().eq("auth_user_id", invited.user.id);
+      await adminClient.auth.admin.deleteUser(invited.user.id);
 
       const detail = profileError?.message ?? "The profile row was not created.";
       const hint = /pending|account_status/i.test(detail)
         ? " Apply supabase/migrations/20260101091400_pending_account_status.sql and redeploy this function."
         : " Check that the auth-user trigger is installed, then redeploy this function.";
 
-      return errorResponse("profile_setup_failed", detail + hint, 500, origin);
+      return errorResponse(
+        "profile_setup_failed",
+        detail + hint + " The invitation e-mail may already have been sent; its link is now invalid.",
+        500,
+        origin,
+      );
     }
 
     const { error: logError } = await adminClient.from("activity_logs").insert({
@@ -198,41 +261,30 @@ Deno.serve(async (request: Request) => {
       action: "user_created",
       target_type: "profile",
       target_id: profile.id,
-      metadata: { email, role, account_status: "pending", created_by: "admin-users edge function" },
+      metadata: {
+        email,
+        role,
+        account_status: "pending",
+        invited: true,
+        created_by: "admin-users edge function",
+      },
     });
 
     if (logError) {
       console.error("admin-users: could not write the activity log", logError.message);
     }
 
-    // Build the password-setup link and hand it back to the console.
-    //
-    // generateLink only *creates* the link — it does not send anything. On a
-    // project without SMTP Supabase's built-in mailer is rate-limited and often
-    // only delivers to addresses already on the project team, so an invitation
-    // to a real municipal address silently never arrives. Rather than claim an
-    // e-mail was sent, our own /auth/confirm link is returned and the
-    // administrator passes it on through whatever channel the office uses.
-    const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo: `${SITE_URL}/auth/confirm` },
-    });
-
-    const setupLink: string | null = confirmLink(link?.properties?.hashed_token, "recovery");
-
     return json(
       {
         ok: true,
-        user_id: created.user.id,
+        user_id: invited.user.id,
         email,
         role,
-        setup_link: setupLink,
-        message: setupLink
-          ? "Account created and set to “awaiting approval”. Approve it from the Users screen, then copy the setup link below and send it to the new user yourself. The link is single-use and expires; the account cannot sign in until it is approved and the password is set through this link."
-          : "Account created but awaiting approval, and no setup link could be generated" +
-            (linkError ? ` (${linkError.message}).` : ".") +
-            " Approve the account from the Users screen and generate a new recovery link there.",
+        invited: true,
+        message:
+          `Account created and an invitation e-mail was sent to ${email}. ` +
+          "The account is awaiting approval — approve it from the Users screen before the new staff member tries to use the console. " +
+          "The invitation takes them to a page where they choose a password, then to the sign-in screen.",
       },
       201,
       origin,

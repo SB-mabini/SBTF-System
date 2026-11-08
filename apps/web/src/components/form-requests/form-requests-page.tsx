@@ -12,13 +12,15 @@ const STATUS_TABS: Array<{ value: FormRequestStatus | "all"; label: string }> = 
   { value: "all", label: "All" },
   { value: "requested", label: "Requested" },
   { value: "issued", label: "Issued" },
+  { value: "rejected", label: "Returned" },
   { value: "converted", label: "Converted" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const STATUS_TONE: Record<FormRequestStatus, "info" | "warning" | "success" | "neutral"> = {
+const STATUS_TONE: Record<FormRequestStatus, "info" | "warning" | "success" | "danger" | "neutral"> = {
   requested: "warning",
   issued: "info",
+  rejected: "danger",
   converted: "success",
   cancelled: "neutral",
 };
@@ -76,27 +78,72 @@ export async function FormRequestsPage({
               <li key={request.id} className="rounded-lg border border-line p-3.5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-[0.875rem] font-medium text-ink">{request.form_number}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/staff/form-requests/${request.id}`}
+                        className="font-mono text-[0.875rem] font-medium text-primary-700 hover:underline"
+                      >
+                        {request.form_number}
+                      </Link>
+                      {request.review_due_at && request.status === "requested" ? (
+                        <Badge
+                          tone={
+                            new Date(request.review_due_at).getTime() < Date.now()
+                              ? "danger"
+                              : "neutral"
+                          }
+                        >
+                          {new Date(request.review_due_at).getTime() < Date.now()
+                            ? "Review overdue"
+                            : `Review by ${formatDateTime(request.review_due_at)}`}
+                        </Badge>
+                      ) : null}
+                      {request.printed_at ? <Badge tone="success">Printed</Badge> : null}
+                    </div>
                     <p className="mt-0.5 text-[0.75rem] text-muted">
                       {request.applicant?.full_name ?? "Unknown applicant"} ·{" "}
                       {request.toda?.name ?? "No TODA"} ·{" "}
                       {APPLICATION_TYPE_LABELS[request.application_type]} · requested{" "}
                       {formatDateTime(request.requested_at)}
                     </p>
+                    {request.plate_number ? (
+                      <p className="mt-1 text-[0.8125rem] text-ink">
+                        {[request.vehicle_make, request.vehicle_model].filter(Boolean).join(" ")} · Plate{" "}
+                        {request.plate_number}
+                        {request.engine_number ? ` · Engine ${request.engine_number}` : ""}
+                      </p>
+                    ) : null}
                     {request.purpose ? (
                       <p className="mt-1 text-[0.8125rem] text-ink">{request.purpose}</p>
+                    ) : null}
+                    {request.rejection_reason ? (
+                      <p className="mt-1 text-[0.75rem] text-danger-600">
+                        Returned: {request.rejection_reason}
+                      </p>
                     ) : null}
                     {request.cancel_reason ? (
                       <p className="mt-1 text-[0.75rem] text-muted">Cancelled: {request.cancel_reason}</p>
                     ) : null}
                   </div>
-                  <Badge tone={STATUS_TONE[request.status]}>
-                    {FORM_REQUEST_STATUS_LABELS[request.status]}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={STATUS_TONE[request.status]}>
+                      {FORM_REQUEST_STATUS_LABELS[request.status]}
+                    </Badge>
+                    <Link
+                      href={`/staff/form-requests/${request.id}`}
+                      className="text-[0.75rem] font-medium text-primary-700 hover:underline"
+                    >
+                      View
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="mt-3">
-                  <FormRequestActions formRequestId={request.id} status={request.status} />
+                  <FormRequestActions
+                    formRequestId={request.id}
+                    status={request.status}
+                    printed={Boolean(request.printed_at)}
+                  />
                 </div>
               </li>
             ))}

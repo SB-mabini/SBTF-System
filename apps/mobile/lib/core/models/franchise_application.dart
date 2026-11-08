@@ -75,6 +75,11 @@ class ApplicationSubmission {
     this.bodyNumber,
     this.renewalOfRecordId,
     this.remarks,
+    this.orCrFromRequest = false,
+    this.operatorCitizenship = 'Filipino',
+    this.appliedRoute = '',
+    this.registeredOwner,
+    this.ownershipType = 'not_applicable',
   });
 
   final String applicationType;
@@ -104,9 +109,36 @@ class ApplicationSubmission {
 
   final String? remarks;
 
+  /// True when the approved request already supplies the OR/CR. The driver
+  /// then uploads only the other three requirements.
+  final bool orCrFromRequest;
+
+  /// Official application-form fields (Image 1).
+  final String operatorCitizenship;
+  final String appliedRoute;
+  final String? registeredOwner;
+  final String ownershipType;
+
   final List<ApplicationDocumentUpload> documents;
 
   bool get isRenewal => applicationType == ApplicationType.renewal;
+
+  /// Payload for `rpc_driver_set_application_details`, called right after the
+  /// application row is created. The CTC and signature are copied from the
+  /// approved request by the RPC itself.
+  Map<String, dynamic> detailsPayload() {
+    final payload = <String, dynamic>{
+      'applied_route': appliedRoute.trim(),
+      'operator_citizenship': operatorCitizenship.trim().isEmpty
+          ? 'Filipino'
+          : operatorCitizenship.trim(),
+      'ownership_type': ownershipType,
+    };
+    if (registeredOwner != null && registeredOwner!.trim().isNotEmpty) {
+      payload['registered_owner'] = registeredOwner!.trim();
+    }
+    return payload;
+  }
 
   /// The exact `jsonb` argument the RPC expects.
   ///
@@ -173,6 +205,11 @@ class ApplicationSubmission {
     _requireText(problems, operatorLastName, 'Last name', 1, 80);
     _requireText(problems, operatorContactNumber, 'Contact number', 7, 20);
     _requireText(problems, operatorAddressLine, 'Address', 5, 200);
+    _requireText(problems, appliedRoute, 'Applied route', 3, 120);
+    if ((ownershipType == 'cooperative' || ownershipType == 'corporation') &&
+        (registeredOwner == null || registeredOwner!.trim().isEmpty)) {
+      problems.add('Registered owner is required for a cooperative or corporation.');
+    }
     _requireText(problems, vehicleMake, 'Vehicle make', 1, 60);
     _requireText(problems, vehicleModel, 'Vehicle model', 1, 60);
     _requireText(problems, vehicleColor, 'Vehicle color', 2, 40);
@@ -195,7 +232,10 @@ class ApplicationSubmission {
 
     final providedTypes =
         documents.map((document) => document.documentType).toSet();
-    for (final type in requiredDocumentTypes) {
+    final expectedTypes = orCrFromRequest
+        ? requiredDocumentTypes.where((type) => type != 'or_cr')
+        : requiredDocumentTypes;
+    for (final type in expectedTypes) {
       if (!providedTypes.contains(type)) {
         problems.add(
             'Missing documentary requirement: ${documentLabels[type] ?? type}.');

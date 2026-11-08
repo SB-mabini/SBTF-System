@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(62);
+select plan(65);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -121,6 +121,8 @@ end;
 $$;
 
 -- Document payload (storage paths inside the applicant's own folder).
+-- The OR/CR is no longer uploaded by the client: it comes from the approved
+-- form request, so this helper returns the three client-supplied documents.
 create or replace function pg_temp.docs(p_driver uuid, p_tag text)
 returns jsonb
 language sql
@@ -132,7 +134,50 @@ as $$
            'file_size_bytes', 250000,
            'mime_type', 'application/pdf'
          ))
-    from unnest(enum_range(null::public.document_type)) as dt(document_type);
+    from unnest(enum_range(null::public.document_type)) as dt(document_type)
+   where dt.document_type::text <> 'or_cr';
+$$;
+
+-- Issue an approved request so the submission gate is satisfied. Defined as
+-- SECURITY DEFINER because the tests call it while impersonating a driver and
+-- form_requests is read-only for authenticated clients.
+create or replace function pg_temp.issue_form(
+  p_driver uuid,
+  p_toda   uuid,
+  p_actor  uuid,
+  p_type   text default 'new'
+) returns uuid
+language plpgsql
+security definer
+as $$
+declare
+  v_tag  text := substr(md5(random()::text), 1, 10);
+  v_id   uuid;
+begin
+  -- Keep exactly one approved request per driver so the gate picks this row.
+  delete from public.form_requests
+   where requested_by = p_driver and status = 'issued';
+
+  insert into public.form_requests (
+    form_number, requested_by, toda_id, application_type, status, purpose,
+    applicant_name, contact_number, ctc_number,
+    vehicle_make, vehicle_model, engine_number, chassis_number, plate_number, cr_number,
+    or_cr_storage_path, or_cr_file_name, or_cr_mime_type, or_cr_file_size_bytes,
+    signature_typed_name, acknowledged_at, review_due_at,
+    issued_at, issued_by, reviewed_by, reviewed_at
+  )
+  values (
+    'FR-TEST-' || v_tag, p_driver, p_toda, p_type::public.application_type, 'issued', 'test',
+    'Workflow Tester', '09171112222', 'CTC-' || v_tag,
+    'Honda', 'TMX 155', 'ENG-' || v_tag, 'CHS-' || v_tag, 'PLT-' || v_tag, 'CR-' || v_tag,
+    p_driver::text || '/pending/' || v_tag || '-or_cr.pdf', 'or-cr.pdf', 'application/pdf', 250000,
+    'Workflow Tester', now(), now() + interval '3 days',
+    now(), p_actor, p_actor, now()
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
 $$;
 
 create or replace function pg_temp.payload(p_toda uuid, p_docs jsonb, p_type text default 'new')
@@ -164,18 +209,24 @@ $$;
 -- ---------------------------------------------------------------------------
 select pg_temp.login((select driver_auth from fx));
 
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
+
 select throws_ok(
   $$select public.rpc_driver_submit_application(pg_temp.payload((select toda from ids), '[]'::jsonb))$$,
   'P0001', null,
   'a submission without documents is refused'
 );
 
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
+
 select throws_ok(
   $$select public.rpc_driver_submit_application(
-      pg_temp.payload((select toda from ids), pg_temp.docs((select driver from ids), 'x') - 'or_cr'))$$,
+      pg_temp.payload((select toda from ids), pg_temp.docs((select driver from ids), 'x') - 'cedula'))$$,
   'P0001', null,
   'a submission missing one required documentary requirement is refused'
 );
+
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
 
 select throws_ok(
   $$select public.rpc_driver_submit_application(
@@ -185,6 +236,8 @@ select throws_ok(
   'an implausible vehicle year is refused'
 );
 
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
+
 select throws_ok(
   $$select public.rpc_driver_submit_application(
       jsonb_set(pg_temp.payload((select toda from ids), pg_temp.docs((select driver from ids), 'z')),
@@ -192,6 +245,29 @@ select throws_ok(
   '42501', null,
   'a document stored outside the applicant folder is refused'
 );
+
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
+
+select throws_ok(
+  $$select public.rpc_driver_submit_application(
+      pg_temp.payload((select toda from ids),
+        pg_temp.docs((select driver from ids), 'o') ||
+        jsonb_build_array(jsonb_build_object(
+          'document_type', 'or_cr',
+          'storage_path', (select driver from ids)::text || '/pending/extra-or_cr.pdf',
+          'file_name', 'or-cr.pdf',
+          'file_size_bytes', 250000,
+          'mime_type', 'application/pdf'))))$$,
+  'P0001', null,
+  'a client-supplied OR/CR is refused because the approved request owns it'
+);
+
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
+
+create temporary table fx_form as
+select id from public.form_requests
+ where requested_by = (select driver from ids) and status = 'issued'
+ order by issued_at desc limit 1;
 
 select lives_ok(
   $$select public.rpc_driver_submit_application(
@@ -212,6 +288,20 @@ select is(
     where a.applicant_id = (select driver from ids)),
   4,
   'the four documentary requirements are stored with the application'
+);
+
+select is(
+  (select d.storage_path from public.franchise_documents d
+     join public.franchise_applications a on a.id = d.application_id
+    where a.applicant_id = (select driver from ids) and d.document_type = 'or_cr'),
+  (select or_cr_storage_path from public.form_requests where id = (select id from fx_form)),
+  'the OR/CR from the approved request is attached automatically'
+);
+
+select is(
+  (select status::text from public.form_requests where id = (select id from fx_form)),
+  'converted',
+  'the approved request is consumed when the application is submitted'
 );
 
 select is(
@@ -237,6 +327,8 @@ select is(
   1,
   'staff receive an in-app notification for the new application'
 );
+
+select pg_temp.issue_form((select driver from ids), (select toda from ids), (select staff from ids));
 
 select throws_ok(
   $$select public.rpc_driver_submit_application(
@@ -351,6 +443,8 @@ select throws_ok(
 -- 3. Rejection flow
 -- ---------------------------------------------------------------------------
 select pg_temp.login((select driver2_auth from fx));
+
+select pg_temp.issue_form((select driver2 from ids), (select toda from ids), (select staff from ids));
 
 select lives_ok(
   $$select public.rpc_driver_submit_application(

@@ -7,6 +7,7 @@ import { Download, FileCheck2, Loader2, Printer, Stamp } from "lucide-react";
 import { Alert, Button, Card, CardHeader } from "@/components/ui";
 import { attachCertificateAction, logActivityAction } from "@/lib/actions/applications";
 import { buildCertificatePdf, certificateStoragePath } from "@/lib/certificate";
+import { MUNICIPALITY, PROVINCE } from "@/lib/constants";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
 import { formatDate } from "@/lib/format";
@@ -18,6 +19,7 @@ interface CertificateActionsProps {
   certificateUrl: string | null;
   settings: SystemSetting[];
   readOnly?: boolean;
+  signatureUrl?: string | null;
 }
 
 function settingValue(settings: SystemSetting[], key: string, fallback: string): string {
@@ -26,7 +28,24 @@ function settingValue(settings: SystemSetting[], key: string, fallback: string):
   return typeof setting.value === "string" ? setting.value : String(setting.value ?? fallback);
 }
 
-export function CertificateActions({ record, certificateUrl, settings, readOnly: externalReadOnly = false }: CertificateActionsProps) {
+async function dataUrlFromUrl(url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function CertificateActions({ record, certificateUrl, settings, readOnly: externalReadOnly = false, signatureUrl }: CertificateActionsProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
@@ -41,20 +60,32 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
     setMessage(null);
 
     try {
+      const application = record.application;
+      const operatorName =
+        record.operator?.full_name ??
+        ([application?.operator_first_name, application?.operator_middle_name, application?.operator_last_name]
+          .filter(Boolean)
+          .join(" ") ||
+          "Operator");
+      const addressParts = [application?.operator_address_line, MUNICIPALITY, PROVINCE].filter(
+        (part) => Boolean(part && String(part).trim()),
+      );
+      const conformeSignature = await dataUrlFromUrl(signatureUrl);
+
       const doc = await buildCertificatePdf({
         franchiseNumber: record.franchise_number,
         verificationCode: record.verification_code,
-        operatorName: record.operator?.full_name ?? "Operator",
-        operatorAddress: "Mabini, Batangas",
+        operatorName,
+        operatorAddress: addressParts.length ? addressParts.join(", ") : `${MUNICIPALITY}, ${PROVINCE}`,
         todaName: record.toda?.name ?? "TODA",
-        plateNumber: record.application?.plate_number ?? "—",
-        vehicleMake: record.application?.vehicle_make ?? "—",
-        vehicleModel: record.application?.vehicle_model ?? "—",
-        vehicleYear: record.application?.vehicle_year ?? new Date().getFullYear(),
-        vehicleColor: "—",
-        engineNumber: "—",
-        chassisNumber: "—",
-        seatingCapacity: 5,
+        plateNumber: application?.plate_number ?? "—",
+        vehicleMake: application?.vehicle_make ?? "—",
+        vehicleModel: application?.vehicle_model ?? "—",
+        vehicleYear: application?.vehicle_year ?? new Date().getFullYear(),
+        vehicleColor: application?.vehicle_color ?? "—",
+        engineNumber: application?.engine_number ?? "—",
+        chassisNumber: application?.chassis_number ?? "—",
+        seatingCapacity: application?.seating_capacity ?? 1,
         issuedAt: record.issued_at,
         expiresAt: record.expires_at,
         signatoryName: settingValue(settings, "certificate_signatory_name", "Municipal Mayor"),
@@ -67,12 +98,30 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
         footerNote: settingValue(
           settings,
           "certificate_footer_note",
-          "This certificate is verifiable through the QR code printed on it.",
+          "This Authority is verifiable through the QR code printed on it.",
         ),
         verificationBaseUrl: resolveVerificationBaseUrl(
           settingValue(settings, "certificate_verification_base_url", ""),
           { requestOrigin: window.location.origin },
         ),
+        applicationNumber: application?.application_number ?? undefined,
+        route: application?.applied_route ?? undefined,
+        registeredOwner: application?.registered_owner ?? undefined,
+        ownershipType: application?.ownership_type ?? undefined,
+        boardName: settingValue(
+          settings,
+          "certificate_board_name",
+          "MABINI TRICYCLE FRANCHISING AND REGULATORY BOARD",
+        ),
+        officialReceiptNumber: record.official_receipt_number,
+        officialReceiptDate: record.official_receipt_date,
+        amountPaid: record.amount_paid,
+        fareFirstKm: settingValue(settings, "certificate_fare_first_km", "8.00"),
+        fareSucceedingKm: settingValue(settings, "certificate_fare_succeeding_km", "1.00"),
+        supervisionFee: settingValue(settings, "certificate_supervision_fee", "120.00"),
+        supervisionDue: settingValue(settings, "certificate_supervision_due", "September 30"),
+        conformeName: operatorName,
+        conformeSignatureDataUrl: conformeSignature,
       });
 
       const blob = doc.output("blob");
@@ -118,8 +167,8 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
   return (
     <Card>
       <CardHeader
-        title="Franchise certificate"
-        description="Generated in the browser and stored privately; retrieved only through short-lived signed links."
+        title="Authority to Operate"
+        description="Official Authority to Operate Motorized Tricycle Service. Generated in the browser and stored privately; retrieved only through short-lived signed links."
         icon={Stamp}
       />
 
@@ -163,7 +212,7 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
             title={readOnly ? "Available without upload in preview mode" : undefined}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
-            {generated ? "Regenerate certificate" : "Generate certificate"}
+            {generated ? "Regenerate Authority" : "Generate Authority"}
           </Button>
         )}
 

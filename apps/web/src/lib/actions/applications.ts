@@ -32,6 +32,28 @@ function refreshApplicationViews(applicationId?: string, recordId?: string) {
   }
 }
 
+export async function recordFranchisePaymentAction(input: {
+  recordId: string;
+  orNumber: string;
+  orDate: string | null;
+  amountPaid: number | null;
+}): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rpc_staff_record_franchise_payment", {
+    p_record_id: input.recordId,
+    p_or_number: input.orNumber,
+    p_or_date: input.orDate,
+    p_amount: input.amountPaid,
+  });
+
+  refreshApplicationViews(undefined, input.recordId);
+  return error
+    ? { ok: false, message: error.message }
+    : { ok: true, message: "Payment details saved. Regenerate the Authority to print them." };
+}
+
 export async function startReviewAction(applicationId: string): Promise<ActionState> {
   if (isDemoMode()) return DEMO_WRITE_BLOCKED;
 

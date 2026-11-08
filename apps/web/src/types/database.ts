@@ -20,7 +20,7 @@ export type ApplicationStage =
   | "released"
   | "completed"
   | "rejected";
-export type FormRequestStatus = "requested" | "issued" | "converted" | "cancelled";
+export type FormRequestStatus = "requested" | "issued" | "rejected" | "converted" | "cancelled";
 export type AppointmentKind =
   | "evaluation"
   | "physical_documents"
@@ -51,6 +51,10 @@ export type NotificationType =
   | "application_stage_changed"
   | "form_request_received"
   | "form_request_issued"
+  | "form_request_rejected"
+  | "form_request_resubmitted"
+  | "form_request_review_reminder"
+  | "form_request_review_overdue"
   | "appointment_scheduled"
   | "appointment_updated"
   | "document_release_ready"
@@ -155,6 +159,15 @@ export interface FranchiseApplication {
   operator_address_line: string;
   operator_barangay_code: string | null;
   operator_email: string | null;
+  operator_citizenship: string | null;
+  applied_route: string | null;
+  registered_owner: string | null;
+  ownership_type: string | null;
+  ctc_number: string | null;
+  ctc_issued_at: string | null;
+  ctc_issued_on: string | null;
+  applicant_signature_storage_path: string | null;
+  applicant_signature_typed_name: string | null;
   vehicle_make: string;
   vehicle_model: string;
   vehicle_year: number;
@@ -200,6 +213,32 @@ export interface FormRequest {
   converted_application_id: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  applicant_name: string | null;
+  contact_number: string | null;
+  ctc_number: string | null;
+  ctc_issued_at: string | null;
+  ctc_issued_on: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  engine_number: string | null;
+  chassis_number: string | null;
+  plate_number: string | null;
+  cr_number: string | null;
+  or_cr_storage_path: string | null;
+  or_cr_file_name: string | null;
+  or_cr_mime_type: string | null;
+  or_cr_file_size_bytes: number | null;
+  signature_storage_path: string | null;
+  signature_typed_name: string | null;
+  acknowledged_at: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  review_due_at: string | null;
+  review_reminder_sent_at: string | null;
+  review_overdue_notified_at: string | null;
+  printed_at: string | null;
+  printed_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -272,6 +311,9 @@ export interface FranchiseRecord {
   expires_at: string;
   certificate_storage_path: string | null;
   certificate_generated_at: string | null;
+  official_receipt_number: string | null;
+  official_receipt_date: string | null;
+  amount_paid: number | null;
   renewed_by_record_id: string | null;
   archived: boolean;
   archived_at: string | null;
@@ -284,7 +326,7 @@ export interface FranchiseRecord {
 export interface FranchiseRecordDetail extends FranchiseRecord {
   operator?: Pick<Profile, "id" | "full_name" | "email" | "contact_number"> | null;
   toda?: Pick<Toda, "id" | "name" | "code"> | null;
-  application?: Pick<FranchiseApplication, "id" | "application_number" | "application_type" | "plate_number" | "vehicle_make" | "vehicle_model" | "vehicle_year"> | null;
+  application?: Pick<FranchiseApplication, "id" | "application_number" | "application_type" | "plate_number" | "vehicle_make" | "vehicle_model" | "vehicle_year" | "vehicle_color" | "engine_number" | "chassis_number" | "seating_capacity" | "operator_first_name" | "operator_middle_name" | "operator_last_name" | "operator_address_line" | "operator_barangay_code" | "operator_citizenship" | "applied_route" | "registered_owner" | "ownership_type" | "ctc_number" | "ctc_issued_at" | "ctc_issued_on" | "applicant_signature_storage_path" | "applicant_signature_typed_name"> | null;
 }
 
 export interface ApplicationStatusHistory {
@@ -341,7 +383,7 @@ export interface SystemSetting {
   key: string;
   value: unknown;
   data_type: "string" | "number" | "boolean" | "json" | "string_array";
-  category: "general" | "franchise" | "notifications" | "ai" | "certificate";
+  category: "general" | "franchise" | "notifications" | "ai" | "certificate" | "forms";
   label: string;
   description: string;
   is_public: boolean;

@@ -79,6 +79,7 @@ export const APPLICATION_STAGE_ORDER: ApplicationStage[] = [
 export const FORM_REQUEST_STATUS_LABELS: Record<FormRequestStatus, string> = {
   requested: "Requested",
   issued: "Issued",
+  rejected: "Returned",
   converted: "Converted",
   cancelled: "Cancelled",
 };

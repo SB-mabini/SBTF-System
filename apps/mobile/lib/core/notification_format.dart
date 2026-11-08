@@ -17,6 +17,12 @@ const Map<String, String> notificationTypeLabels = {
   'application_under_review': 'Application under review',
   'appointment_scheduled': 'Appointment scheduled',
   'appointment_updated': 'Appointment updated',
+  'form_request_received': 'Form request received',
+  'form_request_issued': 'Form request approved',
+  'form_request_rejected': 'Form request returned',
+  'form_request_resubmitted': 'Form request resubmitted',
+  'form_request_review_reminder': 'Form request review due',
+  'form_request_review_overdue': 'Form request review overdue',
   'account_updated': 'Account updated',
   'system': 'System',
 };

@@ -562,6 +562,25 @@ export async function getFormRequest(id: string): Promise<FormRequestDetail | nu
   return (data as unknown as FormRequestDetail | null) ?? null;
 }
 
+export async function getFormRequestOrCrSignedUrl(id: string): Promise<string | null> {
+  if (isDemoMode()) return null;
+
+  const supabase = await createClient();
+  const { data: request } = await supabase
+    .from("form_requests")
+    .select("or_cr_storage_path")
+    .eq("id", id)
+    .maybeSingle();
+
+  const path = (request as { or_cr_storage_path?: string | null } | null)?.or_cr_storage_path;
+  if (!path) return null;
+
+  const { data } = await supabase.storage
+    .from("franchise-documents")
+    .createSignedUrl(path, 300);
+  return data?.signedUrl ?? null;
+}
+
 export async function getPendingApplicationsForStaff(
   limit = 6,
 ): Promise<FranchiseApplicationDetail[]> {
@@ -593,7 +612,7 @@ const RECORD_SELECT = `
   *,
   operator:profiles!franchise_records_operator_id_fkey(id, full_name, email, contact_number),
   toda:todas!franchise_records_toda_id_fkey(id, name, code),
-  application:franchise_applications!franchise_records_application_id_fkey(id, application_number, application_type, plate_number, vehicle_make, vehicle_model, vehicle_year)
+  application:franchise_applications!franchise_records_application_id_fkey(id, application_number, application_type, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_color, engine_number, chassis_number, seating_capacity, operator_first_name, operator_middle_name, operator_last_name, operator_address_line, operator_barangay_code, operator_citizenship, applied_route, registered_owner, ownership_type, ctc_number, ctc_issued_at, ctc_issued_on, applicant_signature_storage_path, applicant_signature_typed_name)
 `;
 
 export async function listFranchiseRecords(
@@ -679,8 +698,14 @@ export async function getFranchiseRecord(id: string): Promise<FranchiseRecordDet
   return (data ?? null) as FranchiseRecordDetail | null;
 }
 
-export async function getCertificateSignedUrl(recordId: string): Promise<string | null> {
-  const record = await getFranchiseRecord(recordId);
+export async function getStorageSignedUrl(path: string | null | undefined): Promise<string | null> {
+  if (!path || isDemoMode()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from("franchise-documents").createSignedUrl(path, 300);
+  return data?.signedUrl ?? null;
+}
+
+export async function getCertificateSignedUrl(recordId: string): Promise<string | null> {  const record = await getFranchiseRecord(recordId);
   if (!record?.certificate_storage_path) return null;
   if (isDemoMode()) return null;
 

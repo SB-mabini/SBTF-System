@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Archive, Building2, Car, FileText, History, Stamp, User } from "lucide-react";
 
+import { ApplicationFormActions } from "@/components/applications/application-form-actions";
 import { ApplicationSummaryCard, ReviewPanel } from "@/components/applications/review-panel";
 import { HandlingPanel } from "@/components/applications/handling-panel";
 import { StatusTimeline } from "@/components/applications/status-timeline";
@@ -14,6 +15,7 @@ import {
   getCertificateSignedUrl,
   getDocumentRelease,
   getFranchiseRecord,
+  getStorageSignedUrl,
   listSettings,
   listStaffMembers,
 } from "@/lib/data";
@@ -43,6 +45,8 @@ export async function ApplicationDetail({
     listStaffMembers(),
   ]);
 
+  const signatureUrl = await getStorageSignedUrl(application.applicant_signature_storage_path);
+
   // The embedded `record` on the application is only a summary. Re-fetch the
   // full franchise record so the certificate and archive controls — the same
   // components the Franchise Records page uses — can be handled without
@@ -67,6 +71,7 @@ export async function ApplicationDetail({
           } · submitted ${relativeTime(application.submitted_at)}`}
         />
         <div className="flex gap-2">
+          <ApplicationFormActions application={application} signatureUrl={signatureUrl} />
           <LinkButton variant="outline" href={`${basePath}/applications`}>
             Back to register
           </LinkButton>

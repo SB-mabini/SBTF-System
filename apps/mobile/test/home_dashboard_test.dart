@@ -31,6 +31,9 @@ Widget _harness(int unread) => ProviderScope(
             .overrideWith((ref) => Stream.value(unread)),
         todaListProvider.overrideWith((ref) => const <Toda>[]),
         barangayListProvider.overrideWith((ref) => const <Barangay>[]),
+        openFormRequestProvider.overrideWith((ref) => Future.value(null)),
+        latestRejectedFormRequestProvider
+            .overrideWith((ref) => Future.value(null)),
       ],
       child: const MaterialApp(home: HomeScreen()),
     );
@@ -84,17 +87,16 @@ void main() {
     expect(cardSize.height, inInclusiveRange(48, 72));
   });
 
-  testWidgets('Apply navigation opens the application form directly',
+  testWidgets('Apply navigation opens the request form first',
       (tester) async {
     await _pumpTall(tester, _harness(0));
 
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 
-    expect(find.text('New application'), findsOneWidget);
+    expect(find.text('Request form'), findsOneWidget);
+    expect(find.text('Submit request'), findsOneWidget);
+    expect(find.text('New application'), findsNothing);
     expect(find.text('Apply for Franchise'), findsNothing);
-    expect(find.text('New Franchise Application'), findsNothing);
-    expect(find.text('Renewal Application'), findsNothing);
-    expect(find.byIcon(Icons.radio_button_checked), findsNothing);
   });
 }

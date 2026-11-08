@@ -38,6 +38,11 @@ export function SettingsEditor({ settings }: { settings: SystemSetting[] }) {
       description: "Signatory, footer note and the public verification address embedded in the QR code.",
     },
     {
+      key: "forms",
+      title: "Request form letter",
+      description: "Addressee, municipality, location and opening sentence printed on the request letter, plus the staff review deadline.",
+    },
+    {
       key: "notifications",
       title: "Notifications and retention",
       description: "Renewal reminder offsets and how long notifications are kept.",

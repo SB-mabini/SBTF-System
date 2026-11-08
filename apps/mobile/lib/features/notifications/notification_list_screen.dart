@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/error_view.dart';
 import '../application/application_detail_screen.dart';
+import '../application/request_form_screen.dart';
 import '../appointments/appointment_detail_screen.dart';
 import '../certificate/certificate_detail_screen.dart';
 
@@ -148,7 +149,25 @@ class _NotificationListScreenState
       await _openRecord(notification.targetId!);
     } else if (notification.targetsAppointment) {
       await _openAppointment(notification.targetId!);
+    } else if (notification.targetsFormRequest) {
+      await _openFormRequest(notification.targetId!);
     }
+  }
+
+  Future<void> _openFormRequest(String id) async {
+    final request = await _load(
+      () => ref.read(formRequestServiceProvider).getById(id),
+      'That form request is no longer available.',
+    );
+    if (request == null || !mounted) return;
+
+    ref.invalidate(openFormRequestProvider);
+    ref.invalidate(latestRejectedFormRequestProvider);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RequestFormScreen(existing: request),
+      ),
+    );
   }
 
   Future<void> _openApplication(String id) async {
@@ -374,7 +393,8 @@ class _NotificationCard extends StatelessWidget {
     final unread = !notification.read;
     final hasTarget = notification.targetsApplication ||
         notification.targetsRecord ||
-        notification.targetsAppointment;
+        notification.targetsAppointment ||
+        notification.targetsFormRequest;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -493,7 +513,8 @@ class _NotificationCard extends StatelessWidget {
   String _targetLabel(AppNotification notification) {
     if (notification.targetsApplication) return 'Open application';
     if (notification.targetsRecord) return 'Open certificate';
-    return 'Open appointment';
+    if (notification.targetsAppointment) return 'Open appointment';
+    return 'Open request form';
   }
 }
 

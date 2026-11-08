@@ -43,7 +43,19 @@ class ApplicationService extends SupabaseService {
         'rpc_driver_submit_application',
         params: {'p_payload': submission.toPayload()},
       );
-      return FranchiseApplication.fromMap(_asRow(data));
+      final created = FranchiseApplication.fromMap(_asRow(data));
+
+      // The official application-form fields live on a separate, small RPC so
+      // the large submit RPC stays unchanged. The server also copies the CTC
+      // and signature from the approved request at this point.
+      await client.rpc(
+        'rpc_driver_set_application_details',
+        params: {
+          'p_application_id': created.id,
+          'p_payload': submission.detailsPayload(),
+        },
+      );
+      return created;
     });
   }
 

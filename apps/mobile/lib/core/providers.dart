@@ -6,6 +6,7 @@ import 'models/app_notification.dart';
 import 'models/appointment.dart';
 import 'models/franchise_application.dart';
 import 'models/franchise_record.dart';
+import 'models/form_request.dart';
 import 'models/profile.dart';
 import 'models/toda.dart';
 import 'qr_scanner.dart';
@@ -14,6 +15,7 @@ import 'services/application_service.dart';
 import 'services/appointment_service.dart';
 import 'services/certificate_service.dart';
 import 'services/document_service.dart';
+import 'services/form_request_service.dart';
 import 'services/notification_service.dart';
 import 'services/reference_service.dart';
 
@@ -81,6 +83,11 @@ final documentServiceProvider = Provider<DocumentService>(
   (ref) => DocumentService(ref.watch(supabaseClientProvider)),
 );
 
+/// Request-form-first workflow — the driver's request letter.
+final formRequestServiceProvider = Provider<FormRequestService>(
+  (ref) => FormRequestService(ref.watch(supabaseClientProvider)),
+);
+
 /// Slice 6 — certificates, QR and verification.
 final certificateServiceProvider = Provider<CertificateService>(
   (ref) => CertificateService(ref.watch(supabaseClientProvider)),
@@ -134,6 +141,26 @@ final barangayListProvider = FutureProvider<List<Barangay>>(
 /// The driver's own applications, newest first (slice 4).
 final myApplicationsProvider = FutureProvider<List<FranchiseApplication>>(
   (ref) => ref.watch(applicationServiceProvider).listMine(),
+);
+
+/// All of the driver's form requests, newest first.
+final myFormRequestsProvider = FutureProvider<List<FormRequest>>(
+  (ref) => ref.watch(formRequestServiceProvider).listMine(),
+);
+
+/// The request occupying the driver's open slot, if any.
+final openFormRequestProvider = FutureProvider<FormRequest?>(
+  (ref) => ref.watch(formRequestServiceProvider).openRequest(),
+);
+
+/// The newest rejected request the driver can edit and resubmit.
+final latestRejectedFormRequestProvider = FutureProvider<FormRequest?>(
+  (ref) => ref.watch(formRequestServiceProvider).latestRejected(),
+);
+
+/// Live form-request status changes (staff approval / rejection).
+final myFormRequestsStreamProvider = StreamProvider<List<FormRequest>>(
+  (ref) => ref.watch(formRequestServiceProvider).watchMine(),
 );
 
 /// The application to open by default: newest pending, else newest overall.
