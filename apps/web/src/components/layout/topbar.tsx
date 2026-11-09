@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Bell, ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { BrandMark } from "@/components/layout/brand-mark";
+import { NavPanel } from "@/components/layout/nav-panel";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
 import { markNotificationReadAction } from "@/lib/actions/notifications";
@@ -31,6 +33,23 @@ export function Topbar({
 
   const unread = notifications.filter((notification) => !notification.read).length;
   const basePath: "/admin" | "/staff" = role === "administrator" ? "/admin" : "/staff";
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -65,28 +84,40 @@ export function Topbar({
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white px-4 lg:px-6">
-      <button
-        type="button"
-        className="rounded-md p-2 text-muted hover:bg-page lg:hidden"
-        onClick={() => setMobileNavOpen((open) => !open)}
-        aria-label="Toggle navigation"
-      >
-        {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
+    <>
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white px-4 lg:px-6">
+        <Link
+          href={basePath}
+          className="flex items-center gap-2 md:hidden"
+          aria-label="SBTF dashboard"
+        >
+          <BrandMark size="sm" priority />
+          <span className="text-[0.8125rem] font-semibold text-ink">SBTF</span>
+        </Link>
 
-      <form onSubmit={submitSearch} className="relative hidden max-w-md flex-1 md:block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
-          className="sbtf-input pl-9"
-          placeholder="Search application number, plate number or operator…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label="Search applications"
-        />
-      </form>
+        <button
+          type="button"
+          className="hidden rounded-md p-2 text-muted hover:bg-page md:inline-flex lg:hidden"
+          onClick={() => setMobileNavOpen((open) => !open)}
+          aria-label="Open navigation"
+          aria-expanded={mobileNavOpen}
+          aria-controls="tablet-navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
 
-      <div className="ml-auto flex items-center gap-2" ref={menuRef}>
+        <form onSubmit={submitSearch} className="relative hidden max-w-md flex-1 md:block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input
+            className="sbtf-input pl-9"
+            placeholder="Search application number, plate number or operator…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search applications"
+          />
+        </form>
+
+        <div className="ml-auto flex items-center gap-2" ref={menuRef}>
         <div className="relative">
           <button
             type="button"
@@ -210,6 +241,60 @@ export function Topbar({
           ) : null}
         </div>
       </div>
-    </header>
+      </header>
+
+      {mobileNavOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-ink/40"
+            aria-label="Close navigation"
+            onClick={() => setMobileNavOpen(false)}
+          />
+
+          <div
+            id="tablet-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Main navigation"
+            className="absolute inset-y-0 left-0 flex w-[min(20rem,85vw)] flex-col bg-white shadow-raised"
+          >
+            <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-line px-4">
+              <div className="flex items-center gap-2.5">
+                <BrandMark size="sm" priority />
+                <div className="leading-tight">
+                  <p className="text-[0.8125rem] font-semibold text-ink">SBTF System</p>
+                  <p className="text-[0.6875rem] text-muted">Mabini, Batangas</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-md p-2 text-muted hover:bg-page hover:text-ink"
+                aria-label="Close navigation"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <NavPanel
+                role={role}
+                unreadCount={unread}
+                onNavigate={() => setMobileNavOpen(false)}
+              />
+            </div>
+
+            <div className="border-t border-line px-4 py-3">
+              <p className="text-[0.6875rem] leading-relaxed text-muted">
+                {role === "administrator" ? "Administrator" : "Staff"} console
+                <br />
+                Municipality of Mabini, Batangas
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

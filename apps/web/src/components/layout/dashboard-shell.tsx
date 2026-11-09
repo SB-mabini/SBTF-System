@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
@@ -41,13 +42,15 @@ export async function DashboardShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 lg:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 pb-24 lg:px-8 md:pb-6">{children}</main>
 
-        <footer className="border-t border-line bg-white px-4 py-3 text-center text-[0.6875rem] text-muted lg:px-8">
+        <footer className="border-t border-line bg-white px-4 py-3 pb-24 text-center text-[0.6875rem] text-muted lg:px-8 md:pb-3">
           SBTF System — Municipality of Mabini, Batangas · Franchising and Tricycle Driver
           Registration with Descriptive and Prescriptive Analytics
         </footer>
       </div>
+
+      <BottomNav role={session.role} unreadCount={unread} />
 
       {/* Live updates for notifications and application decisions. */}
       <RealtimeRefresher />
