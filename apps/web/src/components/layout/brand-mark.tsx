@@ -3,10 +3,9 @@ import Image from "next/image";
 /**
  * The logo shown beside the app name throughout the web app.
  *
- * This is the official Sangguniang Bayan ng Mabini seal (`public/seal.png`),
- * not the launcher icon. The tricycle/document mark (`public/logo.png`) is used
- * only for the favicon/PWA/application icon. The seal is presented on a white
- * disc so its black ring and colours stay legible on the purple header.
+ * This is the official Sangguniang Bayan ng Mabini seal (`public/seal.png`) and
+ * is also the browser/app icon for the staff and admin web app. It sits on a
+ * white disc so its black ring and colours stay legible on the purple header.
  */
 export function BrandMark({
   size = "md",
