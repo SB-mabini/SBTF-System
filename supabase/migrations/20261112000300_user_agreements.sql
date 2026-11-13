@@ -60,7 +60,7 @@ create policy "user_agreements_select_staff"
       select 1
       from public.profiles p
       where p.id = public.current_profile_id()
-        and p.role in ('admin', 'staff')
+        and p.role in ('administrator', 'staff')
     )
   );
 

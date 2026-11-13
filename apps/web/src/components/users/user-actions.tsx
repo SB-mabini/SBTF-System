@@ -2,11 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { ShieldCheck, Trash2, UserCheck, UserX } from "lucide-react";
 
 import { Alert, Badge, Button, Field } from "@/components/ui";
 import { Modal } from "@/components/dialog";
-import { setAccountStatusAction, setUserRoleAction } from "@/lib/actions/users";
+import {
+  purgeAccountAction,
+  setAccountStatusAction,
+  setUserRoleAction,
+} from "@/lib/actions/users";
 import { isDemoMode } from "@/lib/env";
 import { accountStatusLabel, roleLabel } from "@/lib/format";
 import type { AccountStatus, Profile, UserRole } from "@/types/database";
@@ -25,10 +29,13 @@ export function UserActions({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [roleOpen, setRoleOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [role, setRole] = useState<UserRole>(profile.role === "driver" ? "staff" : profile.role);
   const [status, setStatus] = useState<AccountStatus>("inactive");
   const [reason, setReason] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [busy, setBusy] = useState(false);
 
   const isSelf = profile.id === currentProfileId;
@@ -44,6 +51,7 @@ export function UserActions({
     if (result.ok) {
       setRoleOpen(false);
       setStatusOpen(false);
+      setDeleteOpen(false);
       startTransition(() => router.refresh());
     }
   }
@@ -60,6 +68,16 @@ export function UserActions({
         profileId: profile.id,
         status,
         reason: status === "active" ? undefined : reason,
+      }),
+    );
+  }
+
+  async function applyDelete() {
+    setBusy(true);
+    afterSuccess(
+      await purgeAccountAction({
+        profileId: profile.id,
+        reason: deleteReason,
       }),
     );
   }
@@ -116,6 +134,20 @@ export function UserActions({
           </Button>
         )}
 
+        {isSelf ? null : (
+          <Button
+            variant="danger"
+            disabled={readOnly}
+            onClick={() => {
+              setDeleteConfirm("");
+              setDeleteReason("");
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete account
+          </Button>
+        )}
       </div>
 
       {awaitingApproval ? (
@@ -229,6 +261,71 @@ export function UserActions({
             The account will be able to sign in again immediately.
           </p>
         )}
+      </Modal>
+
+      {/* Permanent deletion */}
+      <Modal
+        open={deleteOpen}
+        title="Delete account permanently"
+        description={`Erase ${profile.full_name} and everything connected to ${profile.email}.`}
+        onClose={() => setDeleteOpen(false)}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={applyDelete}
+              loading={busy}
+              disabled={
+                deleteConfirm.trim().toLowerCase() !== profile.email.toLowerCase() ||
+                deleteReason.trim().length < 5
+              }
+            >
+              Delete permanently
+            </Button>
+          </>
+        }
+      >
+        <Alert tone="danger">
+          This cannot be undone. The account, its franchise applications, records, documents,
+          notifications and audit-log entries are erased, the stored files are deleted, and the
+          Supabase Auth account can no longer sign in.
+        </Alert>
+
+        <div className="mt-3 space-y-3">
+          <Field
+            label={`Type ${profile.email} to confirm`}
+            htmlFor="delete-confirm"
+          >
+            <input
+              id="delete-confirm"
+              className="sbtf-input"
+              value={deleteConfirm}
+              onChange={(event) => setDeleteConfirm(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={profile.email}
+            />
+          </Field>
+
+          <Field label="Reason (required, recorded in the admin audit log)" htmlFor="delete-reason">
+            <textarea
+              id="delete-reason"
+              className="sbtf-input min-h-[80px]"
+              value={deleteReason}
+              onChange={(event) => setDeleteReason(event.target.value)}
+              placeholder="For example: duplicate account created during migration."
+            />
+          </Field>
+        </div>
+
+        <p className="mt-3 text-[0.75rem] text-muted">
+          {isOperator
+            ? "All applications, franchise records, uploaded documents and certificates owned by this operator are removed."
+            : "If this staff member has reviewed, verified, issued or released another person's records, deletion is refused to protect that history — deactivate the account instead."}
+        </p>
       </Modal>
     </div>
   );

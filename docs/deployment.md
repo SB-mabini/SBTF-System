@@ -120,7 +120,7 @@ automatically).
 
 | Function | Purpose | Required secrets |
 |---|---|---|
-| `admin-users` | Create staff/administrator accounts, deactivate/reactivate, generate password links | `SITE_URL` |
+| `admin-users` | Create staff/administrator accounts, deactivate/reactivate, permanently delete accounts, generate password links | `SITE_URL` |
 | `password-recovery` | Role-aware self-service recovery behind "Forgot your password?" — sends a 6-digit code (Verify JWT **off**) | none (shares `SITE_URL`) |
 | `ai-decision-support` | Advisory analytics through the LLM | `GROQ_API_KEY` |
 | `renewal-reminders` | Scheduled 90/60/30-day reminder run | none (uses service role) |

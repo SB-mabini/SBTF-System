@@ -82,6 +82,60 @@ async function deactivateThroughEdgeFunction(input: {
 }
 
 /**
+ * Permanently deletes an account: profile, franchise records, documents,
+ * notifications and audit-log entries, plus the Supabase Auth user. The
+ * Edge Function removes the storage files before the database purge.
+ *
+ * The function refuses accounts that acted on other people's records; that
+ * answer is surfaced verbatim because it is actionable ("deactivate instead").
+ */
+export async function purgeAccountAction(input: {
+  profileId: string;
+  reason: string;
+}): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const reason = input.reason.trim();
+  if (reason.length < 5) {
+    return { ok: false, message: "A reason of at least 5 characters is required." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke("admin-users", {
+    body: { action: "purge_account", profile_id: input.profileId, reason },
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${input.profileId}`);
+
+  if (error) {
+    const failure = await readEdgeFunctionFailure(error);
+    if (failure.code === "account_has_workflow_history") {
+      return { ok: false, message: failure.detail };
+    }
+    if (failure.code === "storage_cleanup_failed") {
+      return { ok: false, message: failure.detail };
+    }
+    return edgeFunctionFailure(
+      error,
+      "The account could not be deleted",
+      " No data has been removed.",
+    );
+  }
+
+  if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
+
+  return {
+    ok: true,
+    message: data?.message ?? "Account permanently deleted.",
+    details: {
+      applications: data?.applications,
+      records: data?.records,
+    },
+  };
+}
+
+/**
  * `send_password_reset` still hands a recovery link back instead of sending an
  * e-mail, so the action forwards it into `ActionState.details` — the only
  * channel a server action has for returning data alongside the message. Its

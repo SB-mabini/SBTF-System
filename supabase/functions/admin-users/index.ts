@@ -8,6 +8,7 @@
 //   deactivate        → ban the account in Supabase Auth + mark the profile
 //   activate          → lift the ban + reactivate the profile
 //   send_password_reset → issue a recovery link for an account
+//   purge_account     → permanently erase an account and connected data
 //
 // The caller must be an ACTIVE ADMINISTRATOR. This is verified twice: once with
 // the caller's own JWT against the RLS-protected profiles table, and again
@@ -17,7 +18,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, errorResponse, json } from "../_shared/http.ts";
 
-type Action = "create_staff" | "deactivate" | "activate" | "send_password_reset";
+type Action =
+  | "create_staff"
+  | "deactivate"
+  | "activate"
+  | "send_password_reset"
+  | "purge_account";
 
 const ALLOWED_ROLES = ["administrator", "staff"] as const;
 
@@ -51,6 +57,78 @@ function confirmLink(hashedToken: string | null | undefined, type: "recovery" | 
   if (!hashedToken) return null;
   return `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${type}`;
 }
+
+const STORAGE_BUCKETS = ["franchise-documents", "certificates"] as const;
+
+type AdminClient = Pick<ReturnType<typeof createClient>, "storage">;
+
+/**
+ * Walks a Storage prefix and returns every file path beneath it. The account
+ * purge uses this as a safety net in addition to the paths recorded in the
+ * database, so unlinked uploads under `{profile_id}/` are removed too.
+ */
+async function listStoragePaths(
+  client: AdminClient,
+  bucket: string,
+  prefix: string,
+  depth = 0,
+): Promise<string[]> {
+  if (depth > 5) return [];
+
+  const { data, error } = await client.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error || !data) return [];
+
+  const paths: string[] = [];
+  for (const item of data) {
+    const path = prefix ? `${prefix}/${item.name}` : item.name;
+    // Folders are reported with a null id; everything else is a file.
+    if (item.id === null) {
+      paths.push(...(await listStoragePaths(client, bucket, path, depth + 1)));
+    } else {
+      paths.push(path);
+    }
+  }
+  return paths;
+}
+
+async function removeStorageObjects(
+  client: AdminClient,
+  bucket: string,
+  paths: string[],
+): Promise<string | null> {
+  // Storage API calls are capped; 100 paths per request stays well inside it.
+  for (let index = 0; index < paths.length; index += 100) {
+    const chunk = paths.slice(index, index + 100);
+    const { error } = await client.storage.from(bucket).remove(chunk);
+    if (error) return error.message;
+  }
+  return null;
+}
+
+/**
+ * Maps the purge RPC guard errors to the HTTP codes the web action understands.
+ * Shared by the preflight and the real purge so the two answers cannot diverge.
+ */
+function purgeRpcFailure(
+  error: { message?: string },
+  origin: string | null,
+): Response {
+  const message = error.message ?? "The account could not be deleted.";
+  if (/acted on other people/i.test(message)) {
+    return errorResponse("account_has_workflow_history", message, 409, origin);
+  }
+  if (/last active administrator/i.test(message)) {
+    return errorResponse("last_administrator", message, 400, origin);
+  }
+  if (/Administrator access required/i.test(message)) {
+    return errorResponse("forbidden", "Administrator access is required.", 403, origin);
+  }
+  if (/not found/i.test(message)) {
+    return errorResponse("profile_not_found", message, 404, origin);
+  }
+  return errorResponse("purge_failed", message, 400, origin);
+}
+
 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");
@@ -292,6 +370,102 @@ Deno.serve(async (request: Request) => {
   }
 
   // -------------------------------------------------------------------------
+  // purge_account
+  // -------------------------------------------------------------------------
+  // Permanently erases the account: owns data, logs and the Supabase Auth
+  // user. Storage files are removed first so a failure there leaves the
+  // database untouched. The database side is one transaction (see
+  // rpc_admin_purge_account).
+  if (action === "purge_account") {
+    const profileId = String(payload.profile_id ?? "");
+    const reason = String(payload.reason ?? "").trim();
+
+    if (!/^[0-9a-f-]{36}$/i.test(profileId)) {
+      return errorResponse("invalid_profile", "A valid profile id is required.", 400, origin);
+    }
+    if (reason.length < 5) {
+      return errorResponse(
+        "reason_required",
+        "A reason of at least 5 characters is required when deleting an account.",
+        400,
+        origin,
+      );
+    }
+
+    // Preflight the same guards the purge RPC enforces. Doing this before any
+    // file is touched means a refused purge never loses storage objects.
+    const { error: checkError } = await callerClient.rpc("rpc_admin_purge_check", {
+      p_profile_id: profileId,
+    });
+    if (checkError) return purgeRpcFailure(checkError, origin);
+
+    // Collect the paths recorded in the database plus anything else stored
+    // under the profile's folder, then delete the actual objects.
+    const { data: assets, error: assetError } = await callerClient.rpc(
+      "rpc_admin_collect_account_assets",
+      { p_profile_id: profileId },
+    );
+
+    if (assetError) {
+      return errorResponse("asset_lookup_failed", assetError.message, 400, origin);
+    }
+
+    const pathsByBucket = new Map<string, Set<string>>();
+    for (const bucket of STORAGE_BUCKETS) pathsByBucket.set(bucket, new Set<string>());
+
+    for (const asset of (assets ?? []) as Array<{ bucket_id: string; path: string }>) {
+      if (!asset?.path) continue;
+      const bucketPaths = pathsByBucket.get(asset.bucket_id);
+      if (bucketPaths) bucketPaths.add(asset.path);
+    }
+
+    for (const bucket of STORAGE_BUCKETS) {
+      const listed = await listStoragePaths(adminClient, bucket, profileId);
+      for (const path of listed) pathsByBucket.get(bucket)?.add(path);
+    }
+
+    for (const bucket of STORAGE_BUCKETS) {
+      const paths = [...(pathsByBucket.get(bucket) ?? [])];
+      const storageError = await removeStorageObjects(adminClient, bucket, paths);
+      if (storageError) {
+        return errorResponse(
+          "storage_cleanup_failed",
+          `The account's files could not be deleted (${storageError}). No database rows have been removed; try again.`,
+          502,
+          origin,
+        );
+      }
+    }
+
+    const { data: purged, error: purgeError } = await callerClient.rpc(
+      "rpc_admin_purge_account",
+      { p_profile_id: profileId, p_reason: reason },
+    );
+
+    if (purgeError) {
+      return purgeRpcFailure(purgeError, origin);
+    }
+
+    const applications = Number((purged as { applications?: number } | null)?.applications ?? 0);
+    const records = Number((purged as { records?: number } | null)?.records ?? 0);
+
+    return json(
+      {
+        ok: true,
+        profile_id: profileId,
+        applications,
+        records,
+        message:
+          "Account permanently deleted. Its profile, franchise records, documents, " +
+          "notifications and audit-log entries were removed, and the Supabase Auth " +
+          "account can no longer sign in.",
+      },
+      200,
+      origin,
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // deactivate / activate
   // -------------------------------------------------------------------------
   if (action === "deactivate" || action === "activate") {
@@ -391,7 +565,7 @@ Deno.serve(async (request: Request) => {
 
   return errorResponse(
     "unknown_action",
-    "Supported actions: create_staff, deactivate, activate, send_password_reset.",
+    "Supported actions: create_staff, deactivate, activate, send_password_reset, purge_account.",
     400,
     origin,
   );

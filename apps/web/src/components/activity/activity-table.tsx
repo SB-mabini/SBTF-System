@@ -17,6 +17,7 @@ const ACTION_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "
   role_change: "warning",
   user_activated: "success",
   user_deactivated: "danger",
+  user_purged: "danger",
   settings_update: "warning",
   security_event: "danger",
   ai_request: "info",

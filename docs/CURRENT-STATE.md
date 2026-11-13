@@ -153,6 +153,43 @@ The web panel and template are in the working tree, but the hosted project still
 previous `admin-users` build until the function is redeployed and the hosted invite template
 is updated. In that window the console falls back to the manual `setup_link` panel.
 
+### Permanent account deletion (added 13 November 2026)
+
+The administrator Users screen now has a **Delete account** action on both the Staff and
+Operators tabs. It is a true purge, not a deactivation:
+
+- the profile's applications, documents, franchise records, form requests, notifications,
+  device tokens, agreements, AI briefings and audit-log entries are deleted;
+- files under `{profile_id}/` in `franchise-documents` and `certificates` are removed through
+  the Storage API;
+- the Supabase Auth user is deleted, so the account can never sign in again;
+- the anonymised `toda_members` roster row is kept (only `profile_id` is nulled).
+
+Guard rails:
+
+- only an active administrator can call it;
+- your own account and the **last active administrator** are protected;
+- an account that acted on **other people's** records (reviewed, verified, issued,
+  released, scheduled or endorsed) is refused — deleting it would violate workflow
+  consistency checks and rewrite history. Deactivate those accounts instead;
+- it does not run in preview/demo mode.
+
+Implementation: `supabase/migrations/20261113000100_user_purged_action.sql` and
+`20261113000200_admin_purge_account.sql` add `rpc_admin_collect_account_assets()` and
+`rpc_admin_purge_account()`. The `admin-users` Edge Function removes the storage objects and
+calls the RPC; the web action is `purgeAccountAction` in `apps/web/src/lib/actions/users.ts`.
+Each purge writes one `user_purged` activity entry naming the acting administrator, with no
+name or e-mail in its metadata.
+
+> The append-only log triggers would normally block erasure. The RPC disables
+> `trg_activity_logs_immutable` and `trg_ai_request_logs_immutable` for its own
+> transaction only, then re-enables them. Both migrations must be applied and
+> `admin-users` redeployed before the button works.
+
+This feature is deliberately isolated so it can be removed later: drop the two migrations,
+the `purge_account` branch in `admin-users/index.ts`, `purgeAccountAction`, and the delete
+block in `components/users/user-actions.tsx`.
+
 ### Password recovery — e-mail code (changed 4 November 2026)
 
 Recovery no longer sends a link. The visitor receives a **6-digit code**, types it back into

@@ -94,10 +94,17 @@ export type ActivityAction =
   | "endorsement_recorded"
   | "decision_recorded"
   | "document_released"
+  | "form_request_updated"
+  | "form_request_rejected"
+  | "form_request_resubmitted"
+  | "form_request_converted"
+  | "form_request_printed"
+  | "form_request_review_overdue"
   | "announcement_created"
   | "announcement_published"
   | "announcement_archived"
-  | "announcement_deleted";
+  | "announcement_deleted"
+  | "user_purged";
 export type LogTargetType =
   | "profile"
   | "franchise_application"
