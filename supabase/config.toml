@@ -78,13 +78,16 @@ otp_expiry = 600
 # recovery  : a 6-digit code ({{ .Token }}), typed back into the app's
 #             /verify-otp screen. Do NOT put a link in this template — a
 #             single-use link can be consumed by a mail scanner before the human
-#             opens it. Administrator-issued setup links are built by the
-#             admin-users Edge Function and still use /auth/confirm.
+#             opens it. Administrator-issued password-reset links are built by
+#             the admin-users Edge Function and still use /auth/confirm.
 # magic_link: the body must contain {{ .Token }}; the mobile app verifies it with
 #             auth.verifyOTP({ type: 'email' }).
 # confirmation: the signup template; carries {{ .Token }} and is verified with
 #             auth.verifyOtp({ type: 'signup' }). A successful verification also
 #             creates the session, so the driver is signed in automatically.
+# invite    : sent by admin-users via inviteUserByEmail(). The link uses the
+#             token hash against /auth/confirm, which verifies the invitation
+#             and sends the visitor to /accept-invitation to choose a password.
 [auth.email.template.recovery]
 subject = "Your SBTF verification code — SBTF System"
 content_path = "./supabase/templates/recovery.html"
@@ -96,6 +99,10 @@ content_path = "./supabase/templates/magic_link.html"
 [auth.email.template.confirmation]
 subject = "Confirm your SBTF account — verification code"
 content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+subject = "SBTF staff account invitation — SBTF System"
+content_path = "./supabase/templates/invite.html"
 
 [auth.sms]
 enable_signup = false

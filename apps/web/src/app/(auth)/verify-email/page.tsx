@@ -10,20 +10,20 @@ export default function VerifyEmailPage() {
       <div className="sbtf-card p-6">
         <h1 className="text-lg font-semibold text-ink">Confirm your e-mail address</h1>
         <p className="mt-1 text-[0.8125rem] text-muted">
-          Supabase Auth sent a confirmation link when the account was created. Open it to activate
-          sign-in for this address.
+          Supabase Auth sent an e-mail when the account was created. Open it to activate sign-in
+          for this address.
         </p>
 
         <div className="mt-4 space-y-3">
           <Alert tone="info" title="Nothing in your inbox?">
             Check the spam folder, confirm that the address is spelled correctly, or ask the
-            municipal administrator to re-send the invitation from the Users screen.
+            municipal administrator to issue a new invitation or setup link from the Users screen.
           </Alert>
 
           <p className="text-[0.8125rem] text-muted">
-            Staff accounts created by an administrator receive a Supabase Auth invitation e-mail
-            with a link to set their own password. Drivers and operators receive a confirmation
-            e-mail when they register in the mobile application.
+            Staff accounts created by an administrator receive an invitation e-mail with a link to
+            set their own password and then sign in. Drivers and operators receive a verification
+            code when they register in the mobile application.
           </p>
         </div>
 

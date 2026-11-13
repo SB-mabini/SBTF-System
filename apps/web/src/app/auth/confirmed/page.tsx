@@ -8,10 +8,11 @@ export const metadata = { title: "E-mail confirmed — SBTF System" };
  * Landing page for a confirmed address.
  *
  * Self-service recovery no longer uses links — it e-mails a 6-digit code and
- * never reaches this route. The only link that still lands here is the one-time
- * setup link an administrator hands to a new staff member (built by the
- * `admin-users` function and verified by `/auth/confirm`), so `status=invalid`
- * means that setup link, not a recovery link, has to be reissued.
+ * never reaches this route. The links that land here are the staff invitation
+ * sent by the `admin-users` function and the recovery link it returns for manual
+ * handover; both are verified by `/auth/confirm`. A valid invite continues to
+ * `/accept-invitation`, so `status=invalid` is almost always an expired or
+ * already-used link that has to be reissued.
  */
 export default async function ConfirmedPage({
   searchParams,
@@ -28,8 +29,9 @@ export default async function ConfirmedPage({
           <>
             <h1 className="text-lg font-semibold text-ink">This link is no longer valid</h1>
             <p className="mt-1 text-[0.8125rem] text-muted">
-              This setup link was already used, has expired, or was copied incompletely. Ask the
-              municipal administrator to issue a new one from the Users screen.
+              This invitation or reset link was already used, has expired, or was copied
+              incompletely. Ask the municipal administrator to issue a new one from the Users
+              screen.
             </p>
             <p className="mt-4 text-[0.8125rem]">
               <Link className="text-primary hover:underline" href="/forgot-password">

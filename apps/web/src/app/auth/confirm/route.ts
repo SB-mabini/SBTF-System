@@ -7,22 +7,25 @@ import { isDemoMode } from "@/lib/env";
 /**
  * Single verified entry point for every Supabase auth link.
  *
- * Both shapes are accepted because two producers exist:
+ * Both shapes are accepted because several producers exist:
  *
+ *   - Supabase Auth's own mailer sends staff invitations here with
+ *     `?token_hash=…&type=invite`. The invite template is in
+ *     supabase/templates/invite.html and deliberately uses the token hash, not
+ *     Supabase's `ConfirmationURL`.
  *   - The `admin-users` Edge Function builds our own link from
  *     `generateLink().properties.hashed_token` and points it here with
- *     `?token_hash=…&type=recovery`. That is the link an administrator hands to
- *     a new staff member, so the verification is entirely ours.
- *   - Supabase's own mailer (used for self-service recovery on an account whose
- *     e-mail delivery is configured) redirects here with `?code=…` under the
- *     PKCE flow.
+ *     `?token_hash=…&type=recovery`. That is the link returned by
+ *     `send_password_reset` for manual handover.
+ *   - Supabase's PKCE flow may still arrive with `?code=…`.
  *
  * Only `verifyOtp` / `exchangeCodeForSession` can turn either into a session,
  * which is why links previously dead-ended: nothing consumed the token.
  *
  * Routes:
- *   recovery / invite → /reset-password   (set a password)
- *   everything else   → /auth/confirmed    (address confirmed)
+ *   invite   → /accept-invitation   (set a password, then sign in)
+ *   recovery → /reset-password      (set a password, then open the console)
+ *   anything else → /auth/confirmed (address confirmed)
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -77,5 +80,7 @@ function safeNext(next: string | null): string | null {
 }
 
 function destinationForType(type: EmailOtpType | null): string {
-  return type === "recovery" || type === "invite" ? "/reset-password" : "/auth/confirmed";
+  if (type === "invite") return "/accept-invitation";
+  if (type === "recovery") return "/reset-password";
+  return "/auth/confirmed";
 }

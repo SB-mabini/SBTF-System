@@ -64,14 +64,16 @@ docs/              Deployment, testing and mobile documentation
   settings, including an empty `uri_allow_list` that this file does not reflect.
 - **Self-service recovery e-mails a 6-digit code, not a link.** The visitor types it back into
   `/verify-otp`, then chooses to continue to the console or set a new password. E-mail is also
-  used for driver one-time passwords, but not for staff invitations. Mail goes through the
-  project's Gmail SMTP (`docs/deployment.md` §3.1). `admin-users` still **returns** the
-  invitation link (`setup_link` / `reset_link`) for manual handover, because a new staff
-  account is `pending` until an administrator approves it.
-- **The only auth link left is an administrator-issued setup link.** `/auth/confirm` handles
-  `?token_hash=…&type=…` (the links `admin-users` builds) and Supabase's `?code=…` PKCE flow,
-  then forwards to `/reset-password`. See `apps/web/src/app/auth/confirm/route.ts`. Recovery
-  never reaches it.
+  used for driver one-time passwords. Mail goes through the project's Gmail SMTP
+  (`docs/deployment.md` §3.1).
+- **Staff invitations are e-mailed links.** `create_staff` calls `inviteUserByEmail()`; the
+  template sends the staff member to `/accept-invitation` to set a password and then to
+  `/login`. The account is still `pending` until an administrator approves it. Only
+  `send_password_reset` still **returns** a link (`reset_link`) for manual handover.
+- **`/auth/confirm` consumes every auth link.** It handles `?token_hash=…&type=invite|recovery`
+  (the invitation template and the `admin-users` reset link) and Supabase's `?code=…` PKCE
+  flow, then forwards invites to `/accept-invitation` and recovery to `/reset-password`.
+  See `apps/web/src/app/auth/confirm/route.ts`.
 - **`seed.sql` has never been applied to production.** Do not apply it there. It is
   additive and idempotent in development; see `docs/testing.md` §3–4 for the traps it
   sets for testers.

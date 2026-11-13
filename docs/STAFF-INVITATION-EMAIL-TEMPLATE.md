@@ -1,163 +1,44 @@
-# Staff Invitation Email — Bilingual Template (DRAFT)
+# Staff Invitation Email — Implemented Template
 
-**Status:** draft for review. Copy has not been approved. Two fields marked `TBD` need a
-human decision before implementation.
+**Status:** implemented 13 November 2026.
+**Source of truth:** [`supabase/templates/invite.html`](../supabase/templates/invite.html).
+**Subject:** `SBTF staff account invitation — SBTF System`
 
-The delivery mechanism changed to **Supabase SMTP** (a Gmail account with an App
-Password) — see `deployment.md` §3.1. The two templates that **are** implemented and
-shipped live in `supabase/templates/recovery.html` and `supabase/templates/magic_link.html`.
-This document is the copy reference for the staff **invitation** e-mail, which is not sent
-yet: staff invitations still hand over a link in the console because the account is
-`pending` until approved (`deployment.md` §3.1d).
+Delivery is Supabase Auth's mailer, not Nodemailer. The `admin-users` Edge Function calls
+`inviteUserByEmail()`, and the hosted project's Gmail SMTP sends the message.
 
-Design notes for whoever implements this:
+## Link
 
-- Delivery is Supabase Auth's mailer, **not Nodemailer**. Paste the HTML into Dashboard →
-  Authentication → Email Templates, or wire it under `[auth.email.template.*]` for local dev.
-- Tagalog first, English second. The primary readers are barangay staff.
-- The link href is `{SITE_URL}/auth/confirm?token_hash={hashed_token}` — built from
-  `{{ .TokenHash }}`, **not** `{{ .ConfirmationURL }}` (that returns an unexchangeable
-  PKCE `?code=`).
-- **Do not hardcode an expiry figure in the copy.** Supabase controls token lifetime;
-  state the real value at implementation time. The wording below deliberately says
-  "limited time" instead of inventing a number that could become wrong.
-- Replace `TBD` fields before shipping. Do not ship with a `TBD` visible to users.
-
----
-
-## Subject line
+The template contains:
 
 ```
-Kumpirmahin ang iyong email — SBTF System | Confirm your email — SBTF System
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite
 ```
 
----
+`/auth/confirm` verifies the token hash with `verifyOtp({ type: "invite" })` and forwards the
+visitor to `/accept-invitation`, where they choose a password. That form signs them out and
+redirects to `/login?notice=password-set`.
 
-## Body
+Do **not** replace this with Supabase's default `{{ .ConfirmationURL }}`. It lands on
+GoTrue `/verify`, returns the session in the URL fragment, and the web app cannot consume
+it.
 
-```html
-<div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-            max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+## Copy rules
 
-  <p style="font-size: 15px; line-height: 1.6;">
-    Magandang araw, <strong>[first_name]</strong>,
-  </p>
+- Tagalog first, English second. The primary readers are municipal staff.
+- Keep the “one-time link, limited time” reminder in both languages.
+- State that an administrator must approve the account before the console opens.
+- Never put a Go-template placeholder inside an HTML comment. GoTrue renders placeholders
+  wherever they appear, including comments.
 
-  <p style="font-size: 15px; line-height: 1.6;">
-    Natanggap namin ang kagustuhan mong makapasok sa <strong>SBTF System</strong>
-    ng <em>TBD — institutional name</em>. Mangyaring kumpirmahin ang iyong email
-    address upang ma-activate ang iyong account.
-  </p>
+## Hosted project
 
-  <p style="margin: 28px 0;">
-    <a href="{{CONFIRM_LINK}}"
-       style="background: #271564; color: #ffffff; padding: 13px 24px;
-              border-radius: 8px; text-decoration: none; font-weight: 600;
-              display: inline-block;">
-      Kumpirmahin ang aking email &rarr;
-    </a>
-  </p>
+`supabase/config.toml` only applies the template to `supabase start`. For the hosted
+project, update:
 
-  <p style="font-size: 13px; color: #666; line-height: 1.6;">
-    <em>Paalala: gumagana ang link na ito nang isang beses lamang at may
-    limitadong oras.</em>
-  </p>
+- Dashboard → Authentication → Email Templates → **Invite user**, or
+- the Management API keys `mailer_subjects_invite` and `mailer_templates_invite_content`.
 
-  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
-
-  <p style="font-size: 15px; line-height: 1.6;">
-    Good day, <strong>[first_name]</strong>,
-  </p>
-
-  <p style="font-size: 15px; line-height: 1.6;">
-    We have received your request to join the <strong>SBTF System</strong> of
-    <em>TBD — institutional name</em>. Please confirm your email address to activate
-    your account.
-  </p>
-
-  <p style="margin: 28px 0;">
-    <a href="{{CONFIRM_LINK}}"
-       style="background: #271564; color: #ffffff; padding: 13px 24px;
-              border-radius: 8px; text-decoration: none; font-weight: 600;
-              display: inline-block;">
-      Confirm my email &rarr;
-    </a>
-  </p>
-
-  <p style="font-size: 13px; color: #666; line-height: 1.6;">
-    <em>Note: this link works only once and expires after a limited time.</em>
-  </p>
-
-  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 28px 0;" />
-
-  <p style="font-size: 14px; line-height: 1.6;">
-    Salamat mula sa,<br />
-    <strong>TBD — sender name / office</strong><br />
-    <span style="color: #666; font-size: 13px;">TBD — postal address</span>
-  </p>
-
-  <p style="font-size: 12px; color: #888; line-height: 1.6; margin-top: 24px;">
-    Kung hindi kayo nag-request ng account na ito, maaari itong i-ignore.
-    Ang mga link sa account ay gumagana isang beses lamang.<br /><br />
-    If you did not request this account, you may safely ignore this message.
-    Account links are single-use.
-  </p>
-
-</div>
-```
-
----
-
-## Plain-text alternative
-
-Required as `text` alongside the HTML part — some recipients and mail clients will not
-render HTML at all.
-
-```
-Kumpirmahin ang iyong email — SBTF System
-
-Magandang arow, [first_name],
-
-Natanggap namin ang kagustuhan mong makapasok sa SBTF System ng
-TBD — institutional name. Mangyaring kumpirmahin ang iyong email address
-upang ma-activate ang iyong account.
-
-Kumpirmahin ang aking email:
-{{CONFIRM_LINK}}
-
-Paalala: gumagana ang link na ito nang isang beses lamang at may limitadong oras.
-
----
-
-Good day, [first_name],
-
-We have received your request to join the SBTF System of
-TBD — institutional name. Please confirm your email address to activate
-your account.
-
-Confirm my email:
-{{CONFIRM_LINK}}
-
-Note: this link works only once and expires after a limited time.
-
----
-
-Salamat mula sa,
-TBD — sender name / office
-TBD — postal address
-
-Kung hindi kayo nag-request ng account na ito, maaari itong i-ignore.
-If you did not request this account, you may safely ignore this message.
-```
-
----
-
-## Placeholder reference
-
-| Placeholder | Source |
-|---|---|
-| `[first_name]` | `user_metadata.first_name`, set at invite time |
-| `{{CONFIRM_LINK}}` | `{SITE_URL}/auth/confirm?token_hash={hashed_token}` |
-| `TBD — institutional name` | **Needs human decision** |
-| `TBD — sender name / office` | **Needs human decision** |
-| `TBD — postal address` | **Needs human decision** |
+Also confirm `site_url` is the production origin (`https://sbtf-system.vercel.app`) with no
+trailing slash, because the template builds its link from `.SiteURL`. See
+[`deployment.md`](./deployment.md) §3.1.

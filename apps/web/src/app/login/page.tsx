@@ -4,12 +4,19 @@ import { Suspense } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { BrandMark } from "@/components/layout/brand-mark";
-import { Spinner } from "@/components/ui";
+import { Alert, Spinner } from "@/components/ui";
 import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
 
 export const metadata = { title: "Sign in — SBTF System" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
+  const { notice } = await searchParams;
+  const passwordSet = notice === "password-set";
+
   return (
     <main className="flex min-h-screen flex-col bg-primary-900">
       <header className="relative z-20 border-b border-white/10 bg-primary">
@@ -44,6 +51,14 @@ export default function LoginPage() {
                 Municipal staff and administrators only.
               </p>
             </div>
+
+            {passwordSet ? (
+              <div className="mt-4">
+                <Alert tone="success" title="Password set">
+                  Your password has been saved. Sign in with your new password.
+                </Alert>
+              </div>
+            ) : null}
 
             <div className="mt-6">
               <Suspense fallback={<Spinner />}>

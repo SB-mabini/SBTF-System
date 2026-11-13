@@ -207,8 +207,8 @@ Dashboard → **Authentication → URL Configuration**:
 
 - **Site URL** — the current environment: `https://sbtf-system.vercel.app` in
   production, `http://localhost:3000` while testing locally against the hosted project.
-  **No trailing slash.** The administrator-issued setup link is built from `SITE_URL`
-  (`{{ .SiteURL }}/auth/confirm`), so a stored value ending in `/` produces
+  **No trailing slash.** Invitation and administrator-issued reset links are built from
+  `SITE_URL` (`{{ .SiteURL }}/auth/confirm`), so a stored value ending in `/` produces
   `//auth/confirm`.
 - **Redirect URLs** — add both:
   - `https://sbtf-system.vercel.app/auth/confirm`
@@ -227,12 +227,16 @@ Three things send mail or links out of this project, and they no longer share a 
 | Self-service password recovery | `supabase/templates/recovery.html` | a **6-digit code**, typed into `/verify-otp` |
 | Mobile sign-in | `supabase/templates/magic_link.html` | a 6-digit code, typed into the mobile app |
 | Mobile registration | `supabase/templates/confirmation.html` | a 6-digit code; entering it confirms the address **and signs the driver in** |
-| Administrator-issued staff setup link | *not a template* | the `admin-users` function returns `setup_link`, built from `generateLink()` and pointing at `/auth/confirm` |
+| Staff invitation | `supabase/templates/invite.html` | an invitation link e-mailed by `create_staff` via `inviteUserByEmail()`, landing on `/accept-invitation` after `/auth/confirm` verifies the token |
 
 The recovery and registration messages deliberately contain **no link**. A single-use
 link can be consumed before the human sees it — mail gateways and antivirus scanners
 pre-fetch URLs — and it also reintroduces redirect-host and URL-fragment failure modes. A
 code cannot be pre-fetched and must be typed by the person holding the mailbox.
+
+The staff invitation is the deliberate exception: it must carry a link because it is the
+first sign-in. It uses the token hash against `/auth/confirm`, which verifies server-side
+and never exposes the session in a URL fragment.
 
 For **local development** the templates are wired in `supabase/config.toml`:
 
@@ -245,6 +249,9 @@ content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
 content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+content_path = "./supabase/templates/invite.html"
 ```
 
 For the **hosted project**, paste the same HTML into Dashboard → **Authentication →
@@ -254,6 +261,7 @@ Email Templates**:
 |---|---|---|
 | Reset Password | `supabase/templates/recovery.html` | `Your SBTF verification code — SBTF System` |
 | Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
+| Invite user | `supabase/templates/invite.html` | `SBTF staff account invitation — SBTF System` |
 | Confirm signup | `supabase/templates/confirmation.html` | `Confirm your SBTF account — verification code` |
 
 **The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
@@ -270,6 +278,8 @@ Check what the project actually holds (Management API, `/v1/projects/{ref}/confi
 | `mailer_otp_exp` | `600` seconds — must match `otp_expiry` |
 | `site_url` | the production origin, **without** a trailing slash |
 | `mailer_templates_magic_link_content` | `{{ .Token }}` |
+| `mailer_templates_invite_content` | contains `{{ .TokenHash }}` and `/auth/confirm`; contains **no** `ConfirmationURL` |
+| `mailer_subjects_invite` | `SBTF staff account invitation — SBTF System` |
 
 The code is single-use, so a second `POST /verify` with the same digits answers
 `403 "One-time token not found"`. That is reuse, not an early expiry. An expired code
@@ -288,14 +298,24 @@ History, because it explains two dead ends that are easy to reintroduce:
 
 Neither applies to the code flow, but keep them in mind if a link is ever reintroduced.
 
-### d. What still hands over a link
+### d. Staff invitations
 
-Only one path does: `create_staff` **returns** the setup link (`setup_link`) instead of
-e-mailing it, because a new staff account is `pending` and unusable until an administrator
-approves it — e-mailing a single-use link at creation time would let it expire before the
-account could be used. The console shows the link for manual handover, and it still lands
-on `/auth/confirm` → `/reset-password`. Self-service recovery and driver OTP send codes.
-Do not add copy that claims mail was sent on a path that only returns a link.
+`create_staff` now sends the invitation itself with `inviteUserByEmail()`. The template
+uses `{{ .TokenHash }}` against `/auth/confirm`, so Supabase's mailer never puts the
+session in a URL fragment. `/auth/confirm` verifies the token and forwards the visitor to
+`/accept-invitation`, where they choose a password and are sent to `/login`.
+
+The account is still created as `pending`. The invitation can be opened and a password set
+immediately, but the console stays closed until an administrator approves the account from
+the Users screen.
+
+The function secret `SITE_URL` is used as the `redirectTo` value. The hosted
+`site_url` must also be the production origin because the template builds its link from
+`.SiteURL`; `config.toml` only affects local development.
+
+Only `send_password_reset` still returns a link (`reset_link`) for manual handover. Self-service
+recovery and driver OTP send codes. Do not add copy that claims mail was sent on a path that
+only returns a link.
 
 ---
 

@@ -361,8 +361,10 @@ Deno.serve(async (request: Request) => {
       return errorResponse("invalid_email", "An e-mail address is required.", 400, origin);
     }
 
-    // Same contract as create_staff: our own /auth/confirm link is returned, not
-    // e-mailed. See the comment there for why.
+    // Password reset deliberately keeps the manual-handover contract: the
+    // console returns a link instead of sending mail. Staff invitations moved to
+    // inviteUserByEmail(), but this action is also used to replace an expired
+    // link and must not depend on SMTP being reachable at that moment.
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,

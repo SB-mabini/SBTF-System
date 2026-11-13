@@ -10,9 +10,10 @@ import { isDemoMode } from "@/lib/env";
 /**
  * Sets a new password for the session that already exists.
  *
- * Reaching this form requires a verified e-mail code or an administrator-issued
- * setup link; both leave a session behind, and the server page refuses to render
- * without one. There is therefore no "open the link first" state to handle here.
+ * Reaching this form requires a verified recovery code or an administrator-issued
+ * password-reset link; both leave a session behind, and the server page refuses
+ * to render without one. There is therefore no "open the link first" state to
+ * handle here. New staff invitations use /accept-invitation instead.
  */
 export function ResetPasswordForm() {
   const router = useRouter();

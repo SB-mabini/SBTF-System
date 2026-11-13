@@ -1,9 +1,10 @@
 # Staff Invitations & Email Confirmation — Plan and Status
 
-**Status:** implemented in the working tree (uncommitted) — `pending` account status,
-`/auth/confirm`, and the `password-recovery` Edge Function. Delivery now uses **Supabase
-SMTP**, reversing the Nodemailer decision recorded in §3.
-**Last updated:** 2026-10-13
+**Status:** implemented. The plan below is the historical design record. Since 13 November
+2026, staff invitations are sent by `admin-users` via `inviteUserByEmail()` and land on
+`/accept-invitation`; delivery uses **Supabase SMTP**. See `deployment.md` §3.1 and
+[`STAFF-INVITATION-EMAIL-TEMPLATE.md`](./STAFF-INVITATION-EMAIL-TEMPLATE.md).
+**Last updated:** 2026-11-13
 **Branch at time of writing:** `main`
 
 This file is the handover document for the staff-invitation feature. It records what
@@ -24,7 +25,11 @@ but **that is explicitly out of scope for this phase** (see §9).
 
 ## 2. Why the obvious implementation is wrong
 
-Three things in the current code look like they already do this job. They do not, and
+> Historical note: the observations in this section describe the tree before the
+> invitation e-mail was implemented. They are kept because the failure modes still apply to
+> any future change in this area.
+
+Three things in the existing code looked like they already did this job. They did not, and
 each failure mode is easy to mistake for a configuration problem:
 
 | Looks like it works | Reality |

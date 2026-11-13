@@ -18,9 +18,10 @@ import { isDemoMode } from "@/lib/env";
  * create a municipal account — it goes through the admin-users Edge Function,
  * which holds the service-role key and sets the role in app metadata itself.
  *
- * No e-mail is sent. The Edge Function returns the password-setup link and the
- * administrator passes it on by hand; see the comment in
- * supabase/functions/admin-users/index.ts for why.
+ * The Edge Function sends the invitation through Supabase's SMTP mailer, so the
+ * new staff member receives the link directly. The manual-link panel below is a
+ * fallback for a project still running an older deployed function; once
+ * admin-users is redeployed it never appears.
  */
 export function CreateStaffDialog({
   open,
@@ -45,6 +46,7 @@ export function CreateStaffDialog({
   }>({});
   const [message, setMessage] = useState<string | null>(null);
   const [setupLink, setSetupLink] = useState<string | null>(null);
+  const [created, setCreated] = useState(false);
 
   const readOnly = isDemoMode();
 
@@ -63,6 +65,7 @@ export function CreateStaffDialog({
     setFieldErrors({});
     setMessage(null);
     setSetupLink(null);
+    setCreated(false);
     setBusy(false);
     onClose();
   }
@@ -109,6 +112,7 @@ export function CreateStaffDialog({
     setError(null);
     setMessage(null);
     setSetupLink(null);
+    setCreated(false);
 
     const result = await createStaffUserAction({
       email: email.trim().toLowerCase(),
@@ -128,12 +132,7 @@ export function CreateStaffDialog({
     const link = result.details?.setup_link;
     setMessage(result.message);
     setSetupLink(typeof link === "string" && link.length > 0 ? link : null);
-
-    if (!link) {
-      // The account exists but no link came back; keep the dialog open so the
-      // administrator reads the fallback instruction before closing.
-      return;
-    }
+    setCreated(true);
   }
 
   return (
@@ -144,7 +143,7 @@ export function CreateStaffDialog({
       onClose={handleClose}
       width="lg"
       footer={
-        setupLink ? (
+        created ? (
           <Button variant="outline" onClick={handleClose}>
             Done
           </Button>
@@ -177,27 +176,52 @@ export function CreateStaffDialog({
 
       {setupLink ? (
         <div className="space-y-3">
-          <Alert tone="success" title="Account created">
+          <Alert tone="warning" title="Account created — manual link">
             {message}
           </Alert>
 
           <CopyLinkField
             label="Password setup link"
             value={setupLink}
-            hint="Send this to the new user through whatever channel the office uses. It works once, it is not stored anywhere in the system, and it can be replaced at any time with “Send password reset”."
+            hint="This fallback appears only while the deployed admin-users function is older than this console. Send the link through whatever channel the office uses; it works once."
           />
 
           <div className="rounded-lg bg-page px-3.5 py-3 text-[0.75rem] text-muted">
-            <p className="font-medium text-ink">What the new user sees</p>
+            <p className="font-medium text-ink">Automatic e-mail is not active yet</p>
+            <p className="mt-1">
+              The console received a setup link instead of a send confirmation, so the deployed
+              Edge Function is still the old manual flow. Redeploy
+              <code className="mx-1 rounded bg-white px-1 py-0.5 font-mono">admin-users</code>
+              to switch to invitation e-mails.
+            </p>
+          </div>
+        </div>
+      ) : created ? (
+        <div className="space-y-3">
+          <Alert tone="success" title="Invitation e-mail sent">
+            {message}
+          </Alert>
+
+          <div className="rounded-lg bg-page px-3.5 py-3 text-[0.75rem] text-muted">
+            <p className="font-medium text-ink">What happens next</p>
             <ol className="mt-1 list-decimal space-y-1 pl-4">
-              <li>They open the link and choose their own password.</li>
-              <li>They sign in at /login with the e-mail address above.</li>
               <li>
-                The role is already set — it lives in the Supabase Auth app metadata and is read
-                from there on every sign-in.
+                The new staff member receives the invitation at the e-mail address you entered.
+              </li>
+              <li>
+                They open the link, choose their own password, and are taken to the sign-in screen.
+              </li>
+              <li>
+                Approve the account from the Users list. Until it is approved, signing in shows
+                “awaiting approval”.
               </li>
             </ol>
           </div>
+
+          <p className="text-[0.75rem] text-muted">
+            If the message has not arrived after a few minutes, ask them to check the spam folder.
+            You can issue a new link with “Send password reset” on the account.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -291,12 +315,11 @@ export function CreateStaffDialog({
           </Field>
 
           <div className="rounded-lg bg-page px-3.5 py-3 text-[0.75rem] text-muted">
-            <p className="font-medium text-ink">No e-mail is sent</p>
+            <p className="font-medium text-ink">Invitation e-mail</p>
             <p className="mt-1">
-              The system creates the account and hands the password-setup link back to you in this
-              dialog. Supabase&apos;s built-in mailer is rate-limited and on a project without SMTP
-              often only reaches addresses already on the project team, so an invitation left to it
-              would silently never arrive. Passing the link on yourself is the reliable path.
+              The system creates the account and sends an invitation to the address above through
+              the project&apos;s Supabase SMTP. The staff member opens the link, sets their own
+              password, and is returned to the sign-in screen.
             </p>
             <p className="mt-2">
               Roles live in Supabase Auth app metadata only, which client SDKs cannot write. A

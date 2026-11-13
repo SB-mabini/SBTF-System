@@ -112,11 +112,7 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 ## 5. Known broken, not yet fixed
 
-1. **`/verify-email` claims an invitation e-mail is sent when none is.**
-   `apps/web/src/app/(auth)/verify-email/page.tsx:24-26` tells staff that created accounts
-   receive a Supabase invitation e-mail. `create_staff` deliberately does **not** send one:
-   it returns `setup_link` for manual handover. Fix the copy, or start sending the mail.
-2. **`renewal-reminders` is not deployed, and does not need to be.** `pg_cron` job 1 runs
+1. **`renewal-reminders` is not deployed, and does not need to be.** `pg_cron` job 1 runs
    `public.rpc_generate_renewal_reminders(array[90, 60, 30])` daily at 01:15 in-database.
    Deploy the function only if an HTTP entry point is wanted; it also requires the
    `REMINDER_CRON_SECRET` secret, which is not set.
@@ -141,6 +137,21 @@ only on the `auth.users` trigger. The trigger falls back to `driver` when it can
 the role from `app_metadata`, which produced staff accounts that appeared under Operators.
 One account created before this fix (`659ec9e9-33b3-4b01-b61c-9d21606ce45f`) was corrected
 to `staff` directly.
+
+### Staff invitations — e-mailed link (changed 13 November 2026)
+
+`create_staff` now calls `inviteUserByEmail()` and lets Supabase Auth send the invitation.
+The recipient opens `supabase/templates/invite.html`, which links to
+`/auth/confirm?token_hash=…&type=invite`; `/auth/confirm` verifies the token and forwards to
+the dedicated `/accept-invitation` panel. The staff member sets a password, is signed out,
+and lands on `/login?notice=password-set`.
+
+The account is still created as `pending`. An administrator approves it from the Users
+screen before the new staff member can use the console.
+
+The web panel and template are in the working tree, but the hosted project still runs the
+previous `admin-users` build until the function is redeployed and the hosted invite template
+is updated. In that window the console falls back to the manual `setup_link` panel.
 
 ### Password recovery — e-mail code (changed 4 November 2026)
 
@@ -176,8 +187,8 @@ but the flow itself does not depend on that copy.
 it: mail gateways and antivirus scanners pre-fetch URLs. A code cannot be pre-fetched. The
 change also removes both link-specific failure modes below from the recovery path.
 
-`/auth/confirm` still exists, but now serves only the setup links that `admin-users`
-returns for manually handed-over staff accounts. Do not remove it.
+`/auth/confirm` still exists, and now serves both the staff invitation e-mails sent by
+`admin-users` and the recovery links it returns for manual handover. Do not remove it.
 
 #### The three link faults, for context
 

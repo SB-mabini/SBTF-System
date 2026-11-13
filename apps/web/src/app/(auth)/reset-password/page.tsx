@@ -10,7 +10,10 @@ export const metadata = { title: "Set a new password — SBTF System" };
  * Reached in two ways, both of which already established a session:
  *
  *   - a verified 6-digit recovery code, via /recovery-choice;
- *   - an administrator-issued setup link, via /auth/confirm.
+ *   - an administrator-issued password-reset link, via /auth/confirm.
+ *
+ * New staff invitations use /accept-invitation instead, because their next step
+ * is the sign-in screen rather than an open console.
  *
  * The guard is server-side so the form never renders for a visitor without a
  * session, and so there is no "open the link in the same browser" placeholder to

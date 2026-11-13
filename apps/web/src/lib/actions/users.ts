@@ -82,11 +82,13 @@ async function deactivateThroughEdgeFunction(input: {
 }
 
 /**
- * The admin-users Edge Function hands the recovery link back instead of sending
- * an e-mail (Supabase's built-in mailer is rate-limited and usually only reaches
- * addresses already on the project team). The actions forward that link into
- * `ActionState.details`, which is the only channel a server action has for
- * returning data alongside the message.
+ * `send_password_reset` still hands a recovery link back instead of sending an
+ * e-mail, so the action forwards it into `ActionState.details` — the only
+ * channel a server action has for returning data alongside the message.
+ *
+ * Staff invitations no longer produce a link: `create_staff` sends the message
+ * itself. `setup_link` is still read when present so the console keeps working
+ * against an older deployed Edge Function during a rollout.
  */
 function linkDetails(payload: unknown, keys: string[]): Record<string, unknown> | undefined {
   if (!payload || typeof payload !== "object") return undefined;
@@ -253,12 +255,17 @@ export async function createStaffUserAction(input: {
 
   if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
 
+  const details = {
+    ...(linkDetails(data, ["setup_link", "email", "role", "user_id"]) ?? {}),
+  };
+  if (data?.invited === true) details.invited = true;
+
   return {
     ok: true,
     message:
       data?.message ??
-      "Account created. No e-mail is sent automatically — copy the setup link and send it to the new user yourself.",
-    details: linkDetails(data, ["setup_link", "email", "role", "user_id"]),
+      "Account created and the invitation e-mail was sent to the staff address.",
+    details: Object.keys(details).length > 0 ? details : undefined,
   };
 }
 
