@@ -78,13 +78,13 @@ These look like bugs but are properties of the dataset. Read before logging defe
 | A-06 | Open an application detail | Documents, applicant, TODA and timeline render; timeline shows `created` and per-document events | | |
 | A-07 | Verify a pending document as verified | Status flips to verified; `document_verified` event on the timeline; notification to the driver | | |
 | A-08 | Reject a document with a remark < 5 characters | Refused with the minimum-length message; at ≥ 5 characters it succeeds and resets approval of the application | | |
-| A-09 | **Create a staff account** (Users → Create account) | Account created; the dialog shows a password-setup link; **no e-mail is sent or claimed** | | |
-| A-09b | **Open the setup link** | First use: password set succeeds, sign-in works. Second use of the same link: refused (single-use) | | |
+| A-09 | **Create a staff account** (Users → Create account) | Account created as **Awaiting approval**; an invitation e-mail is sent to the address entered; the dialog reports the invitation, not a link | | |
+| A-09b | **Open the invitation e-mail link** | Lands on `/auth/confirm` → `/accept-invitation`; the password is saved; the visitor is signed out and `/login` shows “Password set”. Reusing the link is refused | | |
 | A-09c | **Call create-staff with the Edge Function undeployed** | Loud failure naming the missing function; **no partial account** exists in `auth.users` afterwards | | |
 | A-10 | Approve a fully verified application | Status becomes approved; franchise number `MAB-TR-YYYY-NNNNNN` issued; record linked; driver notified | | |
 | A-11 | Reject an application | Reason ≥ 10 characters required; shorter refused; the stored reason appears in the driver notification | | |
 | A-12 | Change a user's role / deactivate an account | Both refused for your own account; deactivation requires a reason ≥ 5 characters and bans the auth session; reactivation restores it | | |
-| A-13 | Send password reset for a user | A single-use reset link is returned in the console with a copy button; nothing is e-mailed | | |
+| A-13 | Look for a reset action on a user's row | **No “Send password reset” button exists** in Users; after approval the holder resets from “Forgot your password?” on `/login` (E-01) | | |
 | A-14 | Review the activity log | Every action above appears with actor, action and target; driver rows are not visible in full (scoped RLS) | | |
 | A-15 | Edit system settings | Value updates persist, are validated by type, and each change is written to the activity log | | |
 | A-16 | Generate and attach a certificate for an approved record | PDF generated client-side, uploaded to the `certificates` bucket under the staff member's folder, linked to the record | | |
@@ -233,11 +233,12 @@ Logs: Dashboard → Edge Functions → `password-recovery` → Logs.
 Apply `supabase/migrations/20260101091400_pending_account_status.sql` and redeploy
 `admin-users` before this flow, otherwise `create_staff` fails when it sets `pending`.
 
-1. Create a staff account → the row shows **Awaiting approval**.
-2. **Approve account** → status becomes active.
-3. **Send password reset** → the console returns a link (handover by design,
-   §3.1d of `deployment.md`). Once active, the staff member can also self-serve from
-   `/forgot-password`.
+1. Create a staff account → the row shows **Awaiting approval** and the invitation
+   e-mail is sent automatically (§3.1d of `deployment.md`).
+2. Open the link in that e-mail → set a password on `/accept-invitation`. The
+   administrator still needs to approve the account before the console opens.
+3. **Approve account** → status becomes active. The staff member signs in with the
+   password they just set, and can later reset it from `/forgot-password`.
 
 ---
 

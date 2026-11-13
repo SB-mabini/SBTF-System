@@ -69,7 +69,8 @@ docs/              Deployment, testing and mobile documentation
 - **Staff invitations are e-mailed links.** `create_staff` calls `inviteUserByEmail()`; the
   template sends the staff member to `/accept-invitation` to set a password and then to
   `/login`. The account is still `pending` until an administrator approves it. Only
-  `send_password_reset` still **returns** a link (`reset_link`) for manual handover.
+  `send_password_reset` still **returns** a link (`reset_link`), and its only caller is the
+  account owner's own Account settings.
 - **`/auth/confirm` consumes every auth link.** It handles `?token_hash=…&type=invite|recovery`
   (the invitation template and the `admin-users` reset link) and Supabase's `?code=…` PKCE
   flow, then forwards invites to `/accept-invitation` and recovery to `/reset-password`.

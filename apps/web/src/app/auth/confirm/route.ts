@@ -16,7 +16,7 @@ import { isDemoMode } from "@/lib/env";
  *   - The `admin-users` Edge Function builds our own link from
  *     `generateLink().properties.hashed_token` and points it here with
  *     `?token_hash=…&type=recovery`. That is the link returned by
- *     `send_password_reset` for manual handover.
+ *     `send_password_reset` for the account owner's own reset form.
  *   - Supabase's PKCE flow may still arrive with `?code=…`.
  *
  * Only `verifyOtp` / `exchangeCodeForSession` can turn either into a session,

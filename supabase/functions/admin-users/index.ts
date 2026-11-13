@@ -147,7 +147,7 @@ Deno.serve(async (request: Request) => {
     if (existingProfile) {
       return errorResponse(
         "already_registered",
-        "An account with this e-mail address already exists. Use “Send password reset” on that account instead of creating a new one.",
+        "An account with this e-mail address already exists. Approve it from the Users screen, or ask the holder to use “Forgot your password?” on the sign-in page instead of creating a new one.",
         409,
         origin,
       );
@@ -196,7 +196,7 @@ Deno.serve(async (request: Request) => {
       return errorResponse(
         "invite_failed",
         alreadyRegistered
-          ? "An account with this e-mail address already exists. Use “Send password reset” on that account instead."
+          ? "An account with this e-mail address already exists. Approve it from the Users screen, or ask the holder to use “Forgot your password?” on the sign-in page."
           : (inviteError?.message ?? "The invitation e-mail could not be sent."),
         400,
         origin,

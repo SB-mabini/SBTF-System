@@ -84,7 +84,9 @@ async function deactivateThroughEdgeFunction(input: {
 /**
  * `send_password_reset` still hands a recovery link back instead of sending an
  * e-mail, so the action forwards it into `ActionState.details` — the only
- * channel a server action has for returning data alongside the message.
+ * channel a server action has for returning data alongside the message. Its
+ * only caller is the account owner's own reset form in Account settings; the
+ * administrator's Users screen no longer offers it.
  *
  * Staff invitations no longer produce a link: `create_staff` sends the message
  * itself. `setup_link` is still read when present so the console keeps working

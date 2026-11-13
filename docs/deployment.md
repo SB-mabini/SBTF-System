@@ -313,9 +313,10 @@ The function secret `SITE_URL` is used as the `redirectTo` value. The hosted
 `site_url` must also be the production origin because the template builds its link from
 `.SiteURL`; `config.toml` only affects local development.
 
-Only `send_password_reset` still returns a link (`reset_link`) for manual handover. Self-service
-recovery and driver OTP send codes. Do not add copy that claims mail was sent on a path that
-only returns a link.
+`send_password_reset` is no longer offered on the Users screen. The only caller left is
+the account owner's own **Account settings → Reset password**, which still receives a
+`reset_link` for manual use. Self-service recovery and driver OTP send codes. Do not add
+copy that claims mail was sent on a path that only returns a link.
 
 ---
 
@@ -456,12 +457,14 @@ From the console: **Administrator → Users and roles → Create account**.
 1. Enter first name, last name, official e-mail, contact number, role
    (`staff` or `administrator`).
 2. The `admin-users` Edge Function creates the auth user with the role in
-   `raw_app_meta_data` (service role only — clients cannot write it) and returns a
-   password-setup link.
-3. The dialog shows the link in a read-only field with a copy button. **No e-mail is
-   sent.** Pass the link to the new user yourself.
-4. The link is single-use and expires. If it is lost, **Send password reset** on the
-   user's row generates a new one the same way.
+   `raw_app_meta_data` (service role only — clients cannot write it) and sends the
+   invitation with `inviteUserByEmail()`.
+3. The new user receives the e-mail from the project's SMTP and opens
+   `/accept-invitation` to choose a password. The dialog reports that the invitation was
+   sent; nothing has to be copied by hand.
+4. The account is created as **Awaiting approval**. Approve it from the Users screen; the
+   new staff member can then sign in with the password they set. If the e-mail is lost,
+   they can use **Forgot your password?** on `/login` once the account is approved.
 
 Self-registration is deliberately driver-only (mobile app); there is no public sign-up
 for staff roles.

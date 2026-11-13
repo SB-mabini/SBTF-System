@@ -220,7 +220,8 @@ export function CreateStaffDialog({
 
           <p className="text-[0.75rem] text-muted">
             If the message has not arrived after a few minutes, ask them to check the spam folder.
-            You can issue a new link with “Send password reset” on the account.
+            Once the account is approved, the staff member can also use “Forgot your password?” on
+            the sign-in page.
           </p>
         </div>
       ) : (
