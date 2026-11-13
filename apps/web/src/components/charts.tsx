@@ -25,6 +25,7 @@ import type {
   TrendPoint,
 } from "@/types/database";
 import { DOCUMENT_SHORT_LABELS } from "@/lib/constants";
+import { formatDays, formatNumber, formatPercent } from "@/lib/format";
 
 const AXIS = { fontSize: 11, fill: "#6b7280" } as const;
 
@@ -51,65 +52,198 @@ function ChartFrame({
   );
 }
 
+/** A one-sentence reading of the chart, recomputed from the current data. */
+function ChartNote({ children }: { children: React.ReactNode }) {
+  return <p className="mt-2 text-[0.75rem] leading-relaxed text-muted">{children}</p>;
+}
+
+function describeApplicationTrend(data: TrendPoint[]): string {
+  if (data.length === 0) return "No application volume has been recorded yet.";
+
+  const peak = data.reduce((best, point) => (point.submitted > best.submitted ? point : best));
+  const totalSubmitted = data.reduce((sum, point) => sum + point.submitted, 0);
+  const totalApproved = data.reduce((sum, point) => sum + point.approved, 0);
+  const totalRejected = data.reduce((sum, point) => sum + point.rejected, 0);
+  const latest = data[data.length - 1];
+  const previous = data.length > 1 ? data[data.length - 2] : undefined;
+
+  const movement =
+    latest && previous
+      ? latest.submitted === previous.submitted
+        ? `unchanged from ${previous.month_label}`
+        : `${latest.submitted > previous.submitted ? "up" : "down"} ${formatNumber(
+            Math.abs(latest.submitted - previous.submitted),
+          )} from ${previous.month_label}`
+      : null;
+
+  return `Submissions peaked in ${peak.month_label} at ${formatNumber(
+    peak.submitted,
+  )}${movement ? `, and the latest month is ${movement}` : ""}; ${formatNumber(
+    totalApproved,
+  )} were approved and ${formatNumber(totalRejected)} rejected across ${formatNumber(
+    totalSubmitted,
+  )} submissions.`;
+}
+
+function describeApplicationType(data: TrendPoint[]): string {
+  const newCount = data.reduce((sum, point) => sum + point.new_count, 0);
+  const renewalCount = data.reduce((sum, point) => sum + point.renewal_count, 0);
+  const total = newCount + renewalCount;
+  if (total === 0) return "No new or renewal applications are recorded for this period.";
+
+  return `New registrations account for ${formatNumber(
+    newCount,
+  )} of ${formatNumber(total)} applications, while renewals make up ${formatPercent(
+    (renewalCount / total) * 100,
+  )}.`;
+}
+
+function describeTodaMix(rows: TodaAnalytics[]): string {
+  if (rows.length === 0) return "No TODA activity is recorded yet.";
+
+  const total = rows.reduce((sum, row) => sum + row.applications, 0);
+  if (total === 0) return "None of the TODAs shown has recorded an application yet.";
+
+  const leader = rows.reduce((best, row) => (row.applications > best.applications ? row : best));
+  return `${leader.toda_name.replace(/^TODA\s+/, "")} leads with ${formatNumber(
+    leader.applications,
+  )} applications; the ${formatNumber(rows.length)} TODAs shown account for ${formatNumber(
+    total,
+  )} in total.`;
+}
+
+function describeProcessingTime(data: ProcessingTimePoint[]): string {
+  const latest = [...data].reverse().find((point) => point.avg_days !== null);
+  if (!latest || latest.avg_days === null) {
+    return "No decided applications have a processing-time reading yet.";
+  }
+
+  const target = 5;
+  const comparison =
+    latest.avg_days <= target
+      ? "within"
+      : `${formatDays(latest.avg_days - target)} above`;
+
+  return `Average processing time in ${latest.month_label} is ${formatDays(
+    latest.avg_days,
+  )}, ${comparison} the ${target}-day service target.`;
+}
+
+function describeDecisionMix(approved: number, pending: number, rejected: number): string {
+  const total = approved + pending + rejected;
+  if (total === 0) return "No applications have been recorded yet.";
+
+  return `${formatPercent((approved / total) * 100)} of ${formatNumber(
+    total,
+  )} applications are approved, with ${formatNumber(pending)} still pending review and ${formatNumber(
+    rejected,
+  )} rejected.`;
+}
+
+function describeDocumentCompliance(rows: DocumentComplianceRow[]): string {
+  const withRate = rows.filter((row) => row.verified_rate !== null);
+  if (withRate.length === 0) return "No documents have been verified yet.";
+
+  const totalDocuments = withRate.reduce((sum, row) => sum + row.total, 0);
+  const totalVerified = withRate.reduce((sum, row) => sum + row.verified, 0);
+  const overall =
+    totalDocuments > 0 ? (totalVerified / totalDocuments) * 100 : null;
+  const highest = withRate.reduce((best, row) =>
+    (row.verified_rate ?? 0) > (best.verified_rate ?? 0) ? row : best,
+  );
+  const lowest = withRate.reduce((worst, row) =>
+    (row.verified_rate ?? 100) < (worst.verified_rate ?? 100) ? row : worst,
+  );
+  const label = (row: DocumentComplianceRow) =>
+    DOCUMENT_SHORT_LABELS[row.document_type].replace(
+      " (Official Receipt & Certificate of Registration)",
+      "",
+    );
+
+  if (withRate.length === 1) {
+    return `Overall verification is ${formatPercent(overall)}, with ${label(
+      highest,
+    )} at ${formatPercent(highest.verified_rate)}.`;
+  }
+
+  return `Overall verification is ${formatPercent(
+    overall,
+  )}, with ${label(highest)} highest at ${formatPercent(
+    highest.verified_rate,
+  )} and ${label(lowest)} lowest at ${formatPercent(lowest.verified_rate)}.`;
+}
+
 /** Application volume with new / renewal split. */
 export function ApplicationTrendChart({ data }: { data: TrendPoint[] }) {
   return (
-    <ChartFrame>
-      <AreaChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-        <defs>
-          <linearGradient id="submittedFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#271564" stopOpacity={0.22} />
-            <stop offset="100%" stopColor="#271564" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-        <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
-        <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Area
-          type="monotone"
-          dataKey="submitted"
-          name="Submitted"
-          stroke="#271564"
-          strokeWidth={2}
-          fill="url(#submittedFill)"
-        />
-        <Line
-          type="monotone"
-          dataKey="approved"
-          name="Approved"
-          stroke="#0f7a4a"
-          strokeWidth={2}
-          dot={false}
-        />
-        <Line
-          type="monotone"
-          dataKey="rejected"
-          name="Rejected"
-          stroke="#d4271d"
-          strokeWidth={2}
-          dot={false}
-        />
-      </AreaChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame>
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <defs>
+            <linearGradient id="submittedFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#271564" stopOpacity={0.22} />
+              <stop offset="100%" stopColor="#271564" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Area
+            type="monotone"
+            dataKey="submitted"
+            name="Submitted"
+            stroke="#271564"
+            strokeWidth={2}
+            fill="url(#submittedFill)"
+          />
+          <Line
+            type="monotone"
+            dataKey="approved"
+            name="Approved"
+            stroke="#0f7a4a"
+            strokeWidth={2}
+            dot={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="rejected"
+            name="Rejected"
+            stroke="#d4271d"
+            strokeWidth={2}
+            dot={false}
+          />
+        </AreaChart>
+      </ChartFrame>
+      <ChartNote>{describeApplicationTrend(data)}</ChartNote>
+    </div>
   );
 }
 
 /** New versus renewal volume. */
 export function ApplicationTypeChart({ data }: { data: TrendPoint[] }) {
   return (
-    <ChartFrame height={240}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-        <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
-        <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Bar dataKey="new_count" name="New" stackId="a" fill="#271564" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="renewal_count" name="Renewal" stackId="a" fill="#F2C749" radius={[3, 3, 0, 0]} />
-      </BarChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame height={240}>
+        <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="new_count" name="New" stackId="a" fill="#271564" radius={[0, 0, 0, 0]} />
+          <Bar
+            dataKey="renewal_count"
+            name="Renewal"
+            stackId="a"
+            fill="#F2C749"
+            radius={[3, 3, 0, 0]}
+          />
+        </BarChart>
+      </ChartFrame>
+      <ChartNote>{describeApplicationType(data)}</ChartNote>
+    </div>
   );
 }
 
@@ -121,57 +255,69 @@ export function TodaComparisonChart({ data }: { data: TodaAnalytics[] }) {
   }));
 
   return (
-    <ChartFrame height={300}>
-      <BarChart data={top} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-        <XAxis type="number" tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
-        <YAxis
-          type="category"
-          dataKey="short_name"
-          width={110}
-          tick={AXIS}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Bar dataKey="approved" name="Approved" stackId="s" fill="#271564" />
-        <Bar dataKey="pending" name="Pending" stackId="s" fill="#F2C749" />
-        <Bar dataKey="rejected" name="Rejected" stackId="s" fill="#d4271d" radius={[0, 3, 3, 0]} />
-      </BarChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame height={300}>
+        <BarChart data={top} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+          <XAxis type="number" tick={AXIS} tickLine={false} axisLine={false} allowDecimals={false} />
+          <YAxis
+            type="category"
+            dataKey="short_name"
+            width={110}
+            tick={AXIS}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="approved" name="Approved" stackId="s" fill="#271564" />
+          <Bar dataKey="pending" name="Pending" stackId="s" fill="#F2C749" />
+          <Bar
+            dataKey="rejected"
+            name="Rejected"
+            stackId="s"
+            fill="#d4271d"
+            radius={[0, 3, 3, 0]}
+          />
+        </BarChart>
+      </ChartFrame>
+      <ChartNote>{describeTodaMix(top)}</ChartNote>
+    </div>
   );
 }
 
 /** Processing-time trend with the 5-day service target marked. */
 export function ProcessingTimeChart({ data }: { data: ProcessingTimePoint[] }) {
   return (
-    <ChartFrame height={240}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-        <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
-        <YAxis tick={AXIS} tickLine={false} axisLine={false} unit="d" />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
-        <Line
-          type="monotone"
-          dataKey="avg_days"
-          name="Average days"
-          stroke="#271564"
-          strokeWidth={2}
-          dot={{ r: 2 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="median_days"
-          name="Median days"
-          stroke="#6b7280"
-          strokeWidth={2}
-          strokeDasharray="4 3"
-          dot={false}
-        />
-      </LineChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame height={240}>
+        <LineChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="month_label" tick={AXIS} tickLine={false} axisLine={false} />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} unit="d" />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Line
+            type="monotone"
+            dataKey="avg_days"
+            name="Average days"
+            stroke="#271564"
+            strokeWidth={2}
+            dot={{ r: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="median_days"
+            name="Median days"
+            stroke="#6b7280"
+            strokeWidth={2}
+            strokeDasharray="4 3"
+            dot={false}
+          />
+        </LineChart>
+      </ChartFrame>
+      <ChartNote>{describeProcessingTime(data)}</ChartNote>
+    </div>
   );
 }
 
@@ -192,25 +338,28 @@ export function DecisionMixChart({
   ];
 
   return (
-    <ChartFrame height={240}>
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={58}
-          outerRadius={88}
-          paddingAngle={2}
-          strokeWidth={0}
-        >
-          {data.map((entry) => (
-            <Cell key={entry.name} fill={entry.fill} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
-      </PieChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame height={240}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={58}
+            outerRadius={88}
+            paddingAngle={2}
+            strokeWidth={0}
+          >
+            {data.map((entry) => (
+              <Cell key={entry.name} fill={entry.fill} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+        </PieChart>
+      </ChartFrame>
+      <ChartNote>{describeDecisionMix(approved, pending, rejected)}</ChartNote>
+    </div>
   );
 }
 
@@ -222,14 +371,29 @@ export function DocumentComplianceChart({ data }: { data: DocumentComplianceRow[
   }));
 
   return (
-    <ChartFrame height={240}>
-      <BarChart data={rows} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-        <XAxis dataKey="label" tick={{ ...AXIS, fontSize: 10 }} tickLine={false} axisLine={false} interval={0} />
-        <YAxis tick={AXIS} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
-        <Tooltip contentStyle={tooltipStyle} />
-        <Bar dataKey="verified_rate" name="Verified" fill="#271564" radius={[3, 3, 0, 0]} barSize={38} />
-      </BarChart>
-    </ChartFrame>
+    <div>
+      <ChartFrame height={240}>
+        <BarChart data={rows} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={{ ...AXIS, fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+          />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
+          <Tooltip contentStyle={tooltipStyle} />
+          <Bar
+            dataKey="verified_rate"
+            name="Verified"
+            fill="#271564"
+            radius={[3, 3, 0, 0]}
+            barSize={38}
+          />
+        </BarChart>
+      </ChartFrame>
+      <ChartNote>{describeDocumentCompliance(data)}</ChartNote>
+    </div>
   );
 }

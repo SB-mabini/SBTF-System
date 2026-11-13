@@ -14,7 +14,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
     expect(find.byType(AppBar), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Login'), findsOneWidget);
 
     // The banner explains why sign-in is disabled — the form is never hidden.
     expect(find.textContaining('Preview mode'), findsOneWidget);
@@ -26,8 +26,8 @@ void main() {
     final signIn = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(signIn.onPressed, isNull);
 
-    final register = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Create an account'),
+    final register = tester.widget<TextButton>(
+      find.byKey(const Key('login-register-link')),
     );
     expect(register.onPressed, isNull);
   });
