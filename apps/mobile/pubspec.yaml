@@ -23,6 +23,10 @@ dependencies:
 
   flutter_riverpod: ^2.6.1
   supabase_flutter: ^2.13.0
+  # First-run onboarding, language preference and agreement acceptance are
+  # device preferences. Already present transitively via supabase_flutter;
+  # declared directly because the app now depends on it.
+  shared_preferences: ^2.5.6
   # Push notifications
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3
@@ -49,9 +53,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: false
-  image_path: "assets/app_icon.jpg"
+  image_path: "assets/branding/app_icon.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/logo.jpg
+    - assets/mabini-logo.png
+    - assets/branding/

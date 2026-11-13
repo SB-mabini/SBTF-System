@@ -2,12 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileCheck2, Link2, Printer, Undo2 } from "lucide-react";
+import { Eye, FileCheck2, Printer, Undo2 } from "lucide-react";
 
-import { Alert, Button, Field } from "@/components/ui";
+import { Alert, Button, Field, LinkButton } from "@/components/ui";
 import { Modal } from "@/components/dialog";
 import {
-  convertFormRequestAction,
   issueFormRequestAction,
   markFormRequestPrintedAction,
   rejectFormRequestAction,
@@ -19,20 +18,20 @@ export function FormRequestActions({
   formRequestId,
   status,
   printed = false,
+  convertedApplicationId = null,
   readOnly = false,
 }: {
   formRequestId: string;
   status: FormRequestStatus;
   printed?: boolean;
+  convertedApplicationId?: string | null;
   readOnly?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [convertOpen, setConvertOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [applicationNumber, setApplicationNumber] = useState("");
   const [reason, setReason] = useState("");
 
   const disabled = readOnly || isDemoMode();
@@ -41,9 +40,7 @@ export function FormRequestActions({
     setMessage({ ok: result.ok, text: result.message });
     setBusy(false);
     if (result.ok) {
-      setConvertOpen(false);
       setRejectOpen(false);
-      setApplicationNumber("");
       setReason("");
       startTransition(() => router.refresh());
     }
@@ -62,11 +59,6 @@ export function FormRequestActions({
   async function handlePrint() {
     setBusy(true);
     refresh(await markFormRequestPrintedAction(formRequestId));
-  }
-
-  async function handleConvert() {
-    setBusy(true);
-    refresh(await convertFormRequestAction({ formRequestId, applicationNumber }));
   }
 
   if (status !== "requested" && status !== "issued" && status !== "converted") return null;
@@ -98,11 +90,11 @@ export function FormRequestActions({
               Mark as printed
             </Button>
           ) : null}
-          {status === "issued" ? (
-            <Button variant="outline" disabled={disabled || busy} onClick={() => setConvertOpen(true)}>
-              <Link2 className="h-4 w-4" />
-              Link to application
-            </Button>
+          {status === "converted" && convertedApplicationId ? (
+            <LinkButton variant="outline" href={`/staff/applications/${convertedApplicationId}`}>
+              <Eye className="h-4 w-4" />
+              View
+            </LinkButton>
           ) : null}
         </div>
       )}
@@ -135,37 +127,6 @@ export function FormRequestActions({
             maxLength={1000}
             onChange={(event) => setReason(event.target.value)}
             placeholder="For example: The OR/CR photo is blurry. Please upload a clearer copy."
-          />
-        </Field>
-      </Modal>
-
-      <Modal
-        open={convertOpen}
-        title="Link form request to an application"
-        description="Enter the application number the submitted form belongs to."
-        onClose={() => setConvertOpen(false)}
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button
-              loading={busy}
-              disabled={applicationNumber.trim().length === 0}
-              onClick={handleConvert}
-            >
-              Link
-            </Button>
-          </>
-        }
-      >
-        <Field label="Application number (required)" htmlFor="application-number">
-          <input
-            id="application-number"
-            className="sbtf-input"
-            value={applicationNumber}
-            onChange={(event) => setApplicationNumber(event.target.value)}
-            placeholder="For example: APP-2026-000123"
           />
         </Field>
       </Modal>

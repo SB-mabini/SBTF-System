@@ -29,10 +29,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       </main>
 
       <footer className="border-t border-line bg-white px-6 py-4 text-center text-[0.6875rem] text-muted">
-        <p>
-          Web and Mobile-Based Franchising and Tricycle Driver Registration System with Descriptive
-          and Prescriptive Analytics and Decision Support.
-        </p>
         <p className="mt-1">
           <Link className="text-primary hover:underline" href="/verify">
             Verify a franchise certificate

@@ -53,6 +53,10 @@ class AppNotification {
   bool get targetsFormRequest =>
       targetType == 'form_request' && targetId != null;
 
+  /// True when it points at an office announcement.
+  bool get targetsAnnouncement =>
+      targetType == 'announcement' && targetId != null;
+
   factory AppNotification.fromMap(Map<String, dynamic> map) {
     return AppNotification(
       id: (map['id'] ?? '').toString(),

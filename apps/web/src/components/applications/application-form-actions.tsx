@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import { Alert, Button } from "@/components/ui";
 import { buildApplicationFormPdf } from "@/lib/application-form";
 import { MUNICIPALITY, PROVINCE } from "@/lib/constants";
-import type { FranchiseApplicationDetail } from "@/types/database";
+import { documentTemplateFrom, loadDocumentLogoDataUrl } from "@/lib/document-template";
+import type { FranchiseApplicationDetail, SystemSetting } from "@/types/database";
 
 async function dataUrlFromUrl(url: string | null | undefined): Promise<string | null> {
   if (!url) return null;
@@ -37,18 +38,25 @@ function formatDate(value: string | null | undefined): string {
 export function ApplicationFormActions({
   application,
   signatureUrl,
+  settings = [],
 }: {
   application: FranchiseApplicationDetail;
   signatureUrl: string | null;
+  settings?: SystemSetting[];
 }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function generate() {
+    if (busy) return;
     setBusy(true);
     setMessage(null);
     try {
-      const signature = await dataUrlFromUrl(signatureUrl);
+      const template = documentTemplateFrom(settings);
+      const [signature, logoDataUrl] = await Promise.all([
+        dataUrlFromUrl(signatureUrl),
+        template.logoEnabled ? loadDocumentLogoDataUrl() : Promise.resolve(null),
+      ]);
       const address = [application.operator_address_line, MUNICIPALITY, PROVINCE]
         .filter((part) => Boolean(part && String(part).trim()))
         .join(", ");
@@ -80,6 +88,11 @@ export function ApplicationFormActions({
           .join(" "),
         signatureDataUrl: signature,
         printedAt: formatDate(new Date().toISOString()),
+        logoDataUrl,
+        logoEnabled: template.logoEnabled,
+        logoPosition: template.logoPosition,
+        logoWidth: template.logoWidth,
+        headerAlign: template.headerAlign,
       });
 
       const url = doc.output("bloburl");
@@ -98,7 +111,7 @@ export function ApplicationFormActions({
   return (
     <div className="space-y-2">
       <Button variant="secondary" onClick={generate} loading={busy}>
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+        <FileText className="h-4 w-4" />
         Print application form (PDF)
       </Button>
       {message ? <Alert tone="danger">{message}</Alert> : null}

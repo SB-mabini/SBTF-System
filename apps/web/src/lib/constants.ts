@@ -123,6 +123,19 @@ export const REQUIRED_DOCUMENTS: DocumentType[] = [
 
 export const ADVISORY_NOTICE = "Advisory — For Decision Support Only";
 
+export const ANNOUNCEMENT_AUDIENCE_LABELS = {
+  all_drivers: "All drivers",
+  all_members: "All members (drivers with a TODA)",
+  toda: "Specific TODAs",
+  drivers: "Specific drivers",
+} as const;
+
+export const ANNOUNCEMENT_STATUS_LABELS = {
+  draft: "Draft",
+  published: "Published",
+  archived: "Archived",
+} as const;
+
 export const STORAGE_BUCKETS = {
   documents: "franchise-documents",
   certificates: "certificates",

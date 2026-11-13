@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'document_picker.dart';
+import 'onboarding/onboarding_store.dart';
+import 'models/announcement.dart';
 import 'models/app_notification.dart';
 import 'models/appointment.dart';
 import 'models/franchise_application.dart';
@@ -11,6 +13,8 @@ import 'models/profile.dart';
 import 'models/toda.dart';
 import 'qr_scanner.dart';
 import 'url_opener.dart';
+import 'services/announcement_service.dart';
+import 'services/agreement_service.dart';
 import 'services/application_service.dart';
 import 'services/appointment_service.dart';
 import 'services/certificate_service.dart';
@@ -26,6 +30,19 @@ import 'services/reference_service.dart';
 /// allowed to touch a database there.
 final supabaseClientProvider = Provider<SupabaseClient>((ref) {
   return Supabase.instance.client;
+});
+
+/// First-run onboarding state, read by the launch gate and by Settings.
+///
+/// One instance per provider container keeps the in-memory state and the
+/// persisted values in sync while the app is running.
+final onboardingStoreProvider = Provider<OnboardingStore>((ref) {
+  return OnboardingStore();
+});
+
+/// Mirrors an accepted User Agreement to the signed-in driver's profile.
+final agreementServiceProvider = Provider<AgreementService>((ref) {
+  return const AgreementService();
 });
 
 /// Emits every auth transition (sign-in, sign-out, token refresh, initial
@@ -86,6 +103,13 @@ final authSessionSyncProvider = Provider<void>((ref) {
     if (event == null) return;
     if (!_driverDataRefreshEvents.contains(event)) return;
     _invalidateDriverData(ref);
+
+    // Onboarding is completed before sign-in, so the acceptance is recorded
+    // locally first. Once the driver is signed in, mirror it to the profile.
+    if (event == AuthChangeEvent.signedIn) {
+      final acceptance = ref.read(onboardingStoreProvider).state;
+      ref.read(agreementServiceProvider).sync(acceptance).ignore();
+    }
   });
 });
 
@@ -114,6 +138,9 @@ void _invalidateDriverData(Ref ref) {
   ref.invalidate(unreadNotificationCountStreamProvider);
 
   ref.invalidate(myAppointmentsStreamProvider);
+
+  ref.invalidate(announcementsProvider);
+  ref.invalidate(announcementsStreamProvider);
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +184,11 @@ final notificationServiceProvider = Provider<NotificationService>(
 /// Slice 9 — in-person appointments booked by the municipal staff.
 final appointmentServiceProvider = Provider<AppointmentService>(
   (ref) => AppointmentService(ref.watch(supabaseClientProvider)),
+);
+
+/// Office announcements addressed to the driver.
+final announcementServiceProvider = Provider<AnnouncementService>(
+  (ref) => AnnouncementService(ref.watch(supabaseClientProvider)),
 );
 
 /// Slice 3 + 5 — picks a documentary requirement from the device.
@@ -258,6 +290,11 @@ final unreadNotificationCountProvider = FutureProvider<int>(
   (ref) => ref.watch(notificationServiceProvider).unreadCount(),
 );
 
+/// Published office announcements, newest first.
+final announcementsProvider = FutureProvider<List<Announcement>>(
+  (ref) => ref.watch(announcementServiceProvider).listPublished(),
+);
+
 // ---------------------------------------------------------------------------
 // Realtime providers (slices 4, 6, 7)
 //
@@ -283,6 +320,11 @@ final unreadNotificationCountStreamProvider = StreamProvider<int>(
 /// Live franchise records (slice 6).
 final myRecordsStreamProvider = StreamProvider<List<FranchiseRecord>>(
   (ref) => ref.watch(certificateServiceProvider).watchMine(),
+);
+
+/// Live published announcements, so a new notice appears without a refresh.
+final announcementsStreamProvider = StreamProvider<List<Announcement>>(
+  (ref) => ref.watch(announcementServiceProvider).watchPublished(),
 );
 
 /// Live appointment list (slice 9).

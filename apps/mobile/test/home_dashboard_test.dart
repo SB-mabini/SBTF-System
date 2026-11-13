@@ -47,26 +47,36 @@ void main() {
     expect(find.text('juan@example.com'), findsOneWidget);
     expect(find.text('Driver / Operator'), findsOneWidget);
     expect(find.text('Welcome back'), findsNothing);
-    expect(find.text('Mabini Franchise'), findsOneWidget);
+    expect(find.text('SBTF System'), findsOneWidget);
   });
 
-  testWidgets('groups every destination under the section headers',
+  testWidgets('keeps destinations on the Track and Documents tabs',
       (tester) async {
     await _pumpTall(tester, _harness(0));
 
-    expect(find.text('Services'), findsOneWidget);
-    expect(find.text('Track & updates'), findsOneWidget);
-    expect(find.text('New franchise application'), findsOneWidget);
-    expect(find.text('Renewal application'), findsOneWidget);
-    expect(find.text('My documents'), findsOneWidget);
-    expect(find.text('Certificate & QR code'), findsOneWidget);
-    expect(find.text('My application status'), findsOneWidget);
+    await tester.tap(find.text('Track'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Track & Updates'), findsOneWidget);
+    expect(find.text('My Appointments'), findsOneWidget);
+    expect(find.text('My Application Status'), findsOneWidget);
+    expect(find.text('Announcements'), findsOneWidget);
     expect(find.text('Notifications'), findsOneWidget);
+
+    await tester.tap(find.text('Documents'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Documents & Certificates'), findsOneWidget);
+    expect(find.text('My Documents'), findsOneWidget);
+    expect(find.text('Certificate & QR Code'), findsOneWidget);
   });
 
   testWidgets('the notifications row carries the live unread badge',
       (tester) async {
     await _pumpTall(tester, _harness(3));
+
+    await tester.tap(find.text('Track'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
@@ -76,19 +86,21 @@ void main() {
       (tester) async {
     await _pumpTall(tester, _harness(0));
 
-    final title = tester.widget<Text>(find.text('My documents'));
-    expect(title.style?.fontSize, 14);
+    await tester.tap(find.text('Documents'));
+    await tester.pumpAndSettle();
+
+    final title = tester.widget<Text>(find.text('My Documents'));
+    expect(title.style?.fontSize, 15);
 
     final cardFinder = find.ancestor(
-      of: find.text('My documents'),
+      of: find.text('My Documents'),
       matching: find.byType(Card),
     );
     final cardSize = tester.getSize(cardFinder);
-    expect(cardSize.height, inInclusiveRange(48, 72));
+    expect(cardSize.height, inInclusiveRange(48, 80));
   });
 
-  testWidgets('Apply navigation opens the request form first',
-      (tester) async {
+  testWidgets('Apply navigation opens the request form first', (tester) async {
     await _pumpTall(tester, _harness(0));
 
     await tester.tap(find.text('Apply'));

@@ -86,3 +86,72 @@ export async function updateProfileAction(input: ProfileUpdateInput): Promise<Ac
   revalidatePath("/staff/account");
   return { ok: true, message: "Your details have been updated." };
 }
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * Changes the signed-in user's own password.
+ *
+ * Supabase Auth is the only password store. The current password is verified by
+ * re-authenticating before `updateUser`, so a borrowed session cannot silently
+ * take over the account. Nothing is written to the profile table.
+ */
+export async function changePasswordAction(
+  input: ChangePasswordInput,
+): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const session = await getSessionProfile();
+  if (!session) return { ok: false, message: "Your session has expired. Sign in again." };
+
+  const currentPassword = input.currentPassword;
+  const newPassword = input.newPassword;
+  const confirmPassword = input.confirmPassword;
+
+  if (!currentPassword) return { ok: false, message: "Enter your current password." };
+  if (newPassword.length < 8) {
+    return { ok: false, message: "The new password must be at least 8 characters." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { ok: false, message: "The new password and confirmation do not match." };
+  }
+  if (newPassword === currentPassword) {
+    return { ok: false, message: "Choose a password different from your current one." };
+  }
+
+  const supabase = await createClient();
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: session.profile.email,
+    password: currentPassword,
+  });
+  if (signInError) {
+    return { ok: false, message: "Your current password is incorrect." };
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  if (updateError) return { ok: false, message: updateError.message };
+
+  const { error: logError } = await supabase.rpc("rpc_log_activity", {
+    p_action: "security_event",
+    p_target_type: "profile",
+    p_target_id: session.profile.id,
+    p_metadata: { event: "password_changed" },
+  });
+
+  if (logError) {
+    return {
+      ok: true,
+      message: `Your password was changed, but the security log entry could not be written: ${logError.message}`,
+    };
+  }
+
+  revalidatePath("/admin/account");
+  revalidatePath("/staff/account");
+  revalidatePath("/admin/settings");
+  return { ok: true, message: "Your password has been changed." };
+}

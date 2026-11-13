@@ -557,6 +557,9 @@ void main() {
     testWidgets('shows the live unread count', (tester) async {
       await _pumpTall(tester, homeHarness(Stream.value(3)));
 
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
     });
@@ -564,12 +567,18 @@ void main() {
     testWidgets('hides the badge when nothing is unread', (tester) async {
       await _pumpTall(tester, homeHarness(Stream.value(0)));
 
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('0'), findsNothing);
     });
 
     testWidgets('caps a large unread count', (tester) async {
       await _pumpTall(tester, homeHarness(Stream.value(42)));
+
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
 
       expect(find.text('9+'), findsOneWidget);
     });

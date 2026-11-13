@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileCheck2, Loader2, Printer, Stamp } from "lucide-react";
+import { Download, FileCheck2, Printer, Stamp } from "lucide-react";
 
 import { Alert, Button, Card, CardHeader } from "@/components/ui";
 import { attachCertificateAction, logActivityAction } from "@/lib/actions/applications";
 import { buildCertificatePdf, certificateStoragePath } from "@/lib/certificate";
 import { MUNICIPALITY, PROVINCE } from "@/lib/constants";
+import { documentTemplateFrom, loadDocumentLogoDataUrl } from "@/lib/document-template";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/env";
 import { formatDate } from "@/lib/format";
@@ -56,10 +57,13 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
   const readOnly = isDemoMode() || externalReadOnly;
 
   async function generate() {
+    if (busy) return;
     setBusy(true);
     setMessage(null);
 
     try {
+      const template = documentTemplateFrom(settings);
+      const logoDataUrl = template.logoEnabled ? await loadDocumentLogoDataUrl() : null;
       const application = record.application;
       const operatorName =
         record.operator?.full_name ??
@@ -88,31 +92,24 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
         seatingCapacity: application?.seating_capacity ?? 1,
         issuedAt: record.issued_at,
         expiresAt: record.expires_at,
-        signatoryName: settingValue(settings, "certificate_signatory_name", "Municipal Mayor"),
-        signatoryPosition: settingValue(settings, "certificate_signatory_position", "Municipal Mayor"),
-        officeName: settingValue(
-          settings,
-          "office_name",
-          "Sangguniang Bayan ng Mabini — Committee on Transportation",
-        ),
-        footerNote: settingValue(
-          settings,
-          "certificate_footer_note",
-          "This Authority is verifiable through the QR code printed on it.",
-        ),
-        verificationBaseUrl: resolveVerificationBaseUrl(
-          settingValue(settings, "certificate_verification_base_url", ""),
-          { requestOrigin: window.location.origin },
-        ),
+        signatoryName: template.signatoryName,
+        signatoryPosition: template.signatoryPosition,
+        officeName: template.officeName,
+        footerNote: template.footerNote,
+        verificationBaseUrl: resolveVerificationBaseUrl(template.verificationBaseUrl, {
+          requestOrigin: window.location.origin,
+        }),
+        logoDataUrl,
+        logoEnabled: template.logoEnabled,
+        logoPosition: template.logoPosition,
+        logoWidth: template.logoWidth,
+        headerAlign: template.headerAlign,
+        sectionOrder: template.sectionOrder,
         applicationNumber: application?.application_number ?? undefined,
         route: application?.applied_route ?? undefined,
         registeredOwner: application?.registered_owner ?? undefined,
         ownershipType: application?.ownership_type ?? undefined,
-        boardName: settingValue(
-          settings,
-          "certificate_board_name",
-          "MABINI TRICYCLE FRANCHISING AND REGULATORY BOARD",
-        ),
+        boardName: template.boardName,
         officialReceiptNumber: record.official_receipt_number,
         officialReceiptDate: record.official_receipt_date,
         amountPaid: record.amount_paid,
@@ -211,7 +208,7 @@ export function CertificateActions({ record, certificateUrl, settings, readOnly:
             disabled={readOnly && generated}
             title={readOnly ? "Available without upload in preview mode" : undefined}
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
+            <FileCheck2 className="h-4 w-4" />
             {generated ? "Regenerate Authority" : "Generate Authority"}
           </Button>
         )}

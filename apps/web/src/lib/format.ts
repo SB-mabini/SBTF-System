@@ -107,6 +107,18 @@ export function formatDays(value: number | null | undefined): string {
   return `${days.toFixed(days % 1 === 0 ? 0 : 1)} day${days === 1 ? "" : "s"}`;
 }
 
+/**
+ * True when [value] is earlier than now.
+ *
+ * Kept here so a component never has to call `Date.now()` during render (the
+ * React purity rule rejects that); the helper itself is not part of render.
+ */
+export function isPast(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const parsed = parseDate(value);
+  return parsed !== null && parsed.getTime() < Date.now();
+}
+
 export function relativeTime(value: string | null | undefined): string {
   const parsed = parseDate(value);
   if (!parsed) return "—";
@@ -177,6 +189,10 @@ const ACTION_LABELS: Record<ActivityAction, string> = {
   endorsement_recorded: "Recorded an endorsement",
   decision_recorded: "Recorded a decision",
   document_released: "Released documents",
+  announcement_created: "Created an announcement",
+  announcement_published: "Published an announcement",
+  announcement_archived: "Archived an announcement",
+  announcement_deleted: "Deleted an announcement",
 };
 
 export function actionLabel(action: ActivityAction | string): string {
@@ -229,6 +245,9 @@ export function notificationTarget(
   }
   if (type === "appointment" && basePath === "/staff") {
     return { href: "/staff/appointments", label: "Open appointments" };
+  }
+  if (type === "announcement") {
+    return { href: `${basePath}/announcements`, label: "Open announcement" };
   }
   return null;
 }

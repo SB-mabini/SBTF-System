@@ -9,10 +9,9 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-md">
       <div className="sbtf-card p-6">
-        <h1 className="text-lg font-semibold text-ink">Sign in to the SBTF console</h1>
+        <h1 className="text-lg font-semibold text-ink">Sign in to the SBTF System</h1>
         <p className="mt-1 text-[0.8125rem] text-muted">
-          Municipal staff and administrators only. Tricycle drivers and operators use the SBTF
-          mobile application.
+          Municipal staff and administrators only.
         </p>
 
         <div className="mt-6">

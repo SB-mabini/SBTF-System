@@ -7,6 +7,7 @@ import {
   FileBarChart,
   FileText,
   LayoutDashboard,
+  Megaphone,
   Settings,
   Sparkles,
   Stamp,
@@ -119,10 +120,34 @@ const ADMIN_NAV: NavGroup[] = [
         capability: "logs.view_all",
       },
       {
+        href: "/admin/franchise-editor",
+        label: "Franchise Editor",
+        shortLabel: "Documents",
+        icon: Stamp,
+        capability: "settings.manage",
+      },
+      {
         href: "/admin/settings",
         label: "Settings",
         icon: Settings,
         capability: "settings.manage",
+      },
+    ],
+  },
+  {
+    label: "Updates",
+    items: [
+      {
+        href: "/admin/announcements",
+        label: "Announcements",
+        icon: Megaphone,
+        capability: "announcements.manage",
+      },
+      {
+        href: "/admin/notifications",
+        label: "Notifications",
+        icon: Bell,
+        capability: "dashboard.view",
       },
     ],
   },
@@ -209,6 +234,12 @@ const STAFF_NAV: NavGroup[] = [
   {
     label: "Updates",
     items: [
+      {
+        href: "/staff/announcements",
+        label: "Announcements",
+        icon: Megaphone,
+        capability: "announcements.manage",
+      },
       {
         href: "/staff/notifications",
         label: "Notifications",

@@ -10,6 +10,7 @@
 import type {
   ActivityLog,
   AnalyticsOverview,
+  Announcement,
   ApplicationAppointment,
   ApplicationStatusHistory,
   AppointmentKind,
@@ -778,6 +779,58 @@ export const demoNotifications: Notification[] = [
   },
 ];
 
+export const demoAnnouncements: Announcement[] = [
+  {
+    id: uuid(0xb000),
+    title: "Franchise renewal window now open",
+    body:
+      "Operators whose franchises expire this quarter may file their renewal at the franchising office from Monday to Friday, 8:00 AM to 4:00 PM. Bring your current Authority to Operate, updated OR/CR and cedula.",
+    status: "published",
+    audience: "all_drivers",
+    published_at: iso(2, 8),
+    archived_at: null,
+    recipient_count: 44,
+    created_by: demoProfiles[1]!.id,
+    updated_by: demoProfiles[1]!.id,
+    created_at: iso(3, 8),
+    updated_at: iso(2, 8),
+    author_name: demoProfiles[1]!.full_name,
+  },
+  {
+    id: uuid(0xb001),
+    title: "TODA Poblacion general assembly",
+    body:
+      "All members of TODA Poblacion are requested to attend the general assembly at the Barangay Hall on Saturday, 9:00 AM. Franchise concerns and fare adjustments will be discussed.",
+    status: "published",
+    audience: "toda",
+    published_at: iso(5, 10),
+    archived_at: null,
+    recipient_count: 31,
+    created_by: demoProfiles[0]!.id,
+    updated_by: demoProfiles[0]!.id,
+    created_at: iso(6, 10),
+    updated_at: iso(5, 10),
+    toda_names: [demoTodas[0]!.name],
+    author_name: demoProfiles[0]!.full_name,
+  },
+  {
+    id: uuid(0xb002),
+    title: "Office closed for local holiday",
+    body:
+      "The franchising office will be closed on Friday for the local holiday. Online requests may still be filed and will be reviewed on the next working day.",
+    status: "draft",
+    audience: "all_members",
+    published_at: null,
+    archived_at: null,
+    recipient_count: 0,
+    created_by: demoProfiles[1]!.id,
+    updated_by: demoProfiles[1]!.id,
+    created_at: iso(0, 14),
+    updated_at: iso(0, 14),
+    author_name: demoProfiles[1]!.full_name,
+  },
+];
+
 export const demoSettings: SystemSetting[] = [
   ["municipality_name", "Municipality of Mabini", "string", "general", "Municipality name", "Displayed on the interface, reports and certificates.", true],
   ["province_name", "Batangas", "string", "general", "Province", "Displayed on the interface, reports and certificates.", true],
@@ -802,6 +855,12 @@ export const demoSettings: SystemSetting[] = [
   ["form_request_review_reminder_hours", 12, "number", "forms", "Review reminder lead time (hours)", "How long before the staff review deadline a reminder notification is sent.", true],
   ["form_request_signature_required", true, "boolean", "forms", "Signature required", "Require a drawn or typed signature on every new request.", true],
   ["form_request_allow_typed_signature", true, "boolean", "forms", "Allow typed signature", "Let the driver type their name instead of drawing a signature.", true],
+  ["document_logo_enabled", true, "boolean", "certificate", "Show logo on documents", "Prints the official Mabini logo in the document letterhead.", true],
+  ["document_logo_position", "left", "string", "certificate", "Logo position", "Where the official logo is printed: left, center or right.", true],
+  ["document_logo_width", 22, "number", "certificate", "Logo width (mm)", "Width of the printed logo in millimetres (16–40).", true],
+  ["document_header_align", "center", "string", "certificate", "Letterhead alignment", "Alignment of the letterhead text: left, center or right.", true],
+  ["document_board_name", "SANGGUNIANG BAYAN NG MABINI", "string", "certificate", "Board / office heading", "Bold heading printed under the municipality name.", true],
+  ["document_section_order", ["particulars", "conditions", "order", "signatures", "payment", "footer"], "json", "certificate", "Optional block order", "Order of the configurable document blocks.", true],
 ].map(([key, value, data_type, category, label, description, is_public], index) => ({
   key: key as string,
   value,

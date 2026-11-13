@@ -547,8 +547,9 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       ),
       data: (todas) => FormField<String>(
         initialValue: todas.any((toda) => toda.id == _todaId) ? _todaId : null,
-        validator: (value) =>
-            value == null || value.isEmpty ? 'Select an accredited TODA.' : null,
+        validator: (value) => value == null || value.isEmpty
+            ? 'Select an accredited TODA.'
+            : null,
         builder: (field) {
           Toda? selected;
           for (final toda in todas) {
@@ -944,8 +945,18 @@ class _ErrorBanner extends StatelessWidget {
 String _formatDate(DateTime value) {
   final local = value.toLocal();
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${local.day} ${months[local.month - 1]} ${local.year}';
 }

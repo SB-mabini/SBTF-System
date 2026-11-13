@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Search, UserCircle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { BrandMark } from "@/components/layout/brand-mark";
@@ -30,6 +30,7 @@ export function Topbar({
   const [query, setQuery] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
 
   const unread = notifications.filter((notification) => !notification.read).length;
   const basePath: "/admin" | "/staff" = role === "administrator" ? "/admin" : "/staff";
@@ -50,6 +51,19 @@ export function Topbar({
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileNavOpen]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+        notificationButtonRef.current?.focus();
+      }
+      if (menuOpen) setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [notificationsOpen, menuOpen]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -120,6 +134,7 @@ export function Topbar({
         <div className="ml-auto flex items-center gap-2" ref={menuRef}>
         <div className="relative">
           <button
+            ref={notificationButtonRef}
             type="button"
             className="relative rounded-md p-2 text-muted hover:bg-page"
             onClick={() => {
@@ -127,6 +142,9 @@ export function Topbar({
               setMenuOpen(false);
             }}
             aria-label={`Notifications (${unread} unread)`}
+            aria-expanded={notificationsOpen}
+            aria-controls="notification-popover"
+            aria-haspopup="true"
           >
             <Bell className="h-5 w-5" />
             {unread > 0 ? (
@@ -137,18 +155,23 @@ export function Topbar({
           </button>
 
           {notificationsOpen ? (
-            <div className="absolute right-0 mt-2 w-80 rounded-lg border border-line bg-white shadow-raised">
-              <div className="flex items-center justify-between border-b border-line px-3 py-2">
+            <div
+              id="notification-popover"
+              role="dialog"
+              aria-label="Notifications"
+              className="fixed inset-x-3 top-16 z-50 flex max-h-[calc(100dvh-5rem)] flex-col overflow-hidden rounded-lg border border-line bg-white shadow-raised sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 md:w-96"
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-2">
                 <p className="text-[0.8125rem] font-semibold text-ink">Notifications</p>
                 <Link
-                  className="text-[0.75rem] text-primary hover:underline"
+                  className="rounded px-1 text-[0.75rem] text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   href={`${basePath}/notifications`}
                   onClick={() => setNotificationsOpen(false)}
                 >
                   View all
                 </Link>
               </div>
-              <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+              <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain">
                 {notifications.length === 0 ? (
                   <li className="px-3 py-6 text-center text-[0.8125rem] text-muted">
                     No notifications yet.
@@ -229,6 +252,14 @@ export function Topbar({
                 <p className="text-[0.8125rem] font-medium text-ink">{fullName}</p>
                 <p className="truncate text-[0.75rem] text-muted">{email}</p>
               </div>
+              <Link
+                href={`${basePath}/account`}
+                onClick={() => setMenuOpen(false)}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[0.8125rem] text-ink hover:bg-page"
+              >
+                <UserCircle className="h-4 w-4 text-muted" />
+                My account
+              </Link>
               <button
                 type="button"
                 onClick={signOut}

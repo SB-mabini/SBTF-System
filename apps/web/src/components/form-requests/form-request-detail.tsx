@@ -11,7 +11,7 @@ import {
   FORM_REQUEST_LETTER_DEFAULTS,
   type FormRequestLetterInput,
 } from "@/lib/form-request-letter";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, isPast } from "@/lib/format";
 import type { FormRequestDetail } from "@/lib/data";
 import type { FormRequestStatus } from "@/types/database";
 
@@ -47,9 +47,7 @@ export function FormRequestDetailView({
   const [printing, setPrinting] = useState(false);
 
   const overdue =
-    request.status === "requested" &&
-    request.review_due_at !== null &&
-    new Date(request.review_due_at).getTime() < Date.now();
+    request.status === "requested" && isPast(request.review_due_at);
 
   const letterInput = useMemo<FormRequestLetterInput>(
     () => ({
@@ -177,6 +175,7 @@ export function FormRequestDetailView({
             formRequestId={request.id}
             status={request.status}
             printed={Boolean(request.printed_at)}
+            convertedApplicationId={request.converted_application_id}
           />
         </div>
       </Card>

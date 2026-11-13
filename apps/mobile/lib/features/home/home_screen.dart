@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/branding.dart';
 import '../../core/models/app_notification.dart';
 import '../../core/models/franchise_application.dart';
 import '../../core/models/profile.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/brand_mark.dart';
 import '../../core/widgets/error_view.dart';
+import '../application/application_detail_screen.dart';
 import '../application/application_form_screen.dart';
 import '../application/application_list_screen.dart';
 import '../application/request_form_screen.dart';
+import '../announcements/announcement_list_screen.dart';
 import '../appointments/appointment_list_screen.dart';
 import '../certificate/certificate_list_screen.dart';
 import '../documents/document_manager_screen.dart';
 import '../notifications/notification_list_screen.dart';
+import '../settings/settings_screen.dart';
 
 /// The landing screen for a signed-in driver/operator with bottom navigation.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -217,6 +222,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _openAnnouncements(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AnnouncementListScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
@@ -231,8 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         (previous, next) {
       final prevUnread =
           previous?.valueOrNull?.where((n) => !n.read).length ?? 0;
-      final currUnread =
-          next.valueOrNull?.where((n) => !n.read).length ?? 0;
+      final currUnread = next.valueOrNull?.where((n) => !n.read).length ?? 0;
       if (currUnread > prevUnread && next.valueOrNull != null) {
         final all = next.valueOrNull!;
         final newOnes = all.where((n) => !n.read).toList()
@@ -246,13 +258,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           });
         if (newOnes.isNotEmpty && mounted) {
           final notif = newOnes.first;
-          ScaffoldMessenger.of(context).showSnackBar(
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
             SnackBar(
-              content: Text(notif.title),
+              content: GestureDetector(
+                onTap: () {
+                  messenger.hideCurrentSnackBar();
+                  _openNotifications(context);
+                },
+                child: Text(notif.title),
+              ),
               action: SnackBarAction(
                 label: 'View',
                 onPressed: () => _openNotifications(context),
               ),
+              behavior: SnackBarBehavior.floating,
+              showCloseIcon: true,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -262,15 +284,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
-            Image.asset(
-              'assets/logo.jpg',
-              height: 32,
-              width: 32,
+            BrandMark(size: 30),
+            SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                AppBranding.appName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const SizedBox(width: 8),
-            const Text('Mabini Franchise'),
           ],
         ),
         actions: [
@@ -309,6 +333,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+          IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
             onPressed: () => _signOut(context),
@@ -331,9 +362,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 profile: profile,
                 unread: unread,
                 upcoming: upcoming,
-                onOpenApplication: (type) =>
-                    _openApplication(context, type),
-                onOpenStatus: () => _openStatus(context),
+                onOpenApplication: (type) => _openApplication(context, type),
                 onOpenAppointments: () => _openAppointments(context),
                 onOpenDocuments: () => _openDocuments(context),
                 onOpenCertificates: () => _openCertificates(context),
@@ -344,12 +373,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 upcoming: upcoming,
                 onOpenAppointments: () => _openAppointments(context),
                 onOpenStatus: () => _openStatus(context),
+                onOpenAnnouncements: () => _openAnnouncements(context),
+                onOpenNotifications: () => _openNotifications(context),
               ),
               _DocumentsTab(
                 onOpenDocuments: () => _openDocuments(context),
                 onOpenCertificates: () => _openCertificates(context),
               ),
-
             ],
           ),
         ),
@@ -388,7 +418,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             selectedIcon: Icon(Icons.folder, color: AppColors.primary),
             label: 'Documents',
           ),
-
         ],
       ),
     );
@@ -402,7 +431,6 @@ class _HomeTab extends ConsumerWidget {
     required this.unread,
     required this.upcoming,
     required this.onOpenApplication,
-    required this.onOpenStatus,
     required this.onOpenAppointments,
     required this.onOpenDocuments,
     required this.onOpenCertificates,
@@ -413,11 +441,18 @@ class _HomeTab extends ConsumerWidget {
   final int unread;
   final int upcoming;
   final void Function(String) onOpenApplication;
-  final VoidCallback onOpenStatus;
   final VoidCallback onOpenAppointments;
   final VoidCallback onOpenDocuments;
   final VoidCallback onOpenCertificates;
   final VoidCallback onOpenNotifications;
+
+  void _openDetails(BuildContext context, FranchiseApplication application) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ApplicationDetailScreen(application: application),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -442,7 +477,7 @@ class _HomeTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         _LatestApplicationCard(
           application: latest,
-          onOpenStatus: onOpenStatus,
+          onOpenDetails: (application) => _openDetails(context, application),
           onOpenApplication: onOpenApplication,
         ),
       ],
@@ -456,11 +491,15 @@ class _TrackTab extends StatelessWidget {
     required this.upcoming,
     required this.onOpenAppointments,
     required this.onOpenStatus,
+    required this.onOpenAnnouncements,
+    required this.onOpenNotifications,
   });
 
   final int upcoming;
   final VoidCallback onOpenAppointments;
   final VoidCallback onOpenStatus;
+  final VoidCallback onOpenAnnouncements;
+  final VoidCallback onOpenNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -489,6 +528,20 @@ class _TrackTab extends StatelessWidget {
           title: 'My Application Status',
           subtitle: 'Follow your submissions',
           onTap: onOpenStatus,
+        ),
+        const SizedBox(height: 8),
+        _BottomNavTile(
+          icon: Icons.campaign_outlined,
+          title: 'Announcements',
+          subtitle: 'Notices from the franchising office',
+          onTap: onOpenAnnouncements,
+        ),
+        const SizedBox(height: 8),
+        _BottomNavTile(
+          icon: Icons.notifications_outlined,
+          title: 'Notifications',
+          subtitle: 'Decisions, reminders and updates',
+          onTap: onOpenNotifications,
         ),
       ],
     );
@@ -541,12 +594,12 @@ class _DocumentsTab extends StatelessWidget {
 class _LatestApplicationCard extends StatelessWidget {
   const _LatestApplicationCard({
     required this.application,
-    required this.onOpenStatus,
+    required this.onOpenDetails,
     required this.onOpenApplication,
   });
 
   final FranchiseApplication? application;
-  final VoidCallback onOpenStatus;
+  final void Function(FranchiseApplication) onOpenDetails;
   final void Function(String) onOpenApplication;
 
   @override
@@ -564,12 +617,13 @@ class _LatestApplicationCard extends StatelessWidget {
         // Details table
         _ApplicationDetailsCard(application: app),
         const SizedBox(height: AppSpacing.xs),
-        // View all link
-        Center(
-          child: TextButton.icon(
-            onPressed: onOpenStatus,
-            icon: const Icon(Icons.list_alt_outlined, size: 16),
-            label: const Text('View all applications'),
+        // Single action: open this application's details directly.
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => onOpenDetails(app),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text('View application'),
           ),
         ),
       ],
@@ -827,8 +881,7 @@ class _NoApplicationPlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             FilledButton.icon(
-              onPressed: () =>
-                  onOpenApplication(ApplicationType.newFranchise),
+              onPressed: () => onOpenApplication(ApplicationType.newFranchise),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Apply now'),
             ),
@@ -843,8 +896,18 @@ class _NoApplicationPlaceholder extends StatelessWidget {
 String _formatDateTime(DateTime dt) {
   final local = dt.toLocal();
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
   final minute = local.minute.toString().padLeft(2, '0');

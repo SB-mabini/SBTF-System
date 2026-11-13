@@ -16,9 +16,16 @@ describe("navigation", () => {
       "Franchise operations",
       "Insights and reports",
       "Administration",
+      "Updates",
     ]);
     expect(groups.flatMap((group) => group.items).map((item) => item.href)).toContain(
       "/admin/settings",
+    );
+    expect(groups.flatMap((group) => group.items).map((item) => item.href)).toContain(
+      "/admin/franchise-editor",
+    );
+    expect(groups.flatMap((group) => group.items).map((item) => item.href)).toContain(
+      "/admin/announcements",
     );
   });
 

@@ -240,7 +240,10 @@ void main() {
         homeHarness(Stream.value([_upcoming(), _upcoming(id: 'a-9')])),
       );
 
-      expect(find.text('My appointments'), findsOneWidget);
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('My Appointments'), findsOneWidget);
       expect(find.text('Scheduled visits and hearings'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
     });
@@ -251,7 +254,10 @@ void main() {
         homeHarness(Stream.value([_past()])),
       );
 
-      expect(find.text('My appointments'), findsOneWidget);
+      await tester.tap(find.text('Track'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('My Appointments'), findsOneWidget);
       expect(find.text('0'), findsNothing);
     });
   });

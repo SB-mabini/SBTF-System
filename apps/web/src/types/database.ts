@@ -58,6 +58,7 @@ export type NotificationType =
   | "appointment_scheduled"
   | "appointment_updated"
   | "document_release_ready"
+  | "announcement"
   | "system";
 export type ActivityAction =
   | "login"
@@ -92,7 +93,11 @@ export type ActivityAction =
   | "form_request_issued"
   | "endorsement_recorded"
   | "decision_recorded"
-  | "document_released";
+  | "document_released"
+  | "announcement_created"
+  | "announcement_published"
+  | "announcement_archived"
+  | "announcement_deleted";
 export type LogTargetType =
   | "profile"
   | "franchise_application"
@@ -103,6 +108,7 @@ export type LogTargetType =
   | "form_request"
   | "appointment"
   | "document_release"
+  | "announcement"
   | "system";
 
 export interface Profile {
@@ -352,6 +358,37 @@ export interface ApplicationStatusHistory {
   actor_id: string | null;
   note: string | null;
   created_at: string;
+}
+
+export type AnnouncementStatus = "draft" | "published" | "archived";
+export type AnnouncementAudience = "all_drivers" | "all_members" | "toda" | "drivers";
+
+export interface AnnouncementTarget {
+  id: string;
+  announcement_id: string;
+  toda_id: string | null;
+  profile_id: string | null;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  status: AnnouncementStatus;
+  audience: AnnouncementAudience;
+  published_at: string | null;
+  archived_at: string | null;
+  recipient_count: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Resolved display names for TODA/individual targets. */
+  targets?: AnnouncementTarget[];
+  toda_names?: string[];
+  driver_names?: string[];
+  author_name?: string | null;
 }
 
 export interface Notification {

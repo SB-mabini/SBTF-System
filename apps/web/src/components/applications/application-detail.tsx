@@ -53,12 +53,9 @@ export async function ApplicationDetail({
   // leaving this application.
   const record = application.record ? await getFranchiseRecord(application.record.id) : null;
   let certificateUrl: string | null = null;
-  let settings: SystemSetting[] = [];
+  const settings: SystemSetting[] = await listSettings();
   if (record) {
-    [certificateUrl, settings] = await Promise.all([
-      getCertificateSignedUrl(record.id),
-      listSettings(),
-    ]);
+    certificateUrl = await getCertificateSignedUrl(record.id);
   }
 
   return (
@@ -71,7 +68,11 @@ export async function ApplicationDetail({
           } · submitted ${relativeTime(application.submitted_at)}`}
         />
         <div className="flex gap-2">
-          <ApplicationFormActions application={application} signatureUrl={signatureUrl} />
+          <ApplicationFormActions
+            application={application}
+            signatureUrl={signatureUrl}
+            settings={settings}
+          />
           <LinkButton variant="outline" href={`${basePath}/applications`}>
             Back to register
           </LinkButton>

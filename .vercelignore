@@ -1,0 +1,29 @@
+# Vercel upload scope for the monorepo.
+# The sbtf-system project uses apps/web as its Root Directory; the Flutter build
+# output, dev caches, and dependencies are never part of that deployment.
+
+node_modules
+**/node_modules
+
+# Next.js build/dev cache
+**/.next
+
+# Flutter build and tooling output
+apps/mobile/build
+apps/mobile/.dart_tool
+apps/mobile/.vercel
+apps/mobile/android/.gradle
+
+# Local Vercel links and environment files
+.vercel
+**/.vercel
+.env
+.env.*
+!**/.env.example
+
+# Logs and local-only files
+*.log
+web-dev.log
+
+# Reference scans and source images not served by the web app
+apps/assets/References

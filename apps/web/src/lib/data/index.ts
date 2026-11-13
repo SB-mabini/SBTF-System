@@ -12,6 +12,8 @@ import type {
   ActivityAction,
   ActivityLog,
   AiAdvisory,
+  Announcement,
+  AnnouncementStatus,
   AnalyticsOverview,
   ApplicationAppointment,
   ApplicationStatus,
@@ -867,6 +869,97 @@ export async function listNotifications(limit = 12): Promise<Notification[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as unknown as Notification[];
+}
+
+export interface AnnouncementFilters {
+  status?: AnnouncementStatus | "all";
+  search?: string;
+}
+
+/**
+ * Announcements with their targets. Staff and administrators see every row;
+ * drivers would only ever receive published, addressed rows from RLS, which is
+ * why the driver app reads them through the same table.
+ */
+export async function listAnnouncements(
+  filters: AnnouncementFilters = {},
+): Promise<Announcement[]> {
+  if (isDemoMode()) {
+    const term = filters.search?.trim().toLowerCase();
+    return demo.demoAnnouncements
+      .filter((row) => {
+        if (filters.status && filters.status !== "all" && row.status !== filters.status)
+          return false;
+        if (term && !`${row.title} ${row.body}`.toLowerCase().includes(term)) return false;
+        return true;
+      })
+      .map((row) => ({ ...row, targets: [] }));
+  }
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("announcements")
+    .select("*, announcement_targets(toda_id, profile_id)");
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.search) query = query.ilike("title", `%${filters.search.replace(/[%,]/g, " ").trim()}%`);
+
+  const { data } = await query.order("created_at", { ascending: false });
+  return ((data ?? []) as unknown as Array<Announcement & { announcement_targets?: Array<{ toda_id: string | null; profile_id: string | null }> }>).map(
+    (row) => ({
+      ...row,
+      targets: (row.announcement_targets ?? []).map((target, index) => ({
+        id: `${row.id}-${index}`,
+        announcement_id: row.id,
+        toda_id: target.toda_id,
+        profile_id: target.profile_id,
+        created_at: row.created_at,
+      })),
+    }),
+  );
+}
+
+export async function getAnnouncement(id: string): Promise<Announcement | null> {
+  if (isDemoMode()) {
+    const row = demo.demoAnnouncements.find((candidate) => candidate.id === id);
+    return row ? { ...row, targets: [] } : null;
+  }
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("announcements")
+    .select("*, announcement_targets(toda_id, profile_id)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as unknown as Announcement & {
+    announcement_targets?: Array<{ toda_id: string | null; profile_id: string | null }>;
+  };
+  return {
+    ...row,
+    targets: (row.announcement_targets ?? []).map((target, index) => ({
+      id: `${row.id}-${index}`,
+      announcement_id: row.id,
+      toda_id: target.toda_id,
+      profile_id: target.profile_id,
+      created_at: row.created_at,
+    })),
+  };
+}
+
+/** Active driver accounts, for the "specific drivers" audience picker. */
+export async function listDrivers(): Promise<Profile[]> {
+  if (isDemoMode()) {
+    return demo.demoProfiles.filter(
+      (profile) => profile.role === "driver" && profile.account_status === "active",
+    );
+  }
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("role", "driver")
+    .eq("account_status", "active")
+    .order("last_name");
+  return (data ?? []) as unknown as Profile[];
 }
 
 export async function listSettings(): Promise<SystemSetting[]> {

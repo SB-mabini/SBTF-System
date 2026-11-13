@@ -1,14 +1,12 @@
 import Image from "next/image";
 
 /**
- * The municipal logo.
+ * The logo shown beside the app name throughout the web app.
  *
- * `public/logo.jpg` is an opaque JPEG: JPEG cannot carry an alpha channel and the
- * artwork sits on a plain white field. Every slot that shows the logo is a dark
- * purple header (`--color-primary: #271564`), so the artwork is always presented on
- * a white plate. Without that plate the logo reads as a white rectangle rather than
- * a mark. Swap this for a transparent PNG if one is ever supplied and the plate can
- * be dropped here alone.
+ * This is the official Sangguniang Bayan ng Mabini seal (`public/seal.png`),
+ * not the launcher icon. The tricycle/document mark (`public/logo.png`) is used
+ * only for the favicon/PWA/application icon. The seal is presented on a white
+ * disc so its black ring and colours stay legible on the purple header.
  */
 export function BrandMark({
   size = "md",
@@ -22,11 +20,11 @@ export function BrandMark({
 
   return (
     <span
-      className={`grid ${box} shrink-0 place-items-center overflow-hidden rounded-lg bg-white`}
+      className={`grid ${box} shrink-0 place-items-center overflow-hidden rounded-full bg-white p-1`}
     >
       <Image
-        src="/logo.jpg"
-        alt=""
+        src="/seal.png"
+        alt="Sangguniang Bayan ng Mabini official seal"
         width={pixels}
         height={pixels}
         priority={priority}

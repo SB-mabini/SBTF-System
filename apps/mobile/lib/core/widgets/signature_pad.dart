@@ -26,8 +26,8 @@ class SignaturePadController {
   Future<Uint8List?> exportPng({double pixelRatio = 3}) async {
     if (!hasInk.value) return null;
 
-    final boundary =
-        _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final boundary = _boundaryKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
     if (boundary == null) return null;
 
     final image = await boundary.toImage(pixelRatio: pixelRatio);
@@ -152,8 +152,8 @@ class _SignaturePadState extends State<SignaturePad> {
                   gestures: <Type, GestureRecognizerFactory>{
                     EagerGestureRecognizer:
                         GestureRecognizerFactoryWithHandlers<
-                          EagerGestureRecognizer
-                        >(EagerGestureRecognizer.new, (_) {}),
+                                EagerGestureRecognizer>(
+                            EagerGestureRecognizer.new, (_) {}),
                   },
                   child: Listener(
                     behavior: HitTestBehavior.opaque,

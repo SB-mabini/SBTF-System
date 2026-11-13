@@ -31,6 +31,7 @@ const TYPE_LABELS: Record<string, string> = {
   appointment_updated: "Appointment updated",
   document_release_ready: "Document released",
   account_updated: "Account updated",
+  announcement: "Announcement",
   system: "System",
 };
 

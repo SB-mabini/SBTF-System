@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Save, Stamp } from "lucide-react";
 
-import { Alert, Badge, Button, Card, CardHeader, Field } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardHeader, Field, LinkButton } from "@/components/ui";
 import { updateSettingAction } from "@/lib/actions/settings";
 import { isDemoMode } from "@/lib/env";
 import type { SystemSetting } from "@/types/database";
@@ -31,11 +31,6 @@ export function SettingsEditor({ settings }: { settings: SystemSetting[] }) {
       key: "franchise",
       title: "Franchising rules",
       description: "Validity period and numbering. Changing the validity affects franchises issued afterwards only — existing records keep their dates.",
-    },
-    {
-      key: "certificate",
-      title: "Certificate",
-      description: "Signatory, footer note and the public verification address embedded in the QR code.",
     },
     {
       key: "forms",
@@ -69,6 +64,19 @@ export function SettingsEditor({ settings }: { settings: SystemSetting[] }) {
           together with the administrator who made the change.
         </Alert>
       )}
+
+      <Card>
+        <CardHeader
+          title="Franchise documents"
+          description="Logo, letterhead, signatory and block order are configured in the dedicated Franchise Editor, separate from account and system settings."
+          icon={Stamp}
+          action={
+            <LinkButton href="/admin/franchise-editor" variant="secondary">
+              Open Franchise Editor
+            </LinkButton>
+          }
+        />
+      </Card>
 
       {categories.map((category) => {
         const rows = settings.filter((setting) => setting.category === category.key);

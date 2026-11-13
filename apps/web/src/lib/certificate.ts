@@ -5,6 +5,25 @@ import QRCode from "qrcode";
 import { MUNICIPALITY, PROVINCE } from "@/lib/constants";
 import { buildVerificationUrl } from "@/lib/verification";
 
+export type DocumentBlockKey =
+  | "particulars"
+  | "conditions"
+  | "order"
+  | "signatures"
+  | "payment"
+  | "footer";
+
+export type DocumentAlign = "left" | "center" | "right";
+
+export const DEFAULT_SECTION_ORDER: DocumentBlockKey[] = [
+  "particulars",
+  "conditions",
+  "order",
+  "signatures",
+  "payment",
+  "footer",
+];
+
 export interface CertificateInput {
   franchiseNumber: string;
   verificationCode: string;
@@ -27,8 +46,16 @@ export interface CertificateInput {
   footerNote: string;
   verificationBaseUrl: string;
 
-  // Official Authority to Operate (Image 2) fields. Optional so older callers
-  // and tests keep working; blank values print as empty lines.
+  // Franchise Editor template options. Optional so older callers and tests
+  // keep working unchanged.
+  logoDataUrl?: string | null;
+  logoEnabled?: boolean;
+  logoPosition?: DocumentAlign;
+  logoWidth?: number;
+  headerAlign?: DocumentAlign;
+  sectionOrder?: DocumentBlockKey[];
+
+  // Official Authority to Operate (Image 2) fields.
   applicationNumber?: string;
   route?: string;
   registeredOwner?: string;
@@ -80,6 +107,16 @@ function peso(value: number | null | undefined): string {
   return `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+export function normalizeSectionOrder(
+  input: DocumentBlockKey[] | undefined,
+): DocumentBlockKey[] {
+  const keys = (input ?? []).filter((key): key is DocumentBlockKey =>
+    DEFAULT_SECTION_ORDER.includes(key),
+  );
+  const unique = Array.from(new Set(keys));
+  return unique.length > 0 ? unique : DEFAULT_SECTION_ORDER;
+}
+
 /**
  * Builds the official "Authority to Operate Motorized Tricycle Service" PDF.
  *
@@ -87,38 +124,62 @@ function peso(value: number | null | undefined): string {
  * particulars, conditions, SO ORDERED block, signatory, conforme signature and
  * the O.R. payment details. The QR verification code is kept as a discreet
  * footer carrying only the opaque verification URL.
+ *
+ * Required blocks stay in their official sequence; the Franchise Editor can
+ * reorder the optional ones through `sectionOrder`. The logo is printed in the
+ * letterhead with proportional scaling.
  */
 export async function buildCertificatePdf(input: CertificateInput): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 16;
   const center = pageWidth / 2;
   const contentWidth = pageWidth - margin * 2;
 
+  const logoEnabled = input.logoEnabled !== false && Boolean(input.logoDataUrl);
+  const logoPosition = input.logoPosition ?? "left";
+  const logoWidth = Math.min(Math.max(Number(input.logoWidth ?? 22) || 22, 16), 40);
+  const headerAlign = input.headerAlign ?? "center";
+  const order = normalizeSectionOrder(input.sectionOrder);
+
+  const alignX = headerAlign === "left" ? margin : headerAlign === "right" ? pageWidth - margin : center;
+  const textAlign = headerAlign === "left" ? "left" : headerAlign === "right" ? "right" : "center";
+
+  // A centred logo needs its own band above the letterhead; side logos sit in
+  // the empty corner and leave the official text positions untouched.
+  const headerTop = logoEnabled && logoPosition === "center" ? 9 + logoWidth + 2 : 15;
+
   // ---- letterhead ---------------------------------------------------------
   doc.setFont("times", "normal");
   doc.setFontSize(10);
-  doc.text("Republic of the Philippines", center, 15, { align: "center" });
-  doc.text(`Province of ${PROVINCE}`, center, 20, { align: "center" });
-  doc.text(MUNICIPALITY, center, 25, { align: "center" });
+  doc.text("Republic of the Philippines", alignX, headerTop, { align: textAlign });
+  doc.text(`Province of ${PROVINCE}`, alignX, headerTop + 5, { align: textAlign });
+  doc.text(MUNICIPALITY, alignX, headerTop + 10, { align: textAlign });
   doc.setFont("times", "bold");
   doc.setFontSize(11.5);
   doc.text(
     (input.boardName ?? input.officeName).toUpperCase(),
-    center,
-    31,
-    { align: "center", maxWidth: contentWidth },
+    alignX,
+    headerTop + 16,
+    { align: textAlign, maxWidth: contentWidth },
   );
 
   doc.setDrawColor(39, 21, 100);
   doc.setLineWidth(0.7);
-  doc.line(margin, 35, pageWidth - margin, 35);
+  doc.line(margin, headerTop + 20, pageWidth - margin, headerTop + 20);
+
+  if (logoEnabled && input.logoDataUrl) {
+    const logoX =
+      logoPosition === "left" ? margin : logoPosition === "right" ? pageWidth - margin - logoWidth : center - logoWidth / 2;
+    doc.addImage(input.logoDataUrl, "PNG", logoX, 8, logoWidth, logoWidth, undefined, "FAST");
+  }
 
   // ---- title --------------------------------------------------------------
   doc.setFont("times", "bold");
   doc.setFontSize(15);
-  doc.text("AUTHORITY TO OPERATE", center, 44, { align: "center" });
-  doc.text("MOTORIZED TRICYCLE SERVICE", center, 50, { align: "center" });
+  doc.text("AUTHORITY TO OPERATE", center, headerTop + 29, { align: "center" });
+  doc.text("MOTORIZED TRICYCLE SERVICE", center, headerTop + 35, { align: "center" });
 
   // ---- intro --------------------------------------------------------------
   doc.setFont("times", "normal");
@@ -129,9 +190,9 @@ export async function buildCertificatePdf(input: CertificateInput): Promise<jsPD
       `unit for public service under the following particulars:`,
     contentWidth,
   );
-  doc.text(intro, margin, 59, { align: "justify", maxWidth: contentWidth });
+  doc.text(intro, margin, headerTop + 44, { align: "justify", maxWidth: contentWidth });
 
-  const tableTop = 59 + intro.length * 4.7 + 3;
+  const tableTop = headerTop + 44 + intro.length * 4.7 + 3;
 
   autoTable(doc, {
     startY: tableTop,
@@ -166,109 +227,126 @@ export async function buildCertificatePdf(input: CertificateInput): Promise<jsPD
   let cursor = ((doc as any).lastAutoTable?.finalY as number | undefined) ?? tableTop + 45;
   cursor += 7;
 
-  // ---- conditions ---------------------------------------------------------
   const fareFirst = input.fareFirstKm ?? "8.00";
   const fareNext = input.fareSucceedingKm ?? "1.00";
   const supervision = input.supervisionFee ?? "120.00";
   const due = input.supervisionDue ?? "September 30";
 
-  const conditions = [
-    "That the operator shall operate the tricycle only within the authorized route or service area stated above;",
-    `That the fare shall not exceed P${fareFirst} for the first kilometer and P${fareNext} for every succeeding kilometer;`,
-    "That the unit shall be maintained in roadworthy condition and shall comply with all traffic laws and municipal ordinances;",
-    "That the franchise shall not be sold, transferred or encumbered without the prior approval of the Board;",
-    `That the operator shall pay an annual supervision fee of P${supervision} on or before ${due};`,
-    "That the operator shall observe the rights and welfare of passengers and shall not refuse service without just cause;",
-    "That this Authority may be revoked or suspended for violation of its conditions or of existing laws and regulations.",
-  ];
+  function drawConditions(): void {
+    const conditions = [
+      "That the operator shall operate the tricycle only within the authorized route or service area stated above;",
+      `That the fare shall not exceed P${fareFirst} for the first kilometer and P${fareNext} for every succeeding kilometer;`,
+      "That the unit shall be maintained in roadworthy condition and shall comply with all traffic laws and municipal ordinances;",
+      "That the franchise shall not be sold, transferred or encumbered without the prior approval of the Board;",
+      `That the operator shall pay an annual supervision fee of P${supervision} on or before ${due};`,
+      "That the operator shall observe the rights and welfare of passengers and shall not refuse service without just cause;",
+      "That this Authority may be revoked or suspended for violation of its conditions or of existing laws and regulations.",
+    ];
 
-  doc.setFont("times", "normal");
-  doc.setFontSize(9);
-  conditions.forEach((condition, index) => {
-    const lines = doc.splitTextToSize(`${index + 1}. ${condition}`, contentWidth);
-    doc.text(lines, margin, cursor, { align: "justify", maxWidth: contentWidth });
-    cursor += lines.length * 4.2 + 1.1;
-  });
-
-  cursor += 5;
-  doc.setFont("times", "bold");
-  doc.setFontSize(10.5);
-  doc.text("SO ORDERED.", margin, cursor);
-  cursor += 6;
-  doc.setFont("times", "normal");
-  doc.setFontSize(9.5);
-  doc.text(`Mabini, Batangas, ${formatLongDate(input.issuedAt)}.`, margin, cursor);
-
-  // ---- signatures ---------------------------------------------------------
-  const signatureY = cursor + 13;
-
-  // Signatory (right)
-  doc.setFont("times", "bold");
-  doc.setFontSize(10);
-  doc.text(input.signatoryName, pageWidth - margin, signatureY, { align: "right" });
-  doc.setFont("times", "normal");
-  doc.setFontSize(8.5);
-  doc.text(input.signatoryPosition, pageWidth - margin, signatureY + 4, {
-    align: "right",
-    maxWidth: 80,
-  });
-
-  // Conforme (left)
-  doc.setFontSize(9);
-  doc.text("CONFORME:", margin, signatureY - 8);
-  if (input.conformeSignatureDataUrl) {
-    try {
-      doc.addImage(
-        input.conformeSignatureDataUrl,
-        "PNG",
-        margin,
-        signatureY - 6,
-        42,
-        12,
-        undefined,
-        "FAST",
-      );
-    } catch {
-      // A corrupt signature must never block the Authority.
-    }
+    doc.setFont("times", "normal");
+    doc.setFontSize(9);
+    conditions.forEach((condition, index) => {
+      const lines = doc.splitTextToSize(`${index + 1}. ${condition}`, contentWidth);
+      doc.text(lines, margin, cursor, { align: "justify", maxWidth: contentWidth });
+      cursor += lines.length * 4.2 + 1.1;
+    });
+    cursor += 5;
   }
-  doc.setFont("times", "bold");
-  doc.setFontSize(9.5);
-  doc.text(
-    (input.conformeName ?? input.operatorName).toUpperCase(),
-    margin + 21,
-    signatureY + 10,
-    { align: "center", maxWidth: 60 },
-  );
-  doc.setDrawColor(60, 60, 60);
-  doc.setLineWidth(0.2);
-  doc.line(margin, signatureY + 11, margin + 42, signatureY + 11);
-  doc.setFont("times", "normal");
-  doc.setFontSize(8);
-  doc.text("Applicant / Operator", margin + 21, signatureY + 14.5, { align: "center" });
 
-  // ---- payment ------------------------------------------------------------
-  const paymentY = signatureY + 23;
-  doc.setDrawColor(39, 21, 100);
-  doc.setLineWidth(0.4);
-  doc.line(margin, paymentY, pageWidth - margin, paymentY);
-  doc.setFont("times", "bold");
-  doc.setFontSize(9);
-  doc.text("PAID UNDER O.R. NO.", margin, paymentY + 5);
-  doc.text(valueOrDash(input.officialReceiptNumber), margin + 40, paymentY + 5);
+  function drawOrder(): void {
+    doc.setFont("times", "bold");
+    doc.setFontSize(10.5);
+    doc.text("SO ORDERED.", margin, cursor);
+    cursor += 6;
+    doc.setFont("times", "normal");
+    doc.setFontSize(9.5);
+    doc.text(`Mabini, Batangas, ${formatLongDate(input.issuedAt)}.`, margin, cursor);
+    cursor += 5;
+  }
 
-  doc.text("DATE", margin + 90, paymentY + 5);
-  doc.setFont("times", "normal");
-  doc.text(
-    input.officialReceiptDate ? formatLongDate(input.officialReceiptDate) : "—",
-    margin + 102,
-    paymentY + 5,
-  );
+  function drawSignatures(): void {
+    const signatureY = cursor + 8;
 
-  doc.setFont("times", "bold");
-  doc.text("AMOUNT PAID", margin + 138, paymentY + 5);
-  doc.setFont("times", "normal");
-  doc.text(peso(input.amountPaid) || "—", margin + 168, paymentY + 5);
+    doc.setFont("times", "bold");
+    doc.setFontSize(10);
+    doc.text(input.signatoryName, pageWidth - margin, signatureY, { align: "right" });
+    doc.setFont("times", "normal");
+    doc.setFontSize(8.5);
+    doc.text(input.signatoryPosition, pageWidth - margin, signatureY + 4, {
+      align: "right",
+      maxWidth: 80,
+    });
+
+    doc.setFontSize(9);
+    doc.text("CONFORME:", margin, signatureY - 8);
+    if (input.conformeSignatureDataUrl) {
+      try {
+        doc.addImage(
+          input.conformeSignatureDataUrl,
+          "PNG",
+          margin,
+          signatureY - 6,
+          42,
+          12,
+          undefined,
+          "FAST",
+        );
+      } catch {
+        // A corrupt signature must never block the Authority.
+      }
+    }
+    doc.setFont("times", "bold");
+    doc.setFontSize(9.5);
+    doc.text(
+      (input.conformeName ?? input.operatorName).toUpperCase(),
+      margin + 21,
+      signatureY + 10,
+      { align: "center", maxWidth: 60 },
+    );
+    doc.setDrawColor(60, 60, 60);
+    doc.setLineWidth(0.2);
+    doc.line(margin, signatureY + 11, margin + 42, signatureY + 11);
+    doc.setFont("times", "normal");
+    doc.setFontSize(8);
+    doc.text("Applicant / Operator", margin + 21, signatureY + 14.5, { align: "center" });
+
+    cursor = signatureY + 23;
+  }
+
+  let paymentY = 0;
+  function drawPayment(): void {
+    paymentY = cursor;
+    doc.setDrawColor(39, 21, 100);
+    doc.setLineWidth(0.4);
+    doc.line(margin, paymentY, pageWidth - margin, paymentY);
+    doc.setFont("times", "bold");
+    doc.setFontSize(9);
+    doc.text("PAID UNDER O.R. NO.", margin, paymentY + 5);
+    doc.text(valueOrDash(input.officialReceiptNumber), margin + 40, paymentY + 5);
+
+    doc.text("DATE", margin + 90, paymentY + 5);
+    doc.setFont("times", "normal");
+    doc.text(
+      input.officialReceiptDate ? formatLongDate(input.officialReceiptDate) : "—",
+      margin + 102,
+      paymentY + 5,
+    );
+
+    doc.setFont("times", "bold");
+    doc.text("AMOUNT PAID", margin + 138, paymentY + 5);
+    doc.setFont("times", "normal");
+    doc.text(peso(input.amountPaid) || "—", margin + 168, paymentY + 5);
+    cursor = paymentY + 10;
+  }
+
+  // "particulars" and "footer" are anchored (official structure); the rest can
+  // be reordered by the Franchise Editor.
+  for (const block of order) {
+    if (block === "conditions") drawConditions();
+    else if (block === "order") drawOrder();
+    else if (block === "signatures") drawSignatures();
+    else if (block === "payment") drawPayment();
+  }
 
   // ---- QR verification footer --------------------------------------------
   const verificationUrl = buildVerificationUrl(input.verificationBaseUrl, input.verificationCode);
@@ -280,7 +358,7 @@ export async function buildCertificatePdf(input: CertificateInput): Promise<jsPD
   });
 
   const qrSize = 18;
-  const qrY = 262;
+  const qrY = Math.min(Math.max(262, paymentY + 12, cursor + 4), pageHeight - qrSize - 10);
   doc.addImage(qrDataUrl, "PNG", margin, qrY, qrSize, qrSize, undefined, "FAST");
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,29 +18,183 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Sangguniang Bayan ng Mabini Franchising and Tricycle Driver Registration System — file and track your tricycle franchise application, manage requirements, and keep your certificate within reach.">
+  <meta name="theme-color" content="#271564">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="sbtf_mobile">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SBTF System">
+  <link rel="apple-touch-icon" href="icons/Icon-180.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png"/>
 
-  <title>sbtf_mobile</title>
+  <title>SBTF System — Sangguniang Bayan ng Mabini</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Pre-Flutter launch screen. Removed as soon as Flutter paints its first
+       frame, so the branded splash in Dart takes over without a flash of
+       unstyled white. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #271564;
+    }
+
+    #sbtf-boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background:
+        radial-gradient(circle at 50% 38%, #3d2d72 0%, #271564 58%, #1b0f4e 100%);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      text-align: center;
+      padding: 24px;
+      box-sizing: border-box;
+      z-index: 9999;
+      transition: opacity 320ms ease;
+    }
+
+    #sbtf-boot.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #sbtf-boot img {
+      width: 112px;
+      height: 112px;
+      animation: sbtf-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    #sbtf-boot img.sbtf-seal {
+      border-radius: 50%;
+      background: #ffffff;
+      padding: 8px;
+      box-sizing: border-box;
+      object-fit: contain;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    #sbtf-boot .sbtf-name {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      animation: sbtf-fade 700ms 120ms ease both;
+    }
+
+    #sbtf-boot .sbtf-office {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      color: #f2c749;
+      text-transform: uppercase;
+      animation: sbtf-fade 700ms 200ms ease both;
+    }
+
+    #sbtf-boot .sbtf-tagline {
+      max-width: 340px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.72);
+      animation: sbtf-fade 700ms 280ms ease both;
+    }
+
+    #sbtf-boot .sbtf-bar {
+      width: 128px;
+      height: 3px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.16);
+      animation: sbtf-fade 700ms 340ms ease both;
+    }
+
+    #sbtf-boot .sbtf-bar::after {
+      content: "";
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 999px;
+      background: #f2c749;
+      animation: sbtf-slide 1.15s ease-in-out infinite;
+    }
+
+    @keyframes sbtf-rise {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes sbtf-fade {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes sbtf-slide {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(330%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #sbtf-boot img,
+      #sbtf-boot .sbtf-name,
+      #sbtf-boot .sbtf-office,
+      #sbtf-boot .sbtf-tagline,
+      #sbtf-boot .sbtf-bar {
+        animation: none;
+      }
+      #sbtf-boot .sbtf-bar::after {
+        animation: none;
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="sbtf-boot" role="status" aria-live="polite">
+    <img src="branding/seal.png" alt="Sangguniang Bayan ng Mabini official seal" class="sbtf-seal">
+    <div class="sbtf-name">SBTF System</div>
+    <div class="sbtf-office">Sangguniang Bayan ng Mabini</div>
+    <div class="sbtf-tagline">
+      Franchising and driver registration for the Municipality of Mabini,
+      Batangas.
+    </div>
+    <div class="sbtf-bar" aria-hidden="true"></div>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <script>
+    // Flutter fires this after the first frame is painted; fade the static
+    // loader out so the animated in-app splash is the only thing visible.
+    (function () {
+      var boot = document.getElementById('sbtf-boot');
+      if (!boot) return;
+
+      function dismiss() {
+        window.removeEventListener('flutter-first-frame', dismiss);
+        boot.classList.add('is-hidden');
+        window.setTimeout(function () {
+          if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
+        }, 360);
+      }
+
+      window.addEventListener('flutter-first-frame', dismiss);
+
+      // Safety net: if the event is missed (older embedders), do not leave the
+      // loader covering the app forever.
+      window.setTimeout(dismiss, 15000);
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

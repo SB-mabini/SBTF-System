@@ -208,7 +208,8 @@ class ApplicationSubmission {
     _requireText(problems, appliedRoute, 'Applied route', 3, 120);
     if ((ownershipType == 'cooperative' || ownershipType == 'corporation') &&
         (registeredOwner == null || registeredOwner!.trim().isEmpty)) {
-      problems.add('Registered owner is required for a cooperative or corporation.');
+      problems.add(
+          'Registered owner is required for a cooperative or corporation.');
     }
     _requireText(problems, vehicleMake, 'Vehicle make', 1, 60);
     _requireText(problems, vehicleModel, 'Vehicle model', 1, 60);

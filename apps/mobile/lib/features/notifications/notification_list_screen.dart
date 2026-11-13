@@ -12,6 +12,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/error_view.dart';
 import '../application/application_detail_screen.dart';
 import '../application/request_form_screen.dart';
+import '../announcements/announcement_detail_screen.dart';
 import '../appointments/appointment_detail_screen.dart';
 import '../certificate/certificate_detail_screen.dart';
 
@@ -151,7 +152,22 @@ class _NotificationListScreenState
       await _openAppointment(notification.targetId!);
     } else if (notification.targetsFormRequest) {
       await _openFormRequest(notification.targetId!);
+    } else if (notification.targetsAnnouncement) {
+      await _openAnnouncement(notification.targetId!);
     }
+  }
+
+  Future<void> _openAnnouncement(String id) async {
+    final announcement = await _load(
+      () => ref.read(announcementServiceProvider).getById(id),
+      'That announcement is no longer available.',
+    );
+    if (announcement == null || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AnnouncementDetailScreen(announcement: announcement),
+      ),
+    );
   }
 
   Future<void> _openFormRequest(String id) async {
@@ -394,7 +410,8 @@ class _NotificationCard extends StatelessWidget {
     final hasTarget = notification.targetsApplication ||
         notification.targetsRecord ||
         notification.targetsAppointment ||
-        notification.targetsFormRequest;
+        notification.targetsFormRequest ||
+        notification.targetsAnnouncement;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -514,6 +531,7 @@ class _NotificationCard extends StatelessWidget {
     if (notification.targetsApplication) return 'Open application';
     if (notification.targetsRecord) return 'Open certificate';
     if (notification.targetsAppointment) return 'Open appointment';
+    if (notification.targetsAnnouncement) return 'Open announcement';
     return 'Open request form';
   }
 }

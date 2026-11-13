@@ -24,6 +24,7 @@ const Map<String, String> notificationTypeLabels = {
   'form_request_review_reminder': 'Form request review due',
   'form_request_review_overdue': 'Form request review overdue',
   'account_updated': 'Account updated',
+  'announcement': 'Announcement',
   'system': 'System',
 };
 

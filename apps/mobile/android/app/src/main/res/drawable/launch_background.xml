@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The window shown while the process starts: a solid municipal-purple field
-     (the Flutter UI fades in over it). -->
+<!-- The window shown while the process starts: the municipal-purple field with
+     the app mark centred, so the native launch already matches the Flutter
+     splash that follows it. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/brand_primary" />
+    <item>
+        <bitmap
+            android:src="@drawable/launch_logo"
+            android:gravity="center" />
+    </item>
 </layer-list>

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/branding.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/brand_mark.dart';
 import 'auth_messages.dart';
 import 'email_verification_screen.dart';
 import 'forgot_password_screen.dart';
@@ -100,29 +102,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: Column(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(32),
-                            child: Image.asset(
-                              'assets/logo.jpg',
-                              width: 64,
-                              height: 64,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                          const BrandMark(size: 64, elevated: true),
                           const SizedBox(height: AppSpacing.sm),
                           const Text(
-                            'Municipality of Mabini',
+                            AppBranding.appName,
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.inkStrong,
+                              letterSpacing: -0.2,
                             ),
                           ),
                           const SizedBox(height: 2),
                           const Text(
-                            'Tricycle Franchising System',
+                            AppBranding.officeName,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            AppBranding.location,
+                            style: TextStyle(
+                              fontSize: 12,
                               color: AppColors.inkMuted,
                             ),
                           ),

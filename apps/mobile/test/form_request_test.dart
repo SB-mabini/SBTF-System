@@ -144,7 +144,8 @@ void main() {
       expect(payload['toda_id'], 'toda-1');
       expect(payload['ctc_number'], 'CTC-123');
       expect(payload['plate_number'], 'ABC 123');
-      expect(payload['or_cr_storage_path'], 'profile-1/form-requests/or-cr.pdf');
+      expect(
+          payload['or_cr_storage_path'], 'profile-1/form-requests/or-cr.pdf');
       expect(payload['signature_typed_name'], 'Juan Dela Cruz');
     });
 

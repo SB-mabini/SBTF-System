@@ -24,7 +24,8 @@ import '../../core/widgets/section_header.dart';
 /// [ApplicationService.submit], which runs the same pre-validation again and
 /// classifies any refusal into an [AppFailure].
 class ApplicationFormScreen extends ConsumerStatefulWidget {
-  const ApplicationFormScreen({super.key, this.applicationType, this.formRequest});
+  const ApplicationFormScreen(
+      {super.key, this.applicationType, this.formRequest});
 
   /// An optional type for entry points that already know the driver's choice.
   final String? applicationType;
@@ -517,13 +518,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Widget _todaPicker(List<Toda> todas) {
-    final initialId =
-        todas.any((toda) => toda.id == _todaId) ? _todaId : null;
+    final initialId = todas.any((toda) => toda.id == _todaId) ? _todaId : null;
 
     return FormField<String>(
       initialValue: initialId,
-      validator: (value) =>
-          value == null ? 'Select an accredited TODA.' : null,
+      validator: (value) => value == null ? 'Select an accredited TODA.' : null,
       builder: (field) {
         Toda? selected;
         for (final toda in todas) {
@@ -857,9 +856,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             readOnly: readOnly,
             decoration: InputDecoration(
               hintText: hint,
-              suffixIcon: readOnly
-                  ? const Icon(Icons.lock_outline, size: 18)
-                  : null,
+              suffixIcon:
+                  readOnly ? const Icon(Icons.lock_outline, size: 18) : null,
             ),
             validator: validator,
           ),
@@ -922,7 +920,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           controller: _route,
           hint: 'e.g. Mainaga - Poblacion',
           textCapitalization: TextCapitalization.words,
-          validator: (value) => _required(value, 'Applied route', min: 3, max: 120),
+          validator: (value) =>
+              _required(value, 'Applied route', min: 3, max: 120),
         ),
         const SizedBox(height: AppSpacing.xs),
         DropdownButtonFormField<String>(
@@ -952,10 +951,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         ),
         const SizedBox(height: AppSpacing.xs),
         _field(
-          label: _ownershipType == 'cooperative' ||
-                  _ownershipType == 'corporation'
-              ? 'Registered owner (entity name)'
-              : 'Registered owner (optional)',
+          label:
+              _ownershipType == 'cooperative' || _ownershipType == 'corporation'
+                  ? 'Registered owner (entity name)'
+                  : 'Registered owner (optional)',
           controller: _registeredOwner,
           hint: 'Juan Dela Cruz',
           textCapitalization: TextCapitalization.words,
@@ -1169,6 +1168,16 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Image.asset(
+                  'assets/mabini-logo.png',
+                  height: 64,
+                  width: 64,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Municipality of Mabini logo',
+                ),
+              ),
+              const SizedBox(height: 8),
               const Text(
                 'Republic of the Philippines',
                 textAlign: TextAlign.center,
@@ -1251,8 +1260,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 'and that I am applying for a franchise to operate the '
                 'above-described tricycle for public service.',
                 textAlign: TextAlign.justify,
-                style:
-                    TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.5),
+                style: TextStyle(
+                    fontSize: 12.5, color: Colors.black87, height: 1.5),
               ),
               const SizedBox(height: 18),
               const Text(
@@ -1483,13 +1492,24 @@ String _ownershipLabel(String value) {
 String? _formatDate(DateTime? date) {
   if (date == null) return null;
   const months = <String>[
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
 
-String _applicationNumberPreview() => 'Generated on submission (APP-YYYY-NNNNNN)';
+String _applicationNumberPreview() =>
+    'Generated on submission (APP-YYYY-NNNNNN)';
 
 // ---------------------------------------------------------------------------
 // Small widgets

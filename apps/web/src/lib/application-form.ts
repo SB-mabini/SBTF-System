@@ -23,6 +23,13 @@ export interface ApplicationFormInput {
   applicantName: string;
   signatureDataUrl?: string | null;
   printedAt?: string | null;
+
+  // Franchise Editor template options.
+  logoDataUrl?: string | null;
+  logoEnabled?: boolean;
+  logoPosition?: "left" | "center" | "right";
+  logoWidth?: number;
+  headerAlign?: "left" | "center" | "right";
 }
 
 const OWNERSHIP_LABELS: Record<string, string> = {
@@ -42,18 +49,33 @@ export function buildApplicationFormPdf(input: ApplicationFormInput): jsPDF {
   const margin = 18;
   const center = pageWidth / 2;
   const contentWidth = pageWidth - margin * 2;
-  let cursor = 18;
+
+  const logoEnabled = input.logoEnabled !== false && Boolean(input.logoDataUrl);
+  const logoPosition = input.logoPosition ?? "left";
+  const logoWidth = Math.min(Math.max(Number(input.logoWidth ?? 22) || 22, 16), 40);
+  const headerAlign = input.headerAlign ?? "center";
+  const alignX = headerAlign === "left" ? margin : headerAlign === "right" ? pageWidth - margin : center;
+  const textAlign = headerAlign === "left" ? "left" : headerAlign === "right" ? "right" : "center";
+  const headerTop = logoEnabled && logoPosition === "center" ? 9 + logoWidth + 2 : 18;
+
+  let cursor = headerTop;
+
+  if (logoEnabled && input.logoDataUrl) {
+    const logoX =
+      logoPosition === "left" ? margin : logoPosition === "right" ? pageWidth - margin - logoWidth : center - logoWidth / 2;
+    doc.addImage(input.logoDataUrl, "PNG", logoX, 8, logoWidth, logoWidth, undefined, "FAST");
+  }
 
   doc.setFont("times", "normal");
   doc.setFontSize(10);
-  doc.text("Republic of the Philippines", center, cursor, { align: "center" });
+  doc.text("Republic of the Philippines", alignX, cursor, { align: textAlign });
   cursor += 5;
-  doc.text(`Province of ${PROVINCE}`, center, cursor, { align: "center" });
+  doc.text(`Province of ${PROVINCE}`, alignX, cursor, { align: textAlign });
   cursor += 5;
-  doc.text(MUNICIPALITY, center, cursor, { align: "center" });
+  doc.text(MUNICIPALITY, alignX, cursor, { align: textAlign });
   cursor += 5;
   doc.setFont("times", "bold");
-  doc.text("OFFICE OF THE SANGGUNIANG BAYAN", center, cursor, { align: "center" });
+  doc.text("OFFICE OF THE SANGGUNIANG BAYAN", alignX, cursor, { align: textAlign });
 
   cursor += 12;
   doc.setFontSize(15);

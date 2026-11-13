@@ -17,8 +17,10 @@ export const metadata: Metadata = {
   applicationName: "SBTF System",
   robots: { index: false, follow: false },
   icons: {
-    icon: [{ url: "/logo.jpg", type: "image/jpeg" }],
-    apple: [{ url: "/logo.jpg", type: "image/jpeg" }],
+    icon: [
+      { url: "/logo.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/logo.png", type: "image/png", sizes: "180x180" }],
   },
 };
 

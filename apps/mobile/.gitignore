@@ -34,3 +34,5 @@ android/key.properties
 
 # Coverage output.
 coverage/
+.vercel
+.env*

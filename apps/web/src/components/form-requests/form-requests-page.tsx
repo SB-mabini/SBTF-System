@@ -5,7 +5,7 @@ import { FormRequestActions } from "@/components/form-requests/form-request-acti
 import { Badge, Card, CardHeader, EmptyState, SectionTitle } from "@/components/ui";
 import { listFormRequests } from "@/lib/data";
 import { APPLICATION_TYPE_LABELS, FORM_REQUEST_STATUS_LABELS } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, isPast } from "@/lib/format";
 import type { FormRequestStatus } from "@/types/database";
 
 const STATUS_TABS: Array<{ value: FormRequestStatus | "all"; label: string }> = [
@@ -41,7 +41,7 @@ export async function FormRequestsPage({
     <div className="space-y-5">
       <SectionTitle
         title="Form Requests"
-        description="Requests raised by drivers in the mobile app. Issue the form, then link it to the submitted application."
+        description="Requests raised by drivers in the mobile app. Issue the form; the application it produces is linked automatically."
       />
 
       <div className="flex flex-wrap gap-2">
@@ -88,12 +88,12 @@ export async function FormRequestsPage({
                       {request.review_due_at && request.status === "requested" ? (
                         <Badge
                           tone={
-                            new Date(request.review_due_at).getTime() < Date.now()
+                            isPast(request.review_due_at)
                               ? "danger"
                               : "neutral"
                           }
                         >
-                          {new Date(request.review_due_at).getTime() < Date.now()
+                          {isPast(request.review_due_at)
                             ? "Review overdue"
                             : `Review by ${formatDateTime(request.review_due_at)}`}
                         </Badge>
@@ -143,6 +143,7 @@ export async function FormRequestsPage({
                     formRequestId={request.id}
                     status={request.status}
                     printed={Boolean(request.printed_at)}
+                    convertedApplicationId={request.converted_application_id}
                   />
                 </div>
               </li>

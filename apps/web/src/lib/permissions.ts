@@ -30,6 +30,7 @@ export const CAPABILITIES = {
     "settings.view",
     "settings.manage",
     "toda.manage",
+    "announcements.manage",
   ],
   staff: [
     "dashboard.view",
@@ -52,6 +53,7 @@ export const CAPABILITIES = {
     "reports.export",
     "ai.request",
     "logs.view_all",
+    "announcements.manage",
   ],
   driver: [],
 } as const satisfies Record<UserRole, readonly string[]>;
