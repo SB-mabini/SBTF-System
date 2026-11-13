@@ -46,7 +46,7 @@ import type {
 
 export function OverviewCards({ overview }: { overview: AnalyticsOverview }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       <StatCard
         label="Total applications"
         value={formatNumber(overview.total_applications)}

@@ -58,7 +58,7 @@ function PageHeaderSkeleton({ action = true }: { action?: boolean }) {
 
 function StatCardsSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="sbtf-card p-4">
           <div className="flex items-start justify-between gap-3">

@@ -264,16 +264,18 @@ export function StatCard({
             : "text-primary-700 bg-primary-50";
 
   return (
-    <div className="sbtf-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[0.75rem] font-medium uppercase tracking-wide text-muted">{label}</p>
+    <div className="sbtf-card p-3 sm:p-4">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-muted sm:text-[0.75rem]">
+          {label}
+        </p>
         {Icon ? (
-          <span className={`rounded-md p-1.5 ${accent}`}>
+          <span className={`shrink-0 rounded-md p-1.5 ${accent}`}>
             <Icon className="h-4 w-4" />
           </span>
         ) : null}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      <p className="mt-2 text-xl font-semibold tabular-nums text-ink sm:text-2xl">{value}</p>
       {hint ? <p className="mt-1 text-[0.75rem] text-muted">{hint}</p> : null}
     </div>
   );
