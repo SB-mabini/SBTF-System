@@ -39,6 +39,8 @@ npm run test:rls       # pgTAP suites (needs Supabase CLI + a project)
 npm run web:build      # production build
 npm run auth:email     # verify the hosted Auth e-mail templates send codes
 npm run auth:email:apply  # push supabase/templates/* to the hosted project
+npm run install:publish  # upload split release APKs and update the /install manifest
+npm run install:page     # assemble /install (page, QR, APKs) inside build/web
 ```
 
 `npm run db:check` is the fastest way to confirm an environment is healthy;

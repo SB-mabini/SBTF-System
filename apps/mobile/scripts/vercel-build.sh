@@ -50,3 +50,9 @@ if [ -n "${SUPABASE_ANON_KEY:-}" ]; then
 fi
 
 flutter build web "${build_args[@]}"
+
+# Assemble /install: copies the page, generates the QR code, and downloads the
+# release APKs listed in web/install/release.json. Keeping this here means a
+# plain `git push` publishes a complete install page, not just the web app.
+node ../../scripts/build-install-site.mjs
+

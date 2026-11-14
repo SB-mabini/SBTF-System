@@ -76,6 +76,15 @@ flutter build web --release
 npx vercel deploy build/web --prod
 ```
 
+### 2.2 Phone installation page
+
+`/install/` is a static page served from the same deployment. It carries a QR
+code, install steps, and signed APK downloads. The APKs live on a GitHub
+Release; `web/install/release.json` (committed) lists them, and the build
+script fetches and hash-checks them. See
+[`docs/mobile.md` §5](../../docs/mobile.md) for the release commands and the
+keystore backup warning.
+
 ## 3. Quality gates
 
 CI (`.github/workflows/flutter-ci.yml`) runs, on every push that touches

@@ -246,6 +246,56 @@ flutter build apk --release          # installable APK
 flutter build appbundle --release    # Play Store bundle (.aab)
 ```
 
+### Install page and QR code
+
+`https://sbtf-application.vercel.app/install/` is a plain HTML page (not part of
+the Flutter bundle) that shows a QR code, the install steps, and the APK
+download buttons. Print the QR code on a poster; scanning it opens the page on
+the driver's phone.
+
+The APKs are attached to a GitHub Release rather than committed (~25 MB each),
+and `apps/mobile/web/install/release.json` records their public URLs, sizes
+and SHA-256 values. That file **is** committed, so the normal Vercel Git build
+runs `node ../../scripts/build-install-site.mjs`, downloads the APKs into
+`build/web/install/download/` and verifies the hashes before publishing.
+
+To release a new version:
+
+```bash
+# 1. Bump `version:` in apps/mobile/pubspec.yaml, then build split APKs.
+cd apps/mobile
+flutter build apk --release --split-per-abi
+
+# 2. Upload them and rewrite web/install/release.json.
+cd ../..
+npm run install:publish      # uses GITHUB_TOKEN, or the git credential store
+
+# 3. Commit release.json and push; Vercel rebuilds the page with the new APKs.
+git add apps/mobile/web/install/release.json apps/mobile/pubspec.yaml
+git commit -m "release: mobile 0.1.0+2"
+git push
+```
+
+Manual deployment (same artefacts, bypassing Git):
+
+```bash
+cd apps/mobile
+flutter build web --release
+cd ../..
+npm run install:page         # page + QR + APK downloads into build/web
+npx vercel deploy apps/mobile/build/web --prod
+```
+
+`SBTF_INSTALL_URL` overrides the URL encoded in the QR code if the page moves
+to a custom domain. Re-run `install:page` after changing it.
+
+**Back up `apps/mobile/android/app/upload-keystore.jks` and
+`apps/mobile/android/key.properties`.** Both are git-ignored. Losing the
+keystore means future builds are signed with a different key, and Android will
+refuse to install them over the copy already on drivers' phones — everyone
+would have to uninstall first.
+
+
 ---
 
 ## 6. Functional acceptance cases (MA-01 … MA-56)

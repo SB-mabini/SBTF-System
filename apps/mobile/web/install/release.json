@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "build": "2",
+  "released": "14 Nov 2026",
+  "generatedAt": "2026-11-14T12:43:37.110Z",
+  "pageUrl": "https://sbtf-application.vercel.app/install/",
+  "releaseUrl": "https://github.com/SB-mabini/SBTF-System/releases/tag/app-v0.1.0-2",
+  "apks": [
+    {
+      "abi": "arm64-v8a",
+      "label": "Android 7+ (64-bit, most phones)",
+      "file": "sbtf-arm64.apk",
+      "assetName": "sbtf-0.1.0-arm64-v8a.apk",
+      "sourceUrl": "https://github.com/SB-mabini/SBTF-System/releases/download/app-v0.1.0-2/sbtf-0.1.0-arm64-v8a.apk",
+      "sizeBytes": 30364178,
+      "sha256": "2d678f5d87844aa6afa5b9f3043c89000edc2aca1fedbe75c601b14e0e8f0d67",
+      "primary": true
+    },
+    {
+      "abi": "armeabi-v7a",
+      "label": "Android 7+ (32-bit, older phones)",
+      "file": "sbtf-armeabi-v7a.apk",
+      "assetName": "sbtf-0.1.0-armeabi-v7a.apk",
+      "sourceUrl": "https://github.com/SB-mabini/SBTF-System/releases/download/app-v0.1.0-2/sbtf-0.1.0-armeabi-v7a.apk",
+      "sizeBytes": 26283138,
+      "sha256": "241b515673a33bc8a9a0054afe91a672d024171bdd9949083b15906649b4a32d",
+      "primary": false
+    }
+  ]
+}

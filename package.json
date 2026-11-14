@@ -19,6 +19,8 @@
     "functions:deploy:all": "node scripts/deploy-functions.mjs --all",
     "auth:email": "node scripts/apply-auth-email-config.mjs",
     "auth:email:apply": "node scripts/apply-auth-email-config.mjs --apply",
+    "install:page": "node scripts/build-install-site.mjs",
+    "install:publish": "node scripts/publish-install-release.mjs",
     "test:rls": "supabase test db supabase/tests",
     "web:dev": "npm --workspace @sbtf/web run dev",
     "web:build": "npm --workspace @sbtf/web run build",

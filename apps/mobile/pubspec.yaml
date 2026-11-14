@@ -4,7 +4,7 @@ description: >-
   Mobile-Based Franchising and Tricycle Driver Registration System for the
   Municipality of Mabini, Batangas.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.1.0+2
 
 environment:
   sdk: ">=3.5.0 <4.0.0"

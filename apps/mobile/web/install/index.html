@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Install the SBTF app — Sangguniang Bayan ng Mabini</title>
+<meta name="description" content="Install the SBTF mobile app for tricycle drivers and operators of Mabini, Batangas. Scan the QR code with your phone camera.">
+<meta name="theme-color" content="#271564">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="apple-touch-icon" href="../icons/Icon-180.png">
+<style>
+  :root {
+    --primary: #271564;
+    --primary-dark: #1b0f4e;
+    --primary-bright: #4a38a0;
+    --primary-tint: #f1eff9;
+    --primary-tint-strong: #e3dff2;
+    --accent: #f2c749;
+    --accent-strong: #e0a800;
+    --ink-strong: #14131e;
+    --ink: #3b3a46;
+    --ink-muted: #6b6b7b;
+    --surface: #ffffff;
+    --background: #f7f7fb;
+    --border: #e6e5ee;
+    --success: #0e7c4a;
+    --success-tint: #e8f7ef;
+    --warning-tint: #fbf3e0;
+    --warning: #8a6100;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(11, 18, 32, .06), 0 10px 30px rgba(11, 18, 32, .07);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+
+  a { color: var(--primary-bright); }
+
+  .bar {
+    background: linear-gradient(135deg, #33207a, #1b0f4e);
+    color: #fff;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  .bar-inner {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #fff;
+    object-fit: contain;
+    padding: 3px;
+    flex: none;
+  }
+
+  .bar-text { line-height: 1.25; }
+  .bar-text span { display: block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: #d9d3f2; }
+  .bar-text strong { font-size: 17px; font-weight: 600; letter-spacing: .01em; }
+
+  main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 20px 56px;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .eyebrow {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--primary-bright);
+  }
+
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--ink-strong);
+  }
+
+  .lede {
+    margin: 0 0 22px;
+    font-size: 17px;
+    max-width: 34em;
+    color: var(--ink);
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .facts li {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-tint);
+    border: 1px solid var(--primary-tint-strong);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+
+  .qr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 22px 22px 18px;
+    text-align: center;
+  }
+
+  .qr-plate {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px;
+  }
+
+  .qr-plate img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .qr-title {
+    margin: 14px 0 4px;
+    font-weight: 700;
+    color: var(--ink-strong);
+    font-size: 16px;
+  }
+
+  .qr-hint {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  .qr-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    word-break: break-all;
+  }
+
+  .qr-link button {
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--primary-bright);
+    background: none;
+    border: 0;
+    padding: 2px 4px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+    gap: 32px;
+    margin-top: 44px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px;
+  }
+
+  h2 {
+    margin: 0 0 18px;
+    font-size: 19px;
+    color: var(--ink-strong);
+    letter-spacing: -.01em;
+  }
+
+  ol.steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: grid;
+    gap: 20px;
+  }
+
+  ol.steps li {
+    position: relative;
+    padding-left: 46px;
+    counter-increment: step;
+  }
+
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: grid;
+    place-items: center;
+  }
+
+  ol.steps strong { display: block; color: var(--ink-strong); margin-bottom: 2px; }
+  ol.steps p { margin: 0; font-size: 14.5px; color: var(--ink-muted); }
+
+  .download .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color .15s ease, border-color .15s ease, transform .05s ease;
+  }
+
+  .download .btn:active { transform: translateY(1px); }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border: 1px solid var(--primary);
+  }
+
+  .btn-primary:hover { background: var(--primary-dark); }
+
+  .btn-ghost {
+    margin-top: 10px;
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid var(--primary-tint-strong);
+  }
+
+  .btn-ghost:hover { border-color: var(--primary-bright); }
+
+  .release-meta {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: center;
+    min-height: 1.4em;
+  }
+
+  .arch-note {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  details {
+    margin-top: 18px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+  }
+
+  details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 13px;
+  }
+
+  details .file {
+    margin-top: 10px;
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+
+  .note {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .note-card {
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .note-card h3 {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: var(--ink-strong);
+  }
+
+  .note-card p { margin: 0; color: var(--ink-muted); font-size: 13.5px; }
+
+  .note-card.safe { background: var(--success-tint); border-color: #c7ecda; }
+  .note-card.safe h3 { color: var(--success); }
+
+  .note-card.warn { background: var(--warning-tint); border-color: #f0e2b8; }
+  .note-card.warn h3 { color: var(--warning); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 22px 20px 30px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+  }
+
+  footer a { color: var(--ink-muted); }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 28px; }
+    .qr-card { max-width: 360px; margin: 0 auto; width: 100%; }
+    .columns { grid-template-columns: 1fr; margin-top: 32px; }
+    main { padding-top: 28px; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .bar, .download .btn, .qr-link button, .note, footer { display: none; }
+    .qr-card { box-shadow: none; border: 2px solid #14131e; }
+    main { padding: 0; }
+    .hero { grid-template-columns: 1fr 280px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <img src="../icons/Icon-192.png" alt="Municipality of Mabini seal">
+    <div class="bar-text">
+      <span>Sangguniang Bayan ng Mabini</span>
+      <strong>SBTF System</strong>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Android app</p>
+      <h1>Install the SBTF app on your phone</h1>
+      <p class="lede">
+        The official app for tricycle drivers and operators of Mabini, Batangas.
+        File a franchise application, upload your requirements, follow the review,
+        and keep your certificate — wherever you are.
+      </p>
+      <ul class="facts">
+        <li>Android 7.0 or newer</li>
+        <li>Free</li>
+        <li>Works on mobile data</li>
+      </ul>
+    </div>
+
+    <div class="qr-card">
+      <div class="qr-plate">
+        <img src="qr.svg" alt="QR code that opens this installation page" width="600" height="600">
+      </div>
+      <p class="qr-title">Scan with your phone camera</p>
+      <p class="qr-hint">Point the camera at the code, then tap the link that appears.</p>
+      <div class="qr-link">
+        <span id="page-url">sbtf-application.vercel.app/install</span>
+        <button type="button" id="copy-link">Copy</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="columns">
+    <div class="panel">
+      <h2>How to install</h2>
+      <ol class="steps">
+        <li>
+          <strong>Scan the QR code</strong>
+          <p>Use your phone camera. If you are reading this on the phone already, just tap Download.</p>
+        </li>
+        <li>
+          <strong>Tap Download</strong>
+          <p>Choose “Download for Android”. If your browser warns about the file type, choose “Download anyway”.</p>
+        </li>
+        <li>
+          <strong>Allow the install</strong>
+          <p>Android will ask permission to install from your browser. Open Settings, allow “Install unknown apps” for that browser, then tap the downloaded file.</p>
+        </li>
+        <li>
+          <strong>Open SBTF and sign in</strong>
+          <p>Create an account with your e-mail address, or sign in if you already registered. A 6-digit code sent to your e-mail confirms the account.</p>
+        </li>
+      </ol>
+    </div>
+
+    <aside class="panel download">
+      <h2>Download</h2>
+      <a class="btn btn-primary" href="download/sbtf-arm64.apk" download>Download for Android</a>
+      <a class="btn btn-ghost" href="download/sbtf-armeabi-v7a.apk" download>32-bit Android (older phones)</a>
+      <p class="arch-note">If the main file does not install, your phone is a 32-bit model — use the second button.</p>
+      <p class="release-meta" id="release-meta">Checking the latest release…</p>
+      <details>
+        <summary>File details and checksums</summary>
+        <div class="file" id="file-details">Available when the release information loads.</div>
+      </details>
+    </aside>
+  </section>
+
+  <section class="note">
+    <div class="note-card safe">
+      <h3>Install only from this page</h3>
+      <p>The APK here is signed by the Municipality of Mabini. Avoid copies sent through messaging apps; they may have been modified.</p>
+    </div>
+    <div class="note-card">
+      <h3>Updating</h3>
+      <p>Open this page again and download. Android installs the update over the old app and keeps your account — your data lives on the server.</p>
+    </div>
+    <div class="note-card warn">
+      <h3>iPhone or iPad</h3>
+      <p>There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Municipality of Mabini, Batangas · <a href="../">Open the web version</a>
+</footer>
+
+<script>
+  (function () {
+    var pageUrl = location.origin + location.pathname.replace(/index\.html$/, '');
+    var pageUrlLabel = document.getElementById('page-url');
+    if (pageUrlLabel) pageUrlLabel.textContent = pageUrl.replace(/^https?:\/\//, '');
+
+    var copyButton = document.getElementById('copy-link');
+    if (copyButton) {
+      copyButton.addEventListener('click', function () {
+        var done = function () {
+          copyButton.textContent = 'Copied';
+          setTimeout(function () { copyButton.textContent = 'Copy'; }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(pageUrl).then(done, function () {});
+        } else {
+          var input = document.createElement('input');
+          input.value = pageUrl;
+          document.body.appendChild(input);
+          input.select();
+          try { document.execCommand('copy'); done(); } catch (e) {}
+          document.body.removeChild(input);
+        }
+      });
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes && bytes !== 0) return '';
+      var mb = bytes / (1024 * 1024);
+      return (mb >= 10 ? mb.toFixed(0) : mb.toFixed(1)) + ' MB';
+    }
+
+    fetch('release.json', { cache: 'no-cache' })
+      .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function (release) {
+        var meta = document.getElementById('release-meta');
+        if (meta) {
+          var parts = ['Version ' + release.version];
+          if (release.build) parts.push('build ' + release.build);
+          var primary = (release.apks || []).filter(function (a) { return a.primary; })[0] || (release.apks || [])[0];
+          if (primary) parts.push(formatBytes(primary.sizeBytes));
+          if (release.released) parts.push(release.released);
+          meta.textContent = parts.join(' · ');
+        }
+
+        var details = document.getElementById('file-details');
+        if (details) {
+          details.innerHTML = '';
+          (release.apks || []).forEach(function (apk) {
+            var block = document.createElement('div');
+            block.style.marginBottom = '10px';
+            var name = document.createElement('div');
+            name.textContent = apk.label + ' — ' + apk.file + ' (' + formatBytes(apk.sizeBytes) + ')';
+            var hash = document.createElement('div');
+            hash.textContent = 'SHA-256 ' + apk.sha256;
+            block.appendChild(name);
+            block.appendChild(hash);
+            details.appendChild(block);
+          });
+        }
+      })
+      .catch(function () {
+        var meta = document.getElementById('release-meta');
+        if (meta) meta.textContent = 'Release details unavailable — the download buttons still work.';
+      });
+  })();
+</script>
+</body>
+</html>
