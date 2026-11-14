@@ -570,6 +570,9 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: selected?.id,
+                // The InputDecorator already draws the caret; hide the
+                // DropdownButton's own icon so the field shows a single arrow.
+                icon: const SizedBox.shrink(),
                 hint: const Text('Select your TODA'),
                 items: [
                   for (final toda in todas)
