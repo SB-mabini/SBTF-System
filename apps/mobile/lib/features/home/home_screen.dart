@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/branding.dart';
 import '../../core/models/app_notification.dart';
@@ -8,6 +9,7 @@ import '../../core/models/franchise_application.dart';
 import '../../core/models/profile.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/update_service.dart';
 import '../../core/widgets/brand_mark.dart';
 import '../../core/widgets/error_view.dart';
 import '../application/application_detail_screen.dart';
@@ -468,6 +470,8 @@ class _HomeTab extends ConsumerWidget {
         AppSpacing.lg,
       ),
       children: [
+        const _UpdateNotice(),
+        const SizedBox(height: AppSpacing.sm),
         _HeroCard(
           name: profile?.fullName ?? 'Driver',
           initials: profile?.initials ?? '?',
@@ -1178,6 +1182,162 @@ class _CountBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+/// A single, dismissible prompt shown when `/install/release.json` advertises a
+/// newer build than the one installed.
+///
+/// Deliberately quiet: it renders nothing while checking, nothing when offline,
+/// and nothing when the driver chose "Later" for that build. The update itself
+/// happens on the install page (there is no Play Store listing).
+class _UpdateNotice extends StatefulWidget {
+  const _UpdateNotice();
+
+  @override
+  State<_UpdateNotice> createState() => _UpdateNoticeState();
+}
+
+class _UpdateNoticeState extends State<_UpdateNotice> {
+  AppRelease? _release;
+  bool _opening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final installed = await AppUpdateService.installed();
+    final latest = await AppUpdateService.latest();
+    if (!mounted || latest == null) return;
+    if (!latest.isNewerThan(installed)) return;
+    if (await AppUpdateService.isDismissed(latest.build)) return;
+    if (!mounted) return;
+    setState(() => _release = latest);
+  }
+
+  Future<void> _open() async {
+    final release = _release;
+    if (release == null || _opening) return;
+    setState(() => _opening = true);
+    try {
+      final opened = await launchUrl(
+        Uri.parse(release.pageUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not open the download page. Visit '
+              'sbtf-application.vercel.app/install on your browser.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      // The browser is optional; never block the home screen on it.
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  Future<void> _later() async {
+    final release = _release;
+    if (release == null) return;
+    await AppUpdateService.dismiss(release.build);
+    if (!mounted) return;
+    setState(() => _release = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final release = _release;
+    if (release == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.compact),
+      decoration: BoxDecoration(
+        color: AppColors.accentTint,
+        border: Border.all(color: AppColors.accentTintStrong),
+        borderRadius: AppRadius.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.system_update_alt,
+                color: AppColors.accentStrong,
+                size: 22,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Update available',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.inkStrong,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'SBTF ${release.version} is ready'
+                      '${release.released == null ? '' : ' � ${release.released}'}. '
+                      'Your applications and documents stay on the server.',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.inkMuted,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _later,
+                child: const Text('Later'),
+              ),
+              const SizedBox(width: AppSpacing.unit),
+              FilledButton(
+                onPressed: _opening ? null : _open,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 10,
+                  ),
+                ),
+                child: _opening
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Update'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

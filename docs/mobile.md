@@ -253,11 +253,46 @@ the Flutter bundle) that shows a QR code, the install steps, and the APK
 download buttons. Print the QR code on a poster; scanning it opens the page on
 the driver's phone.
 
+The page has an **English / Filipino** switch in the header (the choice is
+remembered in `localStorage`, and the phone's language is used on first visit).
+Every visible string lives in the `STRINGS` table at the bottom of
+`apps/mobile/web/install/index.html`; keep both languages in sync when editing
+copy. The QR image itself can be downloaded from the page for barangay or TODA
+notice boards.
+
+`apps/mobile/web/install/poster.html` is a print-ready A4 poster: seal, large
+QR, the three install steps in Filipino (with an English column), and office
+hours. Open it from the install page footer ("Print a poster") or directly at
+`/install/poster.html`, then use the browser's Print dialog. The build script
+copies it along with the rest of `web/install/`, so no extra step is needed.
+
 The APKs are attached to a GitHub Release rather than committed (~25 MB each),
 and `apps/mobile/web/install/release.json` records their public URLs, sizes
 and SHA-256 values. That file **is** committed, so the normal Vercel Git build
 runs `node ../../scripts/build-install-site.mjs`, downloads the APKs into
 `build/web/install/download/` and verifies the hashes before publishing.
+
+#### Update awareness in the app
+
+There is no Play Store listing, so the app checks for updates itself.
+`lib/core/update_service.dart`:
+
+- reads the installed version/build from the APK via `package_info_plus`;
+  Android reports an ABI-prefixed version code for split APKs (build 3 becomes
+  1003 or 2003), so `AppUpdateService.normalizeBuildCode` strips that digit
+  before comparing;
+- fetches `/install/release.json` once when the home screen opens (8-second
+  timeout, all failures silent so the app works offline);
+- shows a dismissible "Update available" card when the published `build` is
+  higher than the installed one;
+- remembers a "Later" tap per build in `SharedPreferences`, so the same release
+  is not advertised again.
+
+Settings → **Application version** shows the real `version (build N)`, and
+**Check for updates** performs the same comparison on demand and opens
+`/install/` when a newer build exists. Because the comparison is by build
+number, `version:` in `pubspec.yaml` must be bumped (`0.1.0+4`, `0.1.0+5`, …)
+for every release.
 
 To release a new version:
 
@@ -272,7 +307,7 @@ npm run install:publish      # uses GITHUB_TOKEN, or the git credential store
 
 # 3. Commit release.json and push; Vercel rebuilds the page with the new APKs.
 git add apps/mobile/web/install/release.json apps/mobile/pubspec.yaml
-git commit -m "release: mobile 0.1.0+2"
+git commit -m "release: mobile 0.1.0+3"
 git push
 ```
 
@@ -294,6 +329,15 @@ to a custom domain. Re-run `install:page` after changing it.
 keystore means future builds are signed with a different key, and Android will
 refuse to install them over the copy already on drivers' phones — everyone
 would have to uninstall first.
+
+Keep the keystore and its password in the municipality's password manager, held
+by the Sangguniang Bayan IT administrator and one backup officer. Do not email
+the password or commit it. To verify that a build used the expected key:
+
+```bash
+keytool -list -v -keystore apps/mobile/android/app/upload-keystore.jks -alias upload
+# Compare the SHA-256 fingerprint with the recorded release certificate.
+```
 
 
 ---

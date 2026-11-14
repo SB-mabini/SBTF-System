@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/branding.dart';
 import '../../core/onboarding/language.dart';
@@ -8,6 +9,7 @@ import '../../core/onboarding/onboarding_state.dart';
 import '../../core/onboarding/onboarding_store.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/update_service.dart';
 import '../../core/widgets/brand_mark.dart';
 import '../onboarding/full_agreement_screen.dart';
 import '../onboarding/onboarding_flow.dart';
@@ -28,6 +30,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late OnboardingStore _store;
   late OnboardingState _state;
   bool _loaded = false;
+  String _versionLabel = AppBranding.version;
+  bool _checkingUpdates = false;
 
   @override
   void initState() {
@@ -35,6 +39,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _store = ref.read(onboardingStoreProvider);
     _state = _store.state;
     _load();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final installed = await AppUpdateService.installed();
+    if (!mounted) return;
+    setState(() => _versionLabel = installed.label);
+  }
+
+  /// Manual counterpart to the home-screen prompt: tells the driver whether a
+  /// newer build exists and opens the install page when it does.
+  Future<void> _checkForUpdates() async {
+    if (_checkingUpdates) return;
+    setState(() => _checkingUpdates = true);
+    try {
+      final installed = await AppUpdateService.installed();
+      final latest = await AppUpdateService.latest();
+      if (!mounted) return;
+
+      if (latest == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not check for updates. Check your connection and try again.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (!latest.isNewerThan(installed)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('You are on the latest version (${installed.label}).'),
+          ),
+        );
+        return;
+      }
+
+      final open = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Update available'),
+          content: Text(
+            'SBTF ${latest.version} (build ${latest.build}) can be downloaded '
+            'from the install page. Your account and documents stay as they are.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Later'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Open install page'),
+            ),
+          ],
+        ),
+      );
+
+      if (open != true) return;
+      await launchUrl(
+        Uri.parse(latest.pageUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not check for updates.')),
+      );
+    } finally {
+      if (mounted) setState(() => _checkingUpdates = false);
+    }
   }
 
   Future<void> _load() async {
@@ -243,11 +321,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         leading: const Icon(Icons.info_outline),
                         title: const Text('Application version'),
                         subtitle: Text(
-                          AppBranding.version +
+                          _versionLabel +
                               (_loaded
                                   ? ' · ${_state.language.toUpperCase()}'
                                   : ''),
                         ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: _checkingUpdates
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.system_update_alt),
+                        title: const Text('Check for updates'),
+                        subtitle: const Text(
+                          'See whether a newer build is available',
+                        ),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.inkMuted,
+                        ),
+                        onTap: _checkingUpdates ? null : _checkForUpdates,
                       ),
                       const Divider(height: 1),
                       ListTile(

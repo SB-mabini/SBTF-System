@@ -75,6 +75,33 @@
   .bar-text span { display: block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: #d9d3f2; }
   .bar-text strong { font-size: 17px; font-weight: 600; letter-spacing: .01em; }
 
+  .lang {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    padding: 3px;
+  }
+
+  .lang button {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #e9e5f8;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+
+  .lang button[aria-pressed="true"] {
+    background: #fff;
+    color: var(--primary);
+  }
+
   main {
     max-width: 1040px;
     margin: 0 auto;
@@ -292,6 +319,20 @@
     text-align: center;
   }
 
+  .after-download {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--success-tint);
+    border: 1px solid #c7ecda;
+    color: var(--success);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .after-download[hidden] { display: none; }
+
   details {
     margin-top: 18px;
     border-top: 1px solid var(--border);
@@ -376,8 +417,12 @@
   <div class="bar-inner">
     <img src="../icons/Icon-192.png" alt="Municipality of Mabini seal">
     <div class="bar-text">
-      <span>Sangguniang Bayan ng Mabini</span>
+      <span data-i18n="office">Sangguniang Bayan ng Mabini</span>
       <strong>SBTF System</strong>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">English</button>
+      <button type="button" data-lang="fil" aria-pressed="false">Filipino</button>
     </div>
   </div>
 </header>
@@ -385,64 +430,66 @@
 <main>
   <section class="hero">
     <div>
-      <p class="eyebrow">Android app</p>
-      <h1>Install the SBTF app on your phone</h1>
-      <p class="lede">
+      <p class="eyebrow" data-i18n="eyebrow">Android app</p>
+      <h1 data-i18n="h1">Install the SBTF app on your phone</h1>
+      <p class="lede" data-i18n="lede">
         The official app for tricycle drivers and operators of Mabini, Batangas.
         File a franchise application, upload your requirements, follow the review,
         and keep your certificate — wherever you are.
       </p>
       <ul class="facts">
-        <li>Android 7.0 or newer</li>
-        <li>Free</li>
-        <li>Works on mobile data</li>
+        <li data-i18n="fact_android">Android 7.0 or newer</li>
+        <li data-i18n="fact_free">Free</li>
+        <li data-i18n="fact_data">Works on mobile data</li>
       </ul>
     </div>
 
     <div class="qr-card">
       <div class="qr-plate">
-        <img src="qr.svg" alt="QR code that opens this installation page" width="600" height="600">
+        <img src="qr.svg" alt="QR code that opens this installation page" data-i18n-alt="qr_alt" width="600" height="600">
       </div>
-      <p class="qr-title">Scan with your phone camera</p>
-      <p class="qr-hint">Point the camera at the code, then tap the link that appears.</p>
+      <p class="qr-title" data-i18n="qr_title">Scan with your phone camera</p>
+      <p class="qr-hint" data-i18n="qr_hint">Point the camera at the code, then tap the link that appears.</p>
       <div class="qr-link">
         <span id="page-url">sbtf-application.vercel.app/install</span>
-        <button type="button" id="copy-link">Copy</button>
+        <button type="button" id="copy-link" data-i18n="copy">Copy</button>
+        <a href="qr.svg" download="sbtf-install-qr.svg" data-i18n="download_qr">Download QR</a>
       </div>
     </div>
   </section>
 
   <section class="columns">
     <div class="panel">
-      <h2>How to install</h2>
+      <h2 data-i18n="how_title">How to install</h2>
       <ol class="steps">
         <li>
-          <strong>Scan the QR code</strong>
-          <p>Use your phone camera. If you are reading this on the phone already, just tap Download.</p>
+          <strong data-i18n="step1_title">Scan the QR code</strong>
+          <p data-i18n="step1_body">Use your phone camera. If you are reading this on the phone already, just tap Download.</p>
         </li>
         <li>
-          <strong>Tap Download</strong>
-          <p>Choose “Download for Android”. If your browser warns about the file type, choose “Download anyway”.</p>
+          <strong data-i18n="step2_title">Tap Download</strong>
+          <p data-i18n="step2_body">Choose “Download for Android”. If your browser warns about the file type, choose “Download anyway”.</p>
         </li>
         <li>
-          <strong>Allow the install</strong>
-          <p>Android will ask permission to install from your browser. Open Settings, allow “Install unknown apps” for that browser, then tap the downloaded file.</p>
+          <strong data-i18n="step3_title">Allow the install</strong>
+          <p data-i18n="step3_body">Android will ask permission to install from your browser. Open Settings, allow “Install unknown apps” for that browser, then tap the downloaded file.</p>
         </li>
         <li>
-          <strong>Open SBTF and sign in</strong>
-          <p>Create an account with your e-mail address, or sign in if you already registered. A 6-digit code sent to your e-mail confirms the account.</p>
+          <strong data-i18n="step4_title">Open SBTF and sign in</strong>
+          <p data-i18n="step4_body">Create an account with your e-mail address, or sign in if you already registered. A 6-digit code sent to your e-mail confirms the account.</p>
         </li>
       </ol>
     </div>
 
     <aside class="panel download">
-      <h2>Download</h2>
-      <a class="btn btn-primary" href="download/sbtf-arm64.apk" download>Download for Android</a>
-      <a class="btn btn-ghost" href="download/sbtf-armeabi-v7a.apk" download>32-bit Android (older phones)</a>
-      <p class="arch-note">If the main file does not install, your phone is a 32-bit model — use the second button.</p>
-      <p class="release-meta" id="release-meta">Checking the latest release…</p>
+      <h2 data-i18n="download_title">Download</h2>
+      <a class="btn btn-primary" href="download/sbtf-arm64.apk" download data-i18n="download_primary">Download for Android</a>
+      <a class="btn btn-ghost" href="download/sbtf-armeabi-v7a.apk" download data-i18n="download_32">32-bit Android (older phones)</a>
+      <p class="arch-note" data-i18n="arch_note">If the main file does not install, your phone is a 32-bit model — use the second button.</p>
+      <p class="release-meta" id="release-meta" data-i18n="release_checking">Checking the latest release…</p>
+      <p class="after-download" id="after-download" hidden data-i18n="after_download">Download started. Open the notification or your Downloads folder, tap the file, and allow the install.</p>
       <details>
-        <summary>File details and checksums</summary>
+        <summary data-i18n="details">File details and checksums</summary>
         <div class="file" id="file-details">Available when the release information loads.</div>
       </details>
     </aside>
@@ -450,26 +497,174 @@
 
   <section class="note">
     <div class="note-card safe">
-      <h3>Install only from this page</h3>
-      <p>The APK here is signed by the Municipality of Mabini. Avoid copies sent through messaging apps; they may have been modified.</p>
+      <h3 data-i18n="safe_title">Install only from this page</h3>
+      <p data-i18n="safe_body">The APK here is signed by the Municipality of Mabini. Avoid copies sent through messaging apps; they may have been modified.</p>
     </div>
     <div class="note-card">
-      <h3>Updating</h3>
-      <p>Open this page again and download. Android installs the update over the old app and keeps your account — your data lives on the server.</p>
+      <h3 data-i18n="update_title">Updating</h3>
+      <p data-i18n="update_body">Open this page again and download. Android installs the update over the old app and keeps your account — your data lives on the server.</p>
     </div>
     <div class="note-card warn">
-      <h3>iPhone or iPad</h3>
-      <p>There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account.</p>
+      <h3 data-i18n="ios_title">iPhone or iPad</h3>
+      <p data-i18n-html="ios_body">There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account.</p>
     </div>
   </section>
 </main>
 
 <footer>
-  Municipality of Mabini, Batangas · <a href="../">Open the web version</a>
+  <span data-i18n="footer">Municipality of Mabini, Batangas</span> · <a href="../" data-i18n="footer_web">Open the web version</a> · <a href="poster.html" data-i18n="footer_poster">Print a poster</a>
 </footer>
 
 <script>
   (function () {
+    // Bilingual copy. Every string the page swaps lives here so the English in
+    // the HTML stays readable for anyone viewing source, and Filipino never
+    // drifts out of sync with an inline translation.
+    var STRINGS = {
+      en: {
+        eyebrow: 'Android app',
+        h1: 'Install the SBTF app on your phone',
+        lede: 'The official app for tricycle drivers and operators of Mabini, Batangas. File a franchise application, upload your requirements, follow the review, and keep your certificate — wherever you are.',
+        fact_android: 'Android 7.0 or newer',
+        fact_free: 'Free',
+        fact_data: 'Works on mobile data',
+        qr_title: 'Scan with your phone camera',
+        qr_hint: 'Point the camera at the code, then tap the link that appears.',
+        copy: 'Copy',
+        copied: 'Copied',
+        download_qr: 'Download QR',
+        how_title: 'How to install',
+        step1_title: 'Scan the QR code',
+        step1_body: 'Use your phone camera. If you are reading this on the phone already, just tap Download.',
+        step2_title: 'Tap Download',
+        step2_body: 'Choose “Download for Android”. If your browser warns about the file type, choose “Download anyway”.',
+        step3_title: 'Allow the install',
+        step3_body: 'Android will ask permission to install from your browser. Open Settings, allow “Install unknown apps” for that browser, then tap the downloaded file.',
+        step4_title: 'Open SBTF and sign in',
+        step4_body: 'Create an account with your e-mail address, or sign in if you already registered. A 6-digit code sent to your e-mail confirms the account.',
+        download_title: 'Download',
+        download_primary: 'Download for Android',
+        download_32: '32-bit Android (older phones)',
+        arch_note: 'If the main file does not install, your phone is a 32-bit model — use the second button.',
+        after_download: 'Download started. Open the notification or your Downloads folder, tap the file, and allow the install.',
+        details: 'File details and checksums',
+        release_checking: 'Checking the latest release…',
+        release_unavailable: 'Release details unavailable — the download buttons still work.',
+        safe_title: 'Install only from this page',
+        safe_body: 'The APK here is signed by the Municipality of Mabini. Avoid copies sent through messaging apps; they may have been modified.',
+        update_title: 'Updating',
+        update_body: 'Open this page again and download. Android installs the update over the old app and keeps your account — your data lives on the server.',
+        ios_title: 'iPhone or iPad',
+        ios_body: 'There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account.',
+        footer: 'Municipality of Mabini, Batangas',
+        footer_web: 'Open the web version',
+        footer_poster: 'Print a poster',
+        qr_alt: 'QR code that opens this installation page'
+      },
+      fil: {
+        eyebrow: 'App na Android',
+        h1: 'I-install ang SBTF app sa iyong telepono',
+        lede: 'Ang opisyal na app para sa mga tsuper at operator ng tricycle sa Mabini, Batangas. Maghain ng aplikasyon ng prangkisa, mag-upload ng mga kailangan, sundan ang pagsusuri, at itago ang iyong sertipiko — kahit saan ka man.',
+        fact_android: 'Android 7.0 pataas',
+        fact_free: 'Libre',
+        fact_data: 'Gumagana sa mobile data',
+        qr_title: 'I-scan gamit ang camera ng telepono',
+        qr_hint: 'Itutok ang camera sa code, pagkatapos ay pindutin ang link na lalabas.',
+        copy: 'Kopyahin',
+        copied: 'Nakopya',
+        download_qr: 'I-download ang QR',
+        how_title: 'Paano i-install',
+        step1_title: 'I-scan ang QR code',
+        step1_body: 'Gamitin ang camera ng telepono. Kung ito na ang binabasa mo sa telepono, pindutin lang ang I-download.',
+        step2_title: 'Pindutin ang I-download',
+        step2_body: 'Piliin ang “I-download para sa Android”. Kung may babala ang browser tungkol sa uri ng file, piliin ang “I-download pa rin”.',
+        step3_title: 'Payagan ang pag-install',
+        step3_body: 'Hihingi ng pahintulot ang Android na mag-install mula sa iyong browser. Buksan ang Settings, payagan ang “Install unknown apps” para sa browser na iyon, pagkatapos ay pindutin ang na-download na file.',
+        step4_title: 'Buksan ang SBTF at mag-sign in',
+        step4_body: 'Gumawa ng account gamit ang iyong e-mail, o mag-sign in kung nakarehistro ka na. Ang 6-digit na code na ipapadala sa iyong e-mail ang magpapatunay ng account.',
+        download_title: 'I-download',
+        download_primary: 'I-download para sa Android',
+        download_32: '32-bit na Android (lumang telepono)',
+        arch_note: 'Kung hindi ma-install ang pangunahing file, 32-bit ang iyong telepono — gamitin ang pangalawang button.',
+        after_download: 'Nagsimula ang download. Buksan ang notification o ang Downloads folder, pindutin ang file, at payagan ang pag-install.',
+        details: 'Detalye ng file at checksum',
+        release_checking: 'Sinusuri ang pinakabagong release…',
+        release_unavailable: 'Hindi makuha ang detalye ng release — gumagana pa rin ang mga download button.',
+        safe_title: 'Dito lang mag-install',
+        safe_body: 'Ang APK dito ay pinirmahan ng Munisipalidad ng Mabini. Iwasan ang mga kopyang ipinadala sa messaging app; maaaring nabago ang mga ito.',
+        update_title: 'Pag-update',
+        update_body: 'Buksan muli ang pahinang ito at mag-download. I-iinstall ng Android ang update sa ibabaw ng lumang app at mananatili ang iyong account — nasa server ang iyong data.',
+        ios_title: 'iPhone o iPad',
+        ios_body: 'Wala pang iOS build. Buksan ang <a href="../">web version</a> sa Safari at mag-sign in gamit ang parehong account.',
+        footer: 'Munisipalidad ng Mabini, Batangas',
+        footer_web: 'Buksan ang web version',
+        footer_poster: 'Mag-print ng poster',
+        qr_alt: 'QR code na magbubukas ng pahinang ito ng pag-install'
+      }
+    };
+
+    var STORAGE_KEY = 'sbtf_install_lang';
+    var currentLang = 'en';
+
+    function t(key) {
+      var table = STRINGS[currentLang] || STRINGS.en;
+      return table[key] != null ? table[key] : STRINGS.en[key];
+    }
+
+    function copyButtonLabel(button) {
+      if (!button) return;
+      if (button.dataset.state === 'copied') {
+        button.textContent = t('copied');
+      } else {
+        button.textContent = t('copy');
+      }
+    }
+
+    function applyLanguage(lang, persist) {
+      currentLang = STRINGS[lang] ? lang : 'en';
+      document.documentElement.lang = currentLang === 'fil' ? 'fil' : 'en';
+
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var value = t(el.dataset.i18n);
+        if (value != null) el.textContent = value;
+      });
+
+      document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+        var value = t(el.dataset.i18nHtml);
+        if (value != null) el.innerHTML = value;
+      });
+
+      document.querySelectorAll('[data-i18n-alt]').forEach(function (el) {
+        var value = t(el.dataset.i18nAlt);
+        if (value != null) el.setAttribute('alt', value);
+      });
+
+      document.querySelectorAll('[data-lang]').forEach(function (button) {
+        button.setAttribute('aria-pressed', button.dataset.lang === currentLang ? 'true' : 'false');
+      });
+
+      copyButtonLabel(document.getElementById('copy-link'));
+
+      if (persist) {
+        try { localStorage.setItem(STORAGE_KEY, currentLang); } catch (e) {}
+      }
+    }
+
+    // Restore the last choice, otherwise follow the phone's language once.
+    var saved = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+    if (!saved) {
+      var preferred = (navigator.language || '').toLowerCase();
+      if (preferred.indexOf('fil') === 0 || preferred.indexOf('tl') === 0) saved = 'fil';
+    }
+    applyLanguage(saved || 'en', false);
+
+    document.querySelectorAll('[data-lang]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        applyLanguage(button.dataset.lang, true);
+      });
+    });
+
     var pageUrl = location.origin + location.pathname.replace(/index\.html$/, '');
     var pageUrlLabel = document.getElementById('page-url');
     if (pageUrlLabel) pageUrlLabel.textContent = pageUrl.replace(/^https?:\/\//, '');
@@ -478,8 +673,12 @@
     if (copyButton) {
       copyButton.addEventListener('click', function () {
         var done = function () {
-          copyButton.textContent = 'Copied';
-          setTimeout(function () { copyButton.textContent = 'Copy'; }, 1600);
+          copyButton.dataset.state = 'copied';
+          copyButtonLabel(copyButton);
+          setTimeout(function () {
+            copyButton.dataset.state = '';
+            copyButtonLabel(copyButton);
+          }, 1600);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(pageUrl).then(done, function () {});
@@ -493,6 +692,15 @@
         }
       });
     }
+
+    // Tell the driver what happens next: after a download tap, the APK sits in
+    // the notification shade, which is where many people get stuck.
+    var afterDownload = document.getElementById('after-download');
+    document.querySelectorAll('a[download]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (afterDownload) afterDownload.hidden = false;
+      });
+    });
 
     function formatBytes(bytes) {
       if (!bytes && bytes !== 0) return '';
@@ -531,7 +739,7 @@
       })
       .catch(function () {
         var meta = document.getElementById('release-meta');
-        if (meta) meta.textContent = 'Release details unavailable — the download buttons still work.';
+        if (meta) meta.textContent = t('release_unavailable');
       });
   })();
 </script>

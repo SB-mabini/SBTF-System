@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SBTF app — print poster</title>
+<meta name="theme-color" content="#271564">
+<link rel="icon" type="image/png" href="../favicon.png">
+<style>
+  :root {
+    --primary: #271564;
+    --primary-dark: #1b0f4e;
+    --primary-bright: #4a38a0;
+    --primary-tint: #f1eff9;
+    --primary-tint-strong: #e3dff2;
+    --accent: #f2c749;
+    --ink-strong: #14131e;
+    --ink: #3b3a46;
+    --ink-muted: #6b6b7b;
+    --border: #e6e5ee;
+    --success: #0e7c4a;
+    --success-tint: #e8f7ef;
+  }
+
+  @page { size: A4 portrait; margin: 10mm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #eceaf4;
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+  }
+
+  .toolbar {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 14px 16px 0;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    font-size: 13px;
+  }
+
+  .toolbar a,
+  .toolbar button {
+    font: inherit;
+    font-weight: 600;
+    color: var(--primary);
+    background: #fff;
+    border: 1px solid var(--primary-tint-strong);
+    border-radius: 999px;
+    padding: 7px 14px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .toolbar a:hover,
+  .toolbar button:hover { border-color: var(--primary-bright); }
+
+  .poster {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 14px auto 28px;
+    padding: 12mm 13mm 10mm;
+    background: #fff;
+    color: var(--ink-strong);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(11, 18, 32, .16);
+  }
+
+  .poster-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 10mm;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  .poster-head img {
+    width: 22mm;
+    height: 22mm;
+    object-fit: contain;
+    flex: none;
+  }
+
+  .poster-head .office {
+    font-size: 10pt;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--primary-bright);
+    font-weight: 700;
+    margin: 0 0 2mm;
+  }
+
+  .poster-head h1 {
+    margin: 0;
+    font-size: 25pt;
+    line-height: 1.06;
+    letter-spacing: -.015em;
+    color: var(--primary-dark);
+  }
+
+  .poster-head .sub {
+    margin: 2mm 0 0;
+    font-size: 11.5pt;
+    color: var(--ink-muted);
+  }
+
+  .qr-block {
+    display: grid;
+    grid-template-columns: 1fr 78mm;
+    gap: 10mm;
+    align-items: center;
+    padding: 10mm 0 8mm;
+  }
+
+  .qr-block h2 {
+    margin: 0 0 4mm;
+    font-size: 19pt;
+    line-height: 1.15;
+    color: var(--ink-strong);
+  }
+
+  .qr-block .qr-caption {
+    margin: 0;
+    font-size: 11.5pt;
+    color: var(--ink-muted);
+    max-width: 26em;
+  }
+
+  .qr-plate {
+    border: 2.5mm solid var(--primary);
+    border-radius: 5mm;
+    padding: 4mm;
+    background: #fff;
+  }
+
+  .qr-plate img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+
+  .qr-block .url {
+    margin: 3mm 0 0;
+    text-align: center;
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: var(--primary);
+    word-break: break-all;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6mm;
+    margin: 2mm 0 8mm;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    position: relative;
+    counter-increment: step;
+    background: var(--primary-tint);
+    border: 1px solid var(--primary-tint-strong);
+    border-radius: 4mm;
+    padding: 5mm 5mm 5mm 6mm;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    top: -4mm;
+    left: -3mm;
+    width: 9mm;
+    height: 9mm;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12pt;
+    display: grid;
+    place-items: center;
+  }
+
+  .steps strong {
+    display: block;
+    font-size: 12.5pt;
+    color: var(--primary-dark);
+    margin-bottom: 1.5mm;
+  }
+
+  .steps p { margin: 0; font-size: 10pt; color: var(--ink-muted); }
+
+  .bilingual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: auto;
+    border-top: 2px solid var(--border);
+    padding-top: 6mm;
+  }
+
+  .bilingual > div { padding-right: 7mm; }
+  .bilingual > div + div { padding-left: 7mm; border-left: 1px solid var(--border); padding-right: 0; }
+
+  .bilingual h3 {
+    margin: 0 0 2mm;
+    font-size: 10pt;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--primary-bright);
+  }
+
+  .bilingual ol { margin: 0; padding-left: 5mm; }
+  .bilingual li { font-size: 9.5pt; color: var(--ink); margin-bottom: 1.5mm; }
+
+  .help {
+    margin-top: 7mm;
+    padding: 4mm 5mm;
+    border-radius: 4mm;
+    background: var(--success-tint);
+    border: 1px solid #c7ecda;
+    color: var(--success);
+    font-size: 10.5pt;
+  }
+
+  .help strong { color: var(--success); }
+
+  .foot {
+    margin-top: 5mm;
+    padding-top: 3mm;
+    border-top: 1px solid var(--border);
+    font-size: 8.5pt;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 6mm;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .poster { margin: 0; width: auto; min-height: 0; box-shadow: none; padding: 0; }
+    .steps li { break-inside: avoid; }
+  }
+
+  @media (max-width: 760px) {
+    .poster { width: auto; min-height: 0; margin: 10px; padding: 22px 18px; }
+    .qr-block { grid-template-columns: 1fr; }
+    .qr-plate { max-width: 300px; margin: 0 auto; }
+    .steps { grid-template-columns: 1fr; }
+    .bilingual { grid-template-columns: 1fr; }
+    .bilingual > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--border); padding-top: 4mm; margin-top: 4mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <a href="./">Back to the install page</a>
+  <button type="button" onclick="window.print()">Print this poster</button>
+</div>
+
+<main class="poster">
+  <header class="poster-head">
+    <img src="../icons/Icon-192.png" alt="Municipality of Mabini seal">
+    <div>
+      <p class="office">Sangguniang Bayan ng Mabini · Batangas</p>
+      <h1>I-download ang SBTF app</h1>
+      <p class="sub">Download the SBTF app · Libre at para sa mga tsuper at operator ng tricycle</p>
+    </div>
+  </header>
+
+  <section class="qr-block">
+    <div>
+      <h2>I-scan ang QR code para mag-install</h2>
+      <p class="qr-caption">
+        Buksan ang camera ng iyong telepono, itutok sa QR code, at pindutin ang link na lalabas.
+        Sinusundan nito ang opisyal na pahina ng pag-install.
+      </p>
+      <p class="qr-caption" lang="en">
+        Open your phone camera, point it at the QR code, and tap the link that appears.
+        It opens the official installation page.
+      </p>
+    </div>
+    <div>
+      <div class="qr-plate">
+        <img src="qr.svg" alt="QR code that opens the SBTF installation page" width="600" height="600">
+      </div>
+      <p class="url" id="poster-url">sbtf-application.vercel.app/install</p>
+    </div>
+  </section>
+
+  <ol class="steps">
+    <li>
+      <strong>I-scan ang code</strong>
+      <p>Gamitin ang camera ng telepono at pindutin ang link na lalabas.</p>
+    </li>
+    <li>
+      <strong>Pindutin ang I-download</strong>
+      <p>Piliin ang “I-download para sa Android”. Payagan ang pag-install kapag tinanong ng Android.</p>
+    </li>
+    <li>
+      <strong>Mag-sign in</strong>
+      <p>Gumawa ng account gamit ang e-mail, o mag-sign in kung nakarehistro na. May 6-digit na code na ipapadala sa e-mail.</p>
+    </li>
+  </ol>
+
+  <section class="bilingual">
+    <div lang="fil">
+      <h3>Filipino</h3>
+      <ol>
+        <li>I-scan ang QR code gamit ang camera ng telepono.</li>
+        <li>Pindutin ang “I-download para sa Android” at hintaying matapos.</li>
+        <li>Buksan ang na-download na file at payagan ang “Install unknown apps”.</li>
+        <li>Buksan ang SBTF, gumawa ng account, at ilagay ang 6-digit na code.</li>
+      </ol>
+    </div>
+    <div lang="en">
+      <h3>English</h3>
+      <ol>
+        <li>Scan the QR code with your phone camera.</li>
+        <li>Tap “Download for Android” and wait for the file to finish.</li>
+        <li>Open the downloaded file and allow “Install unknown apps”.</li>
+        <li>Open SBTF, create an account, and enter the 6-digit code.</li>
+      </ol>
+    </div>
+  </section>
+
+  <p class="help">
+    <strong>Kailangan ng tulong?</strong> Pumunta sa Sangguniang Bayan ng Mabini,
+    Lunes–Biyernes, 8:00 AM–5:00 PM. ·
+    <span lang="en"><strong>Need help?</strong> Visit the Sangguniang Bayan office, Monday–Friday, 8:00 AM–5:00 PM.</span>
+  </p>
+
+  <footer class="foot">
+    <span>Munisipalidad ng Mabini, Batangas</span>
+    <span>sbtf-application.vercel.app/install</span>
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var label = document.getElementById('poster-url');
+    if (!label) return;
+    var url = location.origin + location.pathname.replace(/poster\.html$/, '');
+    label.textContent = url.replace(/^https?:\/\//, '');
+
+    // Make the printed/clicked short URL work regardless of how the file is
+    // opened; the QR itself is generated by the build from the canonical URL.
+    var foot = document.querySelector('.foot span:last-child');
+    if (foot) foot.textContent = url.replace(/^https?:\/\//, '');
+  })();
+</script>
+</body>
+</html>
