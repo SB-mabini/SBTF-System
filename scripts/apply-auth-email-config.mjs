@@ -11,6 +11,12 @@
  * Usage:
  *   node scripts/apply-auth-email-config.mjs            # read-only check
  *   node scripts/apply-auth-email-config.mjs --apply    # push templates
+ *   node scripts/apply-auth-email-config.mjs --apply --site-url https://example.com
+ *
+ * SITE_URL is the production origin used by the invitation template. It is read
+ * from --site-url, then the SITE_URL environment variable, then the default
+ * below. Never inherit the currently stored value: an outdated deployment URL
+ * silently sends invitation links to a host the app no longer serves.
  *
  * Requires a Supabase personal access token (not the anon key):
  *   https://supabase.com/dashboard/account/tokens
@@ -29,11 +35,24 @@ const templatesDir = path.join(root, "supabase", "templates");
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
+const siteUrlFlagIndex = args.indexOf("--site-url");
+const siteUrlFlag = siteUrlFlagIndex >= 0 ? args[siteUrlFlagIndex + 1] : undefined;
+
+if (siteUrlFlagIndex >= 0 && !siteUrlFlag) {
+  fail("--site-url needs a value, e.g. --site-url https://sbtf-system.vercel.app");
+}
+
+const DEFAULT_SITE_URL = "https://sbtf-system.vercel.app";
+const siteUrl = normaliseUrl(siteUrlFlag ?? process.env.SITE_URL ?? DEFAULT_SITE_URL);
+
+if (!/^https?:\/\/[^/]+$/i.test(siteUrl)) {
+  fail(`site_url must be an origin with no trailing slash or path: ${siteUrl}`);
+}
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(
     [
-      "Usage: node scripts/apply-auth-email-config.mjs [--apply]",
+      "Usage: node scripts/apply-auth-email-config.mjs [--apply] [--site-url URL]",
       "",
       "  (no flag)  read the hosted Auth e-mail config and report mismatches",
       "  --apply    push supabase/templates/* and the OTP settings, then re-read",
@@ -41,6 +60,7 @@ if (args.includes("--help") || args.includes("-h")) {
       "Environment:",
       "  SUPABASE_ACCESS_TOKEN  required — a personal access token",
       "  SUPABASE_PROJECT_REF   optional — otherwise read from supabase link",
+      "  SITE_URL               optional — production origin for invitation links",
     ].join("\n"),
   );
   process.exit(0);
@@ -104,6 +124,7 @@ const TEMPLATES = [
 const apiBase = `https://api.supabase.com/v1/projects/${projectRef}/config/auth`;
 
 console.log(`Project: ${projectRef}`);
+console.log(`Site URL: ${siteUrl}`);
 console.log(`Mode:    ${apply ? "apply then verify" : "read-only check"}`);
 console.log("");
 
@@ -117,15 +138,8 @@ if (apply) {
   const body = {
     mailer_otp_length: 6,
     mailer_otp_exp: 600,
+    site_url: siteUrl,
   };
-
-  // A trailing slash makes the invite template build `//auth/confirm`, which
-  // GoTrue treats as a different redirect target. Keep the host the project
-  // already uses and only normalise the slash.
-  const currentSiteUrl = before.data.site_url;
-  if (typeof currentSiteUrl === "string" && currentSiteUrl.trim()) {
-    body.site_url = currentSiteUrl.trim().replace(/\/+$/, "");
-  }
 
   for (const template of TEMPLATES) {
     const contentPath = path.join(templatesDir, template.file);
@@ -171,11 +185,11 @@ for (const [key, expected] of [
   }
 }
 
-const siteUrl = config.data.site_url;
-if (typeof siteUrl === "string" && !siteUrl.endsWith("/")) {
+const storedSiteUrl = config.data.site_url;
+if (storedSiteUrl === siteUrl) {
   ok(`site_url = ${siteUrl}`);
 } else {
-  bad(`site_url is ${siteUrl ?? "(not set)"}; it must be an origin with no trailing slash`);
+  bad(`site_url is ${storedSiteUrl ?? "(not set)"}; expected ${siteUrl}`);
 }
 
 console.log("");
@@ -277,4 +291,8 @@ function readProjectRef() {
 function fail(message) {
   console.error(message);
   process.exit(1);
+}
+
+function normaliseUrl(value) {
+  return value.trim().replace(/\/+$/, "");
 }

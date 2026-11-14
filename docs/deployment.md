@@ -276,9 +276,13 @@ npm run auth:email
 SUPABASE_ACCESS_TOKEN=… npm run auth:email:apply
 ```
 
-The script (`scripts/apply-auth-email-config.mjs`) also sets `mailer_otp_length = 6`
-and `mailer_otp_exp = 600`, and fails if a template still contains
-`{{ .ConfirmationURL }}`. It needs a Supabase personal access token, not the anon key.
+The script (`scripts/apply-auth-email-config.mjs`) also sets `mailer_otp_length = 6`,
+`mailer_otp_exp = 600`, and the production `site_url`
+(`https://sbtf-system.vercel.app` by default). It never inherits the origin already stored
+on the project, because an old deployment URL produces invitation links that land on the
+wrong host. Override it with `-- --site-url https://…` or `SITE_URL`. It fails if a
+template still contains `{{ .ConfirmationURL }}`. It needs a Supabase personal access
+token, not the anon key.
 
 Registration in the driver/operator app (`auth.signUp`) depends on the **Confirm signup**
 template. If that template is left on Supabase's default, the mail says
