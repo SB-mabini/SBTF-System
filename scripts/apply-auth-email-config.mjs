@@ -116,7 +116,7 @@ const TEMPLATES = [
     contentKey: "mailer_templates_invite_content",
     subject: "SBTF staff account invitation — SBTF System",
     file: "invite.html",
-    expect: ["{{ .TokenHash }}", "/auth/confirm"],
+    expect: ["{{ .TokenHash }}", "/auth/confirm", ".RedirectTo"],
     forbid: ["{{ .ConfirmationURL }}"],
   },
 ];
