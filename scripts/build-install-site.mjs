@@ -106,10 +106,9 @@ writeFileSync(
     {
       headers: [
         {
-          source: "/install/download/(.*)\\.apk",
+          source: "/install/download/(.*)",
           headers: [
             { key: "Content-Type", value: "application/vnd.android.package-archive" },
-            { key: "Content-Disposition", value: 'attachment; filename="sbtf.apk"' },
             { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
           ],
         },
