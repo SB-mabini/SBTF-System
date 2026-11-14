@@ -119,7 +119,7 @@ running, because both write to `.next`. Typecheck and lint pass.
 
 ### `admin-users` deployment (redeployed 14 November 2026)
 
-`admin-users` is deployed to project `qdtmzgaxktebyhsxrgvf` (version 6) with
+`admin-users` is deployed to project `qdtmzgaxktebyhsxrgvf` (version 8) with
 `SITE_URL=https://sbtf-system.vercel.app` and `ALLOWED_WEB_ORIGINS` set. The endpoint
 answers HTTP 401 without a user JWT instead of HTTP 404. Redeploy after changing the
 function with:
@@ -127,6 +127,9 @@ function with:
 ```bash
 npm run functions:deploy -- --site-url https://sbtf-system.vercel.app
 ```
+
+Pass `--site-url` explicitly: without it the script falls back to
+`NEXT_PUBLIC_SITE_URL` in `apps/web/.env.local`, which is `http://localhost:3000`.
 
 The script sets the secrets before deploying and uses `--use-api`, so Docker is not
 required. The deactivation action now also honours the `suspended` status instead of
@@ -154,6 +157,23 @@ and rolls the Auth user back rather than handing the administrator a link to cop
 hosted invite template and `site_url` are applied with
 `node scripts/apply-auth-email-config.mjs --apply`; as of 14 November 2026 the hosted
 project matches `supabase/templates/invite.html`.
+
+The invitation host comes from the hosted Auth **Site URL**, not from the function
+secret: the template builds its link as `{{ .SiteURL }}/auth/confirm`. On 14 November
+2026 the stored value was still `https://sbtf-system-sangguniang-bayan-mabini.vercel.app/`
+— the legacy Vercel alias, which sits behind Vercel SSO — so every invitation button
+landed on `vercel.com/login`. `npm run auth:email` (read-only) now reports that mismatch
+and exits non-zero. Run it after any Auth change:
+
+```bash
+npm run auth:email            # verify site_url + templates, non-zero on drift
+npm run auth:email:apply      # push the repository templates and pinned site_url
+```
+
+`create_staff` also recovers from a half-created account left by an earlier version:
+when the address is "already registered" but has no profile and the Auth user was
+never confirmed or signed in, the stale Auth user is removed and the invitation is
+sent once more.
 
 ### Permanent account deletion (added 13 November 2026)
 

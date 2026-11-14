@@ -58,6 +58,31 @@ function confirmLink(hashedToken: string | null | undefined, type: "recovery" | 
   return `${SITE_URL}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${type}`;
 }
 
+type AdminClient = ReturnType<typeof createClient>;
+
+/**
+ * Finds an Auth user by e-mail.
+ *
+ * supabase-js has no get-user-by-email call, so this pages through the admin
+ * list until the address matches. Only used on the recovery path below, when an
+ * invitation failed because the address is "already registered".
+ */
+async function findAuthUserByEmail(adminClient: AdminClient, email: string) {
+  const perPage = 200;
+
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) return { user: null, error };
+
+    const users = data?.users ?? [];
+    const match = users.find((user) => (user.email ?? "").toLowerCase() === email);
+    if (match) return { user: match, error: null };
+    if (users.length < perPage) break;
+  }
+
+  return { user: null, error: null };
+}
+
 const STORAGE_BUCKETS = ["franchise-documents", "certificates"] as const;
 
 type AdminClient = Pick<ReturnType<typeof createClient>, "storage">;
@@ -238,9 +263,8 @@ Deno.serve(async (request: Request) => {
     // to choose a password. Do NOT switch this back to generateLink(): that only
     // creates a link and sends nothing, which is why staff invitations used to
     // be copied and handed over by hand.
-    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-      email,
-      {
+    const sendInvite = () =>
+      adminClient.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${SITE_URL}/auth/confirm`,
         data: {
           first_name: firstName,
@@ -248,8 +272,41 @@ Deno.serve(async (request: Request) => {
           contact_number: contactNumber,
           account_origin: "admin_users_function",
         },
-      },
-    );
+      });
+
+    let inviteResult = await sendInvite();
+
+    // An earlier attempt can leave an Auth user with no profile (an older
+    // function version rolled back after the mail went out, or Auth refused the
+    // delete). That account can never finish signing in and blocks every retry
+    // with "already registered", so remove it — but only when it is provably
+    // unused: no profile, address never confirmed, never signed in.
+    if (inviteResult.error && /already|registered|exists/i.test(inviteResult.error.message)) {
+      const { data: strayProfile } = await adminClient
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (!strayProfile) {
+        const { user: stray } = await findAuthUserByEmail(adminClient, email);
+
+        if (stray && !stray.email_confirmed_at && !stray.last_sign_in_at) {
+          const { error: strayDeleteError } = await adminClient.auth.admin.deleteUser(stray.id);
+          if (strayDeleteError) {
+            console.error(
+              "admin-users: could not remove the unused Auth user blocking this invitation",
+              strayDeleteError.message,
+            );
+          } else {
+            inviteResult = await sendInvite();
+          }
+        }
+      }
+    }
+
+    const invited = inviteResult.data;
+    const inviteError = inviteResult.error;
 
     if (inviteError || !invited?.user) {
       const alreadyRegistered = /already|registered|exists/i.test(inviteError?.message ?? "");
@@ -267,7 +324,15 @@ Deno.serve(async (request: Request) => {
 
         if (orphan?.auth_user_id) {
           await adminClient.from("profiles").delete().eq("id", orphan.id);
-          await adminClient.auth.admin.deleteUser(orphan.auth_user_id);
+          const { error: orphanDeleteError } = await adminClient.auth.admin.deleteUser(
+            orphan.auth_user_id,
+          );
+          if (orphanDeleteError) {
+            console.error(
+              "admin-users: could not remove the half-created Auth user",
+              orphanDeleteError.message,
+            );
+          }
         }
       }
 
@@ -319,7 +384,16 @@ Deno.serve(async (request: Request) => {
 
     if (profileError || !profile || profile.role !== role) {
       await adminClient.from("profiles").delete().eq("auth_user_id", invited.user.id);
-      await adminClient.auth.admin.deleteUser(invited.user.id);
+      const { error: rollbackError } = await adminClient.auth.admin.deleteUser(invited.user.id);
+      if (rollbackError) {
+        // Log loudly: an Auth user left behind keeps a valid-looking e-mail link
+        // and makes the next attempt fail with "already registered". The retry
+        // guard above can recover it, but the administrator should know.
+        console.error(
+          "admin-users: could not roll back the Auth user after a profile failure",
+          rollbackError.message,
+        );
+      }
 
       const detail = profileError?.message ?? "The profile row was not created.";
       const hint = /pending|account_status/i.test(detail)
