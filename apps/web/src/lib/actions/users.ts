@@ -290,38 +290,50 @@ export async function createStaffUserAction(input: {
     }
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.functions.invoke("admin-users", {
-    body: {
-      action: "create_staff",
-      email,
-      first_name: input.firstName.trim(),
-      last_name: input.lastName.trim(),
-      contact_number: input.contactNumber?.trim() ?? "",
-      role: input.role,
-    },
-  });
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: {
+        action: "create_staff",
+        email,
+        first_name: input.firstName.trim(),
+        last_name: input.lastName.trim(),
+        contact_number: input.contactNumber?.trim() ?? "",
+        role: input.role,
+      },
+    });
 
-  if (error) {
-    return edgeFunctionFailure(error, "The account could not be created", " No account has been created.");
+    if (error) {
+      return edgeFunctionFailure(error, "The account could not be created", " No account has been created.");
+    }
+
+    revalidatePath("/admin/users");
+
+    if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
+
+    const details = {
+      ...(linkDetails(data, ["email", "role", "user_id"]) ?? {}),
+    };
+    if (data?.invited === true) details.invited = true;
+
+    return {
+      ok: true,
+      message:
+        data?.message ??
+        "Account created and the invitation e-mail was sent to the staff address.",
+      details: Object.keys(details).length > 0 ? details : undefined,
+    };
+  } catch (cause) {
+    // An uncaught throw becomes an opaque 500, and the browser can only show
+    // "An unexpected response was received from the server." Return the failure
+    // as an ordinary result so the dialog can explain it.
+    console.error("createStaffUserAction failed", cause);
+    const detail = cause instanceof Error ? cause.message : "unknown error";
+    return {
+      ok: false,
+      message: `The account could not be created: ${detail}. No account has been created.`,
+    };
   }
-
-  revalidatePath("/admin/users");
-
-  if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
-
-  const details = {
-    ...(linkDetails(data, ["email", "role", "user_id"]) ?? {}),
-  };
-  if (data?.invited === true) details.invited = true;
-
-  return {
-    ok: true,
-    message:
-      data?.message ??
-      "Account created and the invitation e-mail was sent to the staff address.",
-    details: Object.keys(details).length > 0 ? details : undefined,
-  };
 }
 
 export async function sendPasswordResetAction(input: { email: string }): Promise<ActionState> {

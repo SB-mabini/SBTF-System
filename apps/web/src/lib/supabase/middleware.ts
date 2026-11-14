@@ -63,15 +63,33 @@ export async function updateSession(
 
   const { data, error: userError } = await supabase.auth.getUser();
 
+  // A Server Function (action) posts to the current page. If the session has
+  // expired, redirecting that POST to /login makes the client follow a 307 into
+  // an HTML page, which React cannot parse — the browser then reports the
+  // useless "An unexpected response was received from the server." Answer the
+  // action itself with a plain-text error so the form can explain what happened.
+  const isActionRequest =
+    request.method === "POST" && request.headers.has("next-action");
+
   // A failure here is never a normal "not signed in": GoTrue answers 401 for an
   // invalid session but a transport or schema failure is a broken environment.
   const notReady = userError ? toDatabaseNotReadyError(userError) : null;
-  if (notReady && !isPublic) return setupRequired(request, notReady);
+  if (notReady && !isPublic) {
+    return isActionRequest
+      ? actionFailure(
+          "The database is unavailable right now. Nothing was saved; try again in a moment.",
+          503,
+        )
+      : setupRequired(request, notReady);
+  }
   if (notReady && isPublic) return response;
 
   const user = data?.user ?? null;
 
   if (!user && !isPublic && path !== "/") {
+    if (isActionRequest) {
+      return actionFailure("Your session has expired. Refresh the page and sign in again.", 401);
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
@@ -96,6 +114,14 @@ export async function updateSession(
     const blocked = profile && profile.account_status !== "active";
 
     if (blocked && !isPublic) {
+      if (isActionRequest) {
+        return actionFailure(
+          profile.account_status === "pending"
+            ? "This account is awaiting approval by a municipal administrator."
+            : "This account is not active. Contact the municipal administrator.",
+          403,
+        );
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/unauthorized";
       url.searchParams.set(
@@ -106,6 +132,9 @@ export async function updateSession(
     }
 
     if (path.startsWith("/admin") && role !== "administrator") {
+      if (isActionRequest) {
+        return actionFailure("Only an administrator can perform this action.", 403);
+      }
       const url = request.nextUrl.clone();
       url.pathname = role === "staff" ? "/staff" : "/unauthorized";
       url.search = role === "staff" ? "" : "?reason=forbidden";
@@ -113,13 +142,16 @@ export async function updateSession(
     }
 
     if (path.startsWith("/staff") && role !== "staff" && role !== "administrator") {
+      if (isActionRequest) {
+        return actionFailure("This account cannot use the staff console.", 403);
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/unauthorized";
       url.search = "?reason=forbidden";
       return NextResponse.redirect(url);
     }
 
-    if (path === "/login") {
+    if (path === "/login" && !isActionRequest) {
       const url = request.nextUrl.clone();
       url.pathname =
         role === "administrator" ? "/admin" : role === "staff" ? "/staff" : "/unauthorized";
@@ -129,6 +161,19 @@ export async function updateSession(
   }
 
   return response;
+}
+
+/**
+ * Answers a Server Function request with readable text instead of a redirect.
+ *
+ * The content type must be exactly `text/plain` (no charset) because Next.js
+ * only surfaces the body as the action error under that exact header.
+ */
+function actionFailure(message: string, status: number): NextResponse {
+  return new NextResponse(message, {
+    status,
+    headers: { "content-type": "text/plain" },
+  });
 }
 
 /** Redirects to the diagnosis page, carrying the classified reason. */
