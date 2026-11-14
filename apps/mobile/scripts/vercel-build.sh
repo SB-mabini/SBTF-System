@@ -32,6 +32,11 @@ fi
 export PATH="$FLUTTER_SDK_DIR/bin:$PATH"
 export CI=true
 
+# Vercel checks out the project as a different user than the one that owns the
+# extracted SDK, so git refuses to inspect it ("dubious ownership"). Flutter's
+# tool reads the SDK's git metadata; mark just this directory as safe.
+git config --global --add safe.directory "$FLUTTER_SDK_DIR"
+
 flutter --version
 flutter config --no-analytics >/dev/null 2>&1 || true
 flutter pub get
