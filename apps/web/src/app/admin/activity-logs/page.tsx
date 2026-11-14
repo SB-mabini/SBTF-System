@@ -2,9 +2,9 @@ import { Suspense } from "react";
 
 import { ActivityTable } from "@/components/activity/activity-table";
 import { FilterBar } from "@/components/filters";
-import { Card, CardHeader, EmptyState, SectionTitle, Spinner } from "@/components/ui";
-import { listActivityLogs, listRecentActivity } from "@/lib/data";
-import { actionLabel, formatDateTime } from "@/lib/format";
+import { SectionTitle, Spinner } from "@/components/ui";
+import { listActivityLogs } from "@/lib/data";
+import { actionLabel } from "@/lib/format";
 import { ACTIVITY_ACTIONS } from "@/lib/activity-actions";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { ActivityAction } from "@/types/database";
@@ -30,10 +30,7 @@ export default async function AdminActivityLogsPage({
   const from = single(params.from);
   const to = single(params.to);
 
-  const [result, recent] = await Promise.all([
-    listActivityLogs({ search, action, from, to, page }),
-    listRecentActivity(5),
-  ]);
+  const result = await listActivityLogs({ search, action, from, to, page });
 
   function pageHref(nextPage: number) {
     const next = new URLSearchParams();
@@ -80,27 +77,6 @@ export default async function AdminActivityLogsPage({
       </Suspense>
 
       <ActivityTable result={result} pageHref={pageHref} />
-
-      <Card className="mt-4">
-        <CardHeader
-          title="What is recorded"
-          description="The audit trail is designed for accountability, not surveillance of citizens: it records who did what inside the system and when."
-        />
-        <ul className="space-y-2 text-[0.8125rem] text-muted">
-          <li>Sign-ins, submissions and renewals, document uploads and replacements, verifications, decisions, certificates and archives.</li>
-          <li>Administrative changes: role assignment, account activation and suspension, and settings updates.</li>
-          <li>AI advisories, including the model used, latency, token counts and hashes of the aggregated payload.</li>
-        </ul>
-        {recent.length > 0 ? (
-          <p className="mt-3 rounded-md bg-page px-3 py-2 text-[0.75rem] text-muted">
-            Latest entry: {actionLabel(recent[0]!.action)} at {formatDateTime(recent[0]!.timestamp)}.
-          </p>
-        ) : (
-          <div className="mt-3">
-            <EmptyState title="Nothing recorded yet" />
-          </div>
-        )}
-      </Card>
     </div>
   );
 }

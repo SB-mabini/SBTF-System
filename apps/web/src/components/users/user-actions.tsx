@@ -12,7 +12,7 @@ import {
   setUserRoleAction,
 } from "@/lib/actions/users";
 import { isDemoMode } from "@/lib/env";
-import { accountStatusLabel, roleLabel } from "@/lib/format";
+import { roleLabel } from "@/lib/format";
 import type { AccountStatus, Profile, UserRole } from "@/types/database";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["administrator", "staff"];
@@ -87,9 +87,6 @@ export function UserActions({
       {message ? <Alert tone={message.ok ? "success" : "danger"}>{message.text}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={profile.account_status === "active" ? "success" : "warning"}>
-          {accountStatusLabel(profile.account_status)}
-        </Badge>
         <Badge tone="neutral">{roleLabel(profile.role)}</Badge>
         {isSelf ? <Badge tone="info">This is your account</Badge> : null}
       </div>
@@ -155,18 +152,7 @@ export function UserActions({
           This account is awaiting approval. Approve it so the holder can sign in; they set their
           password from the invitation e-mail.
         </p>
-      ) : isOperator ? (
-        <p className="text-[0.75rem] text-muted">
-          Drivers and operators recover access with the one-time password option in the SBTF mobile
-          app; no recovery link is issued from this console.
-        </p>
-      ) : (
-        <p className="text-[0.75rem] text-muted">
-          Role and status changes run through administrator-only database functions, are refused when
-          the target is your own account or the last active administrator, and are written to the
-          activity log.
-        </p>
-      )}
+      ) : null}
 
       {/* Role assignment */}
       <Modal

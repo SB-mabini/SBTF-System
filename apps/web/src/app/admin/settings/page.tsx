@@ -59,11 +59,6 @@ export default async function AdminSettingsPage() {
                   </dd>
                 </div>
               </dl>
-              <p className="mt-3 text-[0.75rem] text-muted">
-                The Groq API key and the Supabase service-role key never reach the browser: the web
-                application only holds the project URL and the anonymous key, which are safe to
-                expose because every table is protected by row level security.
-              </p>
             </Card>
           </div>
         }

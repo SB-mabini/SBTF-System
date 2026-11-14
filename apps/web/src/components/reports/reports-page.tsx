@@ -204,18 +204,6 @@ export async function ReportsPage({ session }: { session: SessionContext }) {
           );
         })}
       </div>
-
-      <Card className="mt-4">
-        <CardHeader
-          title="Not included on purpose"
-          description="The system deliberately does not produce these: they are outside the scope of the franchising office."
-        />
-        <p className="text-[0.8125rem] text-muted">
-          Revenue or collection reports, vehicle inspection results, trip or GPS records, and any
-          predictive model output. The analytics available here are descriptive and prescriptive
-          only, and the AI briefings are advisory.
-        </p>
-      </Card>
     </div>
   );
 }

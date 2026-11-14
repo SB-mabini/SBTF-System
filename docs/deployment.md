@@ -520,6 +520,36 @@ testers.
 The Flutter app ships configuration at build time; see `docs/mobile.md` §5. Only the
 publishable key is embedded, which is safe because RLS is the authorisation boundary.
 
+### 7.1 Flutter web (Vercel)
+
+`https://sbtf-application.vercel.app` is a separate Vercel project that serves the
+Flutter web build. It is configured entirely by `apps/mobile/vercel.json`:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `apps/mobile` |
+| Framework Preset | Other |
+| Build Command | `bash scripts/vercel-build.sh` |
+| Output Directory | `build/web` |
+
+`scripts/vercel-build.sh` downloads the pinned Flutter SDK on the build machine
+(Vercel does not ship one), runs `flutter pub get`, and builds the release bundle.
+A plain Vercel deployment with the default output directory (`public`) produces the
+platform 404 page because no `index.html` is published — the root directory and
+output directory above are what fix that.
+
+Optional environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` override the
+values compiled into `apps/mobile/lib/core/env.dart`. Leave them unset to use the
+defaults.
+
+To redeploy without the build pipeline, publish a local build directly:
+
+```bash
+cd apps/mobile
+flutter build web --release
+npx vercel deploy build/web --prod
+```
+
 ---
 
 ## 8. Diagnosis commands

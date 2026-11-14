@@ -190,10 +190,6 @@ export function AccountForm({
             value={profile.last_login_at ? new Date(profile.last_login_at).toLocaleString("en-PH") : "—"}
           />
         </dl>
-        <p className="mt-3 text-[0.75rem] text-muted">
-          The system never stores a password: authentication is delegated to Supabase Auth, and only
-          the resulting user identifier is referenced by your profile.
-        </p>
       </Card>
     </div>
   );

@@ -1,0 +1,11 @@
+# Vercel upload scope for the Flutter web project.
+# The bundle is produced during the build (see scripts/vercel-build.sh), so
+# local build output, the downloaded SDK, tool caches and native shells are not
+# uploaded.
+
+.flutter-sdk
+.dart_tool
+build
+android
+windows
+test

@@ -267,21 +267,6 @@ export default async function AdminUsersPage({
         </div>
       )}
 
-      <Card className="mt-4">
-        <CardHeader
-          title="Role model"
-          description="Three roles only. The mobile application registers drivers; administrators manage staff accounts from this screen."
-        />
-        <div className="flex flex-wrap gap-2">
-          <Badge tone="approved">Administrator — full oversight, analytics, user management</Badge>
-          <Badge tone="info">Staff — processing, verification, decisions, records</Badge>
-          <Badge tone="neutral">Driver / Operator — mobile registration, status, certificate</Badge>
-        </div>
-        <p className="mt-3 text-[0.8125rem] text-muted">
-          An administrator can never read another user&apos;s password: authentication is handled by
-          Supabase Auth and no password material is stored in the application database.
-        </p>
-      </Card>
     </div>
   );
 }

@@ -49,6 +49,33 @@ database (sign-in is shown but disabled, every write blocked). With no
 configuration at all, the app shows a diagnosis screen that prints the exact
 run command above.
 
+### 2.1 Web deployment (Vercel)
+
+`https://sbtf-application.vercel.app` serves the Flutter web build. The project
+is configured by `vercel.json` in this directory, which runs
+`scripts/vercel-build.sh` and publishes `build/web`.
+
+Vercel project settings must be:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `apps/mobile` |
+| Framework Preset | Other |
+| Build Command | `bash scripts/vercel-build.sh` (from `vercel.json`) |
+| Output Directory | `build/web` (from `vercel.json`) |
+
+The build script downloads the pinned Flutter SDK on the build machine, so no
+local Flutter installation is required by Vercel. Optional environment
+variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` override the values compiled
+into `lib/core/env.dart`; leave them unset to use the defaults.
+
+To publish the same bundle manually instead:
+
+```bash
+flutter build web --release
+npx vercel deploy build/web --prod
+```
+
 ## 3. Quality gates
 
 CI (`.github/workflows/flutter-ci.yml`) runs, on every push that touches
