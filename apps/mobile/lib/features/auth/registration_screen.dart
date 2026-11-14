@@ -82,6 +82,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
+      // signUp() never reports "already registered" directly: to avoid leaking
+      // which addresses have accounts, GoTrue answers with an obfuscated user
+      // whose identity list is empty and sends NO e-mail. Advancing to the code
+      // screen in that case leaves the driver waiting for a message that will
+      // never arrive — the intermittent "the code never came" report.
+      final user = response.user;
+      if (user != null && user.identities != null && user.identities!.isEmpty) {
+        setState(() {
+          _loading = false;
+          _error =
+              'An account with this e-mail already exists. Sign in instead, '
+              'or use “Forgot password?” if you do not remember the password.';
+        });
+        return;
+      }
+
+      // No session and no user means GoTrue did not create anything, so no
+      // code was sent either. Surface it instead of opening the code screen.
+      if (user == null) {
+        setState(() {
+          _loading = false;
+          _error = 'The account could not be created and no code was sent. '
+              'Check your connection and try again.';
+        });
+        return;
+      }
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => EmailVerificationScreen(

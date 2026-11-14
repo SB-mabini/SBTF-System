@@ -37,6 +37,8 @@ npm run test:verify    # self-test of the verifier (mock Supabase, no database)
 npm run db:bundle      # concatenate the 14 migrations into one paste-ready file
 npm run test:rls       # pgTAP suites (needs Supabase CLI + a project)
 npm run web:build      # production build
+npm run auth:email     # verify the hosted Auth e-mail templates send codes
+npm run auth:email:apply  # push supabase/templates/* to the hosted project
 ```
 
 `npm run db:check` is the fastest way to confirm an environment is healthy;
@@ -61,7 +63,9 @@ docs/              Deployment, testing and mobile documentation
 
 - **`supabase/config.toml` applies to local development only.** Per its own header it is
   consumed by `supabase start` and `functions serve`. The cloud project has its own
-  settings, including an empty `uri_allow_list` that this file does not reflect.
+  settings, including an empty `uri_allow_list` that this file does not reflect. E-mail
+  templates are copied there too — `npm run auth:email` reports whether the hosted
+  project sends 6-digit codes or Supabase's default confirmation link.
 - **Self-service recovery e-mails a 6-digit code, not a link.** The visitor types it back into
   `/verify-otp`, then chooses to continue to the console or set a new password. E-mail is also
   used for driver one-time passwords. Mail goes through the project's Gmail SMTP

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -29,10 +31,16 @@ class EmailVerificationScreen extends StatefulWidget {
     super.key,
     this.email,
     this.purpose = EmailOtpPurpose.signup,
+    this.codeWasSent = true,
   });
 
   final String? email;
   final EmailOtpPurpose purpose;
+
+  /// False when the screen is opened from a sign-in attempt that failed with
+  /// "email not confirmed": no code was just requested, so the resend button
+  /// must be available immediately instead of waiting out the cooldown.
+  final bool codeWasSent;
 
   @override
   State<EmailVerificationScreen> createState() =>
@@ -48,15 +56,54 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   String? _notice;
   String? _error;
 
+  /// Supabase Auth throttles repeated sends for the same address
+  /// (`max_frequency`, 60 s on the hosted project). Asking again inside that
+  /// window fails with a 429 and no message, so the button is disabled until
+  /// the window has passed. A code is sent right before this screen opens, so
+  /// the countdown starts immediately.
+  Timer? _cooldownTimer;
+  int _secondsUntilResend = 0;
+
+  static const int _resendCooldownSeconds = 60;
+
   bool get _demo => currentEnv.isDemoMode;
   bool get _isRecovery => widget.purpose == EmailOtpPurpose.recovery;
 
   String get _email => (widget.email ?? '').trim().toLowerCase();
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.codeWasSent) {
+      _startCooldown();
+    } else {
+      _notice = 'No code has been sent yet. Tap “Send a new code” below.';
+    }
+  }
+
+  @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _codeController.dispose();
     super.dispose();
+  }
+
+  void _startCooldown() {
+    _cooldownTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _secondsUntilResend = _resendCooldownSeconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsUntilResend <= 1) {
+        timer.cancel();
+        setState(() => _secondsUntilResend = 0);
+        return;
+      }
+      setState(() => _secondsUntilResend--);
+    });
   }
 
   Future<void> _verify() async {
@@ -126,6 +173,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       return;
     }
 
+    if (_secondsUntilResend > 0) {
+      setState(() {
+        _notice = null;
+        _error = 'Please wait $_secondsUntilResend seconds before requesting '
+            'another code.';
+      });
+      return;
+    }
+
     setState(() {
       _resending = true;
       _notice = null;
@@ -145,12 +201,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         _notice = 'A new 6-digit code is on its way. Check your inbox and '
             'spam folder.';
       });
+      _startCooldown();
     } on AuthException catch (error) {
+      if (!mounted) return;
       setState(() {
         _resending = false;
         _error = friendlyAuthMessage(error.message);
       });
+      // A confirmed address cannot be resent a signup code. Supabase reports
+      // "User already registered"; the friendly message already points at
+      // signing in, so leave the button usable in case the driver mistyped.
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _resending = false;
         _error = 'Could not resend the code. Try again shortly.';
@@ -309,14 +371,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton(
-                      onPressed: (_demo || _resending) ? null : _resend,
+                      onPressed:
+                          (_demo || _resending || _secondsUntilResend > 0)
+                              ? null
+                              : _resend,
                       child: _resending
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Send a new code'),
+                          : Text(
+                              _secondsUntilResend > 0
+                                  ? 'Send a new code (${_secondsUntilResend}s)'
+                                  : 'Send a new code',
+                            ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     TextButton(

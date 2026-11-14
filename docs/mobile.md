@@ -33,6 +33,25 @@ Decisions from Phase 0–2 that this app inherits without change:
    trigger writes the `document_replaced` audit row. Slice 5's document manager
    builds the UI on this.
 
+### Registration e-mail codes
+
+Registration calls `auth.signUp`, so the message comes from the hosted project's
+**Confirm signup** template. It must carry `{{ .Token }}` and no `ConfirmationURL`;
+`supabase/templates/confirmation.html` is the source, but `config.toml` only applies it
+locally. Apply it to the hosted project with `npm run auth:email:apply` and read it back
+with `npm run auth:email` (see [`deployment.md`](./deployment.md) §3.1c).
+
+Two behaviour details the app relies on:
+
+- For an address that already has a confirmed account, `signUp` deliberately returns an
+  obfuscated user with an empty identity list and **sends no e-mail**. The registration
+  screen detects that and points the driver at sign-in instead of opening the code
+  screen.
+- Supabase throttles repeated sends (`max_frequency`, 60 s). The code screen starts a
+  60-second countdown when a code was just sent and disables “Send a new code” until it
+  expires, so a resend cannot silently 429. Opening the screen from a failed sign-in
+  (“email not confirmed”) skips the countdown and says no code has been sent yet.
+
 ---
 
 ## 2. Implemented slices (1–9)

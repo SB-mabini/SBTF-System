@@ -17,6 +17,8 @@
     "db:bundle:seed": "node scripts/bundle-sql.mjs --with-seed",
     "functions:deploy": "node scripts/deploy-functions.mjs",
     "functions:deploy:all": "node scripts/deploy-functions.mjs --all",
+    "auth:email": "node scripts/apply-auth-email-config.mjs",
+    "auth:email:apply": "node scripts/apply-auth-email-config.mjs --apply",
     "test:rls": "supabase test db supabase/tests",
     "web:dev": "npm --workspace @sbtf/web run dev",
     "web:build": "npm --workspace @sbtf/web run build",

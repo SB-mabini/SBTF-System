@@ -72,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(
               builder: (_) => EmailVerificationScreen(
                 email: _emailController.text.trim().toLowerCase(),
+                codeWasSent: false,
               ),
             ),
           );

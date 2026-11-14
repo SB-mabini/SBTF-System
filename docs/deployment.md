@@ -266,6 +266,25 @@ Email Templates**:
 
 **The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
 only configures `supabase start` locally; the hosted project keeps its own copies.
+Apply them with the Management API instead of relying on a manual paste:
+
+```bash
+# read-only: report whether the hosted project is sending codes or links
+npm run auth:email
+
+# push supabase/templates/*, then read the values back to prove it
+SUPABASE_ACCESS_TOKEN=… npm run auth:email:apply
+```
+
+The script (`scripts/apply-auth-email-config.mjs`) also sets `mailer_otp_length = 6`
+and `mailer_otp_exp = 600`, and fails if a template still contains
+`{{ .ConfirmationURL }}`. It needs a Supabase personal access token, not the anon key.
+
+Registration in the driver/operator app (`auth.signUp`) depends on the **Confirm signup**
+template. If that template is left on Supabase's default, the mail says
+“Confirm your email address” and carries a link — the app is waiting for a 6-digit
+code that was never generated. The same is true of the **Magic Link** template used by
+`signInWithOtp`.
 
 Check what the project actually holds (Management API, `/v1/projects/{ref}/config/auth`):
 
