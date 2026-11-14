@@ -71,7 +71,7 @@ export async function requestPasswordRecoveryAction(email: string): Promise<Acti
     ok: true,
     message: String(
       data?.message ??
-        "If an account exists for that address, a verification code has been sent.",
+      "If an account exists for that address, a verification code has been sent.",
     ),
   };
 }
@@ -286,7 +286,7 @@ export async function signInAction(
 
   return {
     ok: true,
-    message: "Signed in. Loading your console…",
+    message: "Signed in. Loading your dashboard…",
     destination:
       safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
   };
