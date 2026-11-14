@@ -138,6 +138,17 @@ export interface Profile {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * Joined for display. Present only when the query embedded the related
+   * records (the Users screen does); absent everywhere else.
+   */
+  toda?: {
+    id: string;
+    code: string;
+    name: string;
+    barangay?: { name: string | null } | null;
+  } | null;
+  barangay?: { code: string; name: string | null } | null;
 }
 
 export interface Barangay {

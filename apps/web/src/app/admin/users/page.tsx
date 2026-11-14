@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ShieldCheck, Users } from "lucide-react";
 
@@ -15,11 +16,19 @@ import {
   Spinner,
 } from "@/components/ui";
 import { getUserCounts, listUsers } from "@/lib/data";
-import { formatDateTime, roleLabel } from "@/lib/format";
+import { accountStatusLabel, formatDateTime, roleLabel } from "@/lib/format";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { AccountStatus, UserRole } from "@/types/database";
 
 export const metadata = { title: "Users — SBTF Administrator" };
+
+/** Colour the status pill the same way the rest of the console colours state. */
+const STATUS_TONE: Record<AccountStatus, "success" | "pending" | "neutral" | "rejected"> = {
+  active: "success",
+  pending: "pending",
+  inactive: "neutral",
+  suspended: "rejected",
+};
 
 function single(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -196,9 +205,26 @@ export default async function AdminUsersPage({
                       </>
                     ) : (
                       <>
-                        <Detail label="Address" value={profile.address_line ?? "—"} />
-                        <Detail label="Barangay code" value={profile.barangay_code ?? "—"} />
-                        <Detail label="TODA" value={profile.toda_id ? profile.toda_id.slice(0, 8) : "—"} />
+                        <Detail label="Address" value={profile.address_line ?? "Not provided"} />
+                        <Detail
+                          label="Barangay"
+                          value={
+                            profile.barangay?.name ??
+                            profile.toda?.barangay?.name ??
+                            profile.barangay_code ??
+                            "Not provided"
+                          }
+                        />
+                        <Detail
+                          label="TODA"
+                          value={
+                            profile.toda
+                              ? `${profile.toda.name} (${profile.toda.code})`
+                              : profile.toda_id
+                                ? "Unassigned TODA record"
+                                : "Not assigned"
+                          }
+                        />
                       </>
                     )}
                     <Detail label="Registered" value={formatDateTime(profile.created_at)} />
@@ -208,7 +234,11 @@ export default async function AdminUsersPage({
                     />
                     <Detail
                       label="Status"
-                      value={profile.status_reason ?? "—"}
+                      value={
+                        <Badge tone={STATUS_TONE[profile.account_status]}>
+                          {accountStatusLabel(profile.account_status)}
+                        </Badge>
+                      }
                     />
                   </dl>
                 </div>
@@ -256,7 +286,7 @@ export default async function AdminUsersPage({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <dt className="text-[0.6875rem] uppercase tracking-wide text-muted">{label}</dt>

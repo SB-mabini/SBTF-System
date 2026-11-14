@@ -729,28 +729,56 @@ export async function listUsers(
   const pageSize = filters.pageSize ?? DEFAULT_PAGE_SIZE;
 
   if (isDemoMode()) {
-    const rows = demo.demoProfiles.filter((profile) => {
-      if (filters.roles && filters.roles.length > 0 && !filters.roles.includes(profile.role))
-        return false;
-      if (filters.role && filters.role !== "all" && profile.role !== filters.role) return false;
-      if (filters.status && filters.status !== "all" && profile.account_status !== filters.status)
-        return false;
-      if (filters.todaId && filters.todaId !== "all" && profile.toda_id !== filters.todaId)
-        return false;
-      if (filters.search) {
-        const term = filters.search.toLowerCase();
-        const haystack = [profile.full_name, profile.email, profile.contact_number ?? ""]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(term)) return false;
-      }
-      return true;
-    });
+    const rows: Profile[] = demo.demoProfiles
+      .filter((profile) => {
+        if (filters.roles && filters.roles.length > 0 && !filters.roles.includes(profile.role))
+          return false;
+        if (filters.role && filters.role !== "all" && profile.role !== filters.role) return false;
+        if (filters.status && filters.status !== "all" && profile.account_status !== filters.status)
+          return false;
+        if (filters.todaId && filters.todaId !== "all" && profile.toda_id !== filters.todaId)
+          return false;
+        if (filters.search) {
+          const term = filters.search.toLowerCase();
+          const haystack = [profile.full_name, profile.email, profile.contact_number ?? ""]
+            .join(" ")
+            .toLowerCase();
+          if (!haystack.includes(term)) return false;
+        }
+        return true;
+      })
+      .map((profile) => ({
+        ...profile,
+        toda: profile.toda_id
+          ? (() => {
+              const toda = demo.demoTodas.find((item) => item.id === profile.toda_id);
+              if (!toda) return null;
+              return {
+                ...toda,
+                barangay:
+                  demo.demoBarangays.find((barangay) => barangay.code === toda.barangay_code) ??
+                  null,
+              };
+            })()
+          : null,
+        barangay: profile.barangay_code
+          ? (demo.demoBarangays.find((barangay) => barangay.code === profile.barangay_code) ??
+            null)
+          : null,
+      }));
     return paginate(rows, page, pageSize);
   }
 
   const supabase = await createClient();
-  let query = supabase.from("profiles").select("*", { count: "exact" });
+  // The Users screen prints the TODA and barangay *names*. Reading the raw ids
+  // put a truncated UUID under "TODA" and left the barangay blank even when the
+  // TODA itself records one, so embed the related records instead.
+  let query = supabase
+    .from("profiles")
+    .select(
+      "*, toda:todas(id, code, name, barangay:barangays(name)), barangay:barangays(code, name)",
+      { count: "exact" },
+    );
   if (filters.roles && filters.roles.length > 0) query = query.in("role", filters.roles);
   if (filters.role && filters.role !== "all") query = query.eq("role", filters.role);
   if (filters.status && filters.status !== "all")
