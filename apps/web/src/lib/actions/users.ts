@@ -142,9 +142,8 @@ export async function purgeAccountAction(input: {
  * only caller is the account owner's own reset form in Account settings; the
  * administrator's Users screen no longer offers it.
  *
- * Staff invitations no longer produce a link: `create_staff` sends the message
- * itself. `setup_link` is still read when present so the console keeps working
- * against an older deployed Edge Function during a rollout.
+ * Staff invitations return no link at all: `create_staff` sends the message
+ * itself through Supabase Auth.
  */
 function linkDetails(payload: unknown, keys: string[]): Record<string, unknown> | undefined {
   if (!payload || typeof payload !== "object") return undefined;
@@ -312,7 +311,7 @@ export async function createStaffUserAction(input: {
   if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
 
   const details = {
-    ...(linkDetails(data, ["setup_link", "email", "role", "user_id"]) ?? {}),
+    ...(linkDetails(data, ["email", "role", "user_id"]) ?? {}),
   };
   if (data?.invited === true) details.invited = true;
 

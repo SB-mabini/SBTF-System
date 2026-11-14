@@ -4,7 +4,6 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 
 import { Modal } from "@/components/dialog";
-import { CopyLinkField } from "@/components/users/copy-link-field";
 import { Alert, Button, Field } from "@/components/ui";
 import { createStaffUserAction } from "@/lib/actions/users";
 import { isDemoMode } from "@/lib/env";
@@ -19,9 +18,8 @@ import { isDemoMode } from "@/lib/env";
  * which holds the service-role key and sets the role in app metadata itself.
  *
  * The Edge Function sends the invitation through Supabase's SMTP mailer, so the
- * new staff member receives the link directly. The manual-link panel below is a
- * fallback for a project still running an older deployed function; once
- * admin-users is redeployed it never appears.
+ * new staff member receives the link directly. Nothing is copied or handed over
+ * by the administrator.
  */
 export function CreateStaffDialog({
   open,
@@ -45,7 +43,6 @@ export function CreateStaffDialog({
     contactNumber?: string;
   }>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [setupLink, setSetupLink] = useState<string | null>(null);
   const [created, setCreated] = useState(false);
 
   const readOnly = isDemoMode();
@@ -64,7 +61,6 @@ export function CreateStaffDialog({
     setError(null);
     setFieldErrors({});
     setMessage(null);
-    setSetupLink(null);
     setCreated(false);
     setBusy(false);
     onClose();
@@ -111,7 +107,6 @@ export function CreateStaffDialog({
     setBusy(true);
     setError(null);
     setMessage(null);
-    setSetupLink(null);
     setCreated(false);
 
     const result = await createStaffUserAction({
@@ -129,9 +124,7 @@ export function CreateStaffDialog({
       return;
     }
 
-    const link = result.details?.setup_link;
     setMessage(result.message);
-    setSetupLink(typeof link === "string" && link.length > 0 ? link : null);
     setCreated(true);
   }
 
@@ -174,29 +167,7 @@ export function CreateStaffDialog({
         </div>
       ) : null}
 
-      {setupLink ? (
-        <div className="space-y-3">
-          <Alert tone="warning" title="Account created — manual link">
-            {message}
-          </Alert>
-
-          <CopyLinkField
-            label="Password setup link"
-            value={setupLink}
-            hint="This fallback appears only while the deployed admin-users function is older than this console. Send the link through whatever channel the office uses; it works once."
-          />
-
-          <div className="rounded-lg bg-page px-3.5 py-3 text-[0.75rem] text-muted">
-            <p className="font-medium text-ink">Automatic e-mail is not active yet</p>
-            <p className="mt-1">
-              The console received a setup link instead of a send confirmation, so the deployed
-              Edge Function is still the old manual flow. Redeploy
-              <code className="mx-1 rounded bg-white px-1 py-0.5 font-mono">admin-users</code>
-              to switch to invitation e-mails.
-            </p>
-          </div>
-        </div>
-      ) : created ? (
+      {created ? (
         <div className="space-y-3">
           <Alert tone="success" title="Invitation e-mail sent">
             {message}

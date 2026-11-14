@@ -117,10 +117,10 @@ running, because both write to `.next`. Typecheck and lint pass.
    Deploy the function only if an HTTP entry point is wanted; it also requires the
    `REMINDER_CRON_SECRET` secret, which is not set.
 
-### `admin-users` deployment (fixed 5 November 2026)
+### `admin-users` deployment (redeployed 14 November 2026)
 
-`admin-users` is deployed to project `qdtmzgaxktebyhsxrgvf` (version 1) with
-`SITE_URL=https://sbtf-system.vercel.app` and `ALLOWED_WEB_ORIGINS` set. The endpoint now
+`admin-users` is deployed to project `qdtmzgaxktebyhsxrgvf` (version 6) with
+`SITE_URL=https://sbtf-system.vercel.app` and `ALLOWED_WEB_ORIGINS` set. The endpoint
 answers HTTP 401 without a user JWT instead of HTTP 404. Redeploy after changing the
 function with:
 
@@ -149,9 +149,11 @@ and lands on `/login?notice=password-set`.
 The account is still created as `pending`. An administrator approves it from the Users
 screen before the new staff member can use the console.
 
-The web panel and template are in the working tree, but the hosted project still runs the
-previous `admin-users` build until the function is redeployed and the hosted invite template
-is updated. In that window the console falls back to the manual `setup_link` panel.
+The console has no manual-link fallback: if the invitation cannot be sent, creation fails
+and rolls the Auth user back rather than handing the administrator a link to copy. The
+hosted invite template and `site_url` are applied with
+`node scripts/apply-auth-email-config.mjs --apply`; as of 14 November 2026 the hosted
+project matches `supabase/templates/invite.html`.
 
 ### Permanent account deletion (added 13 November 2026)
 
