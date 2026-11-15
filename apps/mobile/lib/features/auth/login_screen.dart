@@ -7,6 +7,7 @@ import '../../core/branding.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import '../../core/widgets/brand_mark.dart';
 import 'auth_messages.dart';
 import 'email_verification_screen.dart';
@@ -31,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool _loading = false;
-  String? _error;
   bool _obscure = true;
 
   bool get _demo => currentEnv.isDemoMode;
@@ -47,10 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_demo) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
 
     try {
       final client = Supabase.instance.client;
@@ -60,30 +57,39 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       // On success the AuthGate re-evaluates and routes to the home screen.
     } on AuthException catch (error) {
-      setState(() {
-        _loading = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
 
       // An unconfirmed e-mail is not a failure — route to the OTP screen.
       if (error.message.toLowerCase().contains('email not confirmed')) {
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => EmailVerificationScreen(
-                email: _emailController.text.trim().toLowerCase(),
-                codeWasSent: false,
-              ),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(
+              email: _emailController.text.trim().toLowerCase(),
+              codeWasSent: false,
             ),
-          );
-        }
+          ),
+        );
+        return;
       }
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Cannot sign in',
+      );
     } catch (_) {
-      setState(() {
-        _loading = false;
-        _error = 'Could not sign in. Check your connection and try again.';
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        'Could not sign in. Check your connection and try again.',
+        title: 'Cannot sign in',
+      );
     }
+  }
+
+  /// Reports a sign-in failure in a dialog, so it is read without scrolling.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   @override
@@ -160,14 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     'connected, so sign-in is shown '
                                                     'but disabled. The app runs '
                                                     'without a database.',
-                                              ),
-                                              const SizedBox(
-                                                  height: AppSpacing.sm),
-                                            ],
-                                            if (_error != null) ...[
-                                              AppBanner(
-                                                tone: AppBannerTone.danger,
-                                                message: _error!,
                                               ),
                                               const SizedBox(
                                                   height: AppSpacing.sm),

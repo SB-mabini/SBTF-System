@@ -9,6 +9,7 @@ import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import '../../core/widgets/section_header.dart';
 
 /// The new / renewal franchise application wizard — slice 3.
@@ -90,7 +91,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
   int _step = 0;
   bool _submitting = false;
-  String? _submitError;
 
   /// Values reused from the previous franchise application, plus a notice so
   /// the driver knows why fields are already populated.
@@ -284,30 +284,39 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   void _next() {
     FocusScope.of(context).unfocus();
     if (_step == 0 && _type == null) {
-      setState(() => _submitError = 'Select an application type.');
+      _showError('Select an application type.');
       return;
     }
     if (_step == 3) {
       final problems = _documentProblems();
       if (problems.isNotEmpty) {
-        setState(() => _submitError = problems.first);
+        _showError(
+          problems.length == 1
+              ? problems.first
+              : '${problems.first}\n\nStill missing:\n${problems.skip(1).join('\n')}',
+          title: 'Documents incomplete',
+        );
         return;
       }
     } else if (_formKey.currentState?.validate() == false) {
+      showFormValidationErrors(context, _formKey.currentState);
       return;
     }
-    setState(() {
-      _submitError = null;
-      _step++;
-    });
+    setState(() => _step++);
   }
 
   void _back() {
     FocusScope.of(context).unfocus();
     setState(() {
-      _submitError = null;
       if (_step > 0) _step--;
     });
+  }
+
+  /// Shows a validation or action failure over the current scroll position, so
+  /// the driver never has to scroll back to the top of a step to read it.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   // -------------------------------------------------------------------------
@@ -362,7 +371,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       setState(() {
         _uploading.remove(documentType);
         _uploadErrors.remove(documentType);
-        _submitError = null;
         _uploads[documentType] = ApplicationDocumentUpload(
           documentType: documentType,
           storagePath: path,
@@ -425,7 +433,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     FocusScope.of(context).unfocus();
     final applicationType = _type;
     if (applicationType == null) {
-      setState(() => _submitError = 'Select an application type.');
+      _showError('Select an application type.');
       return;
     }
     final submission = _buildSubmission(applicationType: applicationType);
@@ -433,14 +441,16 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     // The same rules the server applies, run before any network call.
     final problems = submission.validate();
     if (problems.isNotEmpty) {
-      setState(() => _submitError = problems.first);
+      _showError(
+        problems.length == 1
+            ? problems.first
+            : '${problems.first}\n\nStill missing:\n${problems.skip(1).join('\n')}',
+        title: 'Application incomplete',
+      );
       return;
     }
 
-    setState(() {
-      _submitting = true;
-      _submitError = null;
-    });
+    setState(() => _submitting = true);
 
     try {
       final application =
@@ -458,17 +468,15 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       );
     } on AppFailure catch (failure) {
       if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _submitError = failure.message;
-      });
+      setState(() => _submitting = false);
+      _showError(failure.message, title: 'Application not sent');
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _submitError =
-            'Could not submit the application. Check your connection and try again.';
-      });
+      setState(() => _submitting = false);
+      _showError(
+        'Could not submit the application. Check your connection and try again.',
+        title: 'Application not sent',
+      );
     }
   }
 
@@ -496,10 +504,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (_submitError != null) ...[
-                        _ErrorBanner(message: _submitError!),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
                       _buildStep(),
                     ],
                   ),
@@ -580,7 +584,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               : () => setState(() {
                     _type = ApplicationType.newFranchise;
                     _recordId = null;
-                    _submitError = null;
                   }),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -594,7 +597,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               : () {
                   setState(() {
                     _type = ApplicationType.renewal;
-                    _submitError = null;
                   });
                   _maybeAutoSelectRenewal();
                 },
@@ -1745,36 +1747,6 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SectionHeader(title);
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.dangerTint,
-        border: Border.all(color: AppColors.border),
-        borderRadius: AppRadius.box,
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppColors.danger, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _PrefillNotice extends StatelessWidget {

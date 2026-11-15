@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import 'auth_messages.dart';
 import 'email_verification_screen.dart';
 
@@ -32,7 +32,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   bool _loading = false;
   bool _obscure = true;
-  String? _error;
 
   bool get _demo => currentEnv.isDemoMode;
 
@@ -51,10 +50,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_demo) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
 
     final email = _emailController.text.trim().toLowerCase();
 
@@ -89,23 +85,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       // never arrive — the intermittent "the code never came" report.
       final user = response.user;
       if (user != null && user.identities != null && user.identities!.isEmpty) {
-        setState(() {
-          _loading = false;
-          _error =
-              'An account with this e-mail already exists. Sign in instead, '
-              'or use “Forgot your password?” if you do not remember it.';
-        });
+        setState(() => _loading = false);
+        _showError(
+          'An account with this e-mail already exists. Sign in instead, '
+          'or use “Forgot your password?” if you do not remember it.',
+          title: 'Account already exists',
+        );
         return;
       }
 
       // No session and no user means GoTrue did not create anything, so no
       // code was sent either. Surface it instead of opening the code screen.
       if (user == null) {
-        setState(() {
-          _loading = false;
-          _error = 'The account could not be created and no code was sent. '
-              'Check your connection and try again.';
-        });
+        setState(() => _loading = false);
+        _showError(
+          'The account could not be created and no code was sent. '
+          'Check your connection and try again.',
+          title: 'Registration failed',
+        );
         return;
       }
 
@@ -118,16 +115,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
       );
     } on AuthException catch (error) {
-      setState(() {
-        _loading = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Registration failed',
+      );
     } catch (_) {
-      setState(() {
-        _loading = false;
-        _error = 'Registration failed. Check your connection and try again.';
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        'Registration failed. Check your connection and try again.',
+        title: 'Registration failed',
+      );
     }
+  }
+
+  /// Reports a registration failure in a dialog, not an inline banner.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   @override
@@ -152,10 +159,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       style: TextStyle(color: AppColors.inkMuted, height: 1.4),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    if (_error != null) ...[
-                      AppBanner(tone: AppBannerTone.danger, message: _error!),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
                     const Text(
                       'First name',
                       style: TextStyle(

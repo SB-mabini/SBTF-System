@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import 'auth_messages.dart';
 import 'email_verification_screen.dart';
 
@@ -26,7 +26,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   late final TextEditingController _emailController;
 
   bool _loading = false;
-  String? _error;
 
   bool get _demo => currentEnv.isDemoMode;
 
@@ -48,10 +47,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     final email = _emailController.text.trim().toLowerCase();
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
 
     try {
       final client = Supabase.instance.client;
@@ -67,17 +63,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       );
     } on AuthException catch (error) {
-      setState(() {
-        _loading = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Code not sent',
+      );
     } catch (_) {
-      setState(() {
-        _loading = false;
-        _error =
-            'Could not send the code. Check your connection and try again.';
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        'Could not send the code. Check your connection and try again.',
+        title: 'Code not sent',
+      );
     }
+  }
+
+  /// Reports a send failure in a dialog, not an inline banner.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   @override
@@ -133,10 +138,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    if (_error != null) ...[
-                      AppBanner(tone: AppBannerTone.danger, message: _error!),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
                     const Text(
                       'E-mail address',
                       style: TextStyle(

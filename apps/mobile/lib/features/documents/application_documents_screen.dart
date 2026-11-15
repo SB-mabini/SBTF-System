@@ -8,6 +8,7 @@ import '../../core/models/franchise_application.dart';
 import '../../core/models/franchise_document.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import '../../core/widgets/error_view.dart';
 import '../../core/widgets/status_chip.dart';
 
@@ -37,9 +38,6 @@ class _ApplicationDocumentsScreenState
   /// The document currently being replaced, so only its button shows a spinner.
   String? _busyDocumentId;
 
-  /// The last refusal, shown above the list.
-  String? _error;
-
   FranchiseApplication get _application => widget.application;
 
   @override
@@ -57,7 +55,6 @@ class _ApplicationDocumentsScreenState
               application: _application,
               loading: true,
               busyDocumentId: _busyDocumentId,
-              error: _error,
               onView: _view,
               onReplace: _replace,
             ),
@@ -72,7 +69,6 @@ class _ApplicationDocumentsScreenState
               application: detail ?? _application,
               loading: false,
               busyDocumentId: _busyDocumentId,
-              error: _error,
               onView: _view,
               onReplace: _replace,
             ),
@@ -92,8 +88,7 @@ class _ApplicationDocumentsScreenState
   Future<void> _replace(FranchiseDocument document) async {
     final profile = ref.read(profileProvider).valueOrNull;
     if (profile == null) {
-      setState(() =>
-          _error = 'Your profile is still loading. Please wait and try again.');
+      _showError('Your profile is still loading. Please wait and try again.');
       return;
     }
 
@@ -101,18 +96,15 @@ class _ApplicationDocumentsScreenState
     if (!mounted || picked == null) return; // cancelled
 
     if (!picked.isAcceptedType) {
-      setState(() => _error = 'Choose a PDF, JPEG or PNG file.');
+      _showError('Choose a PDF, JPEG or PNG file.');
       return;
     }
     if (!picked.isWithinSizeLimit) {
-      setState(() => _error = 'Each document must not exceed 10 MB.');
+      _showError('Each document must not exceed 10 MB.');
       return;
     }
 
-    setState(() {
-      _busyDocumentId = document.id;
-      _error = null;
-    });
+    setState(() => _busyDocumentId = document.id);
 
     final service = ref.read(documentServiceProvider);
     try {
@@ -149,18 +141,22 @@ class _ApplicationDocumentsScreenState
       );
     } on AppFailure catch (failure) {
       if (!mounted) return;
-      setState(() {
-        _busyDocumentId = null;
-        _error = failure.message;
-      });
+      setState(() => _busyDocumentId = null);
+      _showError(failure.message, title: 'Document not replaced');
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _busyDocumentId = null;
-        _error = 'Could not replace the document. Check your connection and '
-            'try again.';
-      });
+      setState(() => _busyDocumentId = null);
+      _showError(
+        'Could not replace the document. Check your connection and try again.',
+        title: 'Document not replaced',
+      );
     }
+  }
+
+  /// Shows a validation or action failure over the current scroll position.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 }
 
@@ -169,7 +165,6 @@ class _Body extends StatelessWidget {
     required this.application,
     required this.loading,
     required this.busyDocumentId,
-    required this.error,
     required this.onView,
     required this.onReplace,
   });
@@ -177,7 +172,6 @@ class _Body extends StatelessWidget {
   final FranchiseApplication application;
   final bool loading;
   final String? busyDocumentId;
-  final String? error;
   final ValueChanged<FranchiseDocument> onView;
   final ValueChanged<FranchiseDocument> onReplace;
 
@@ -187,7 +181,6 @@ class _Body extends StatelessWidget {
       for (final document in application.documents)
         document.documentType: document,
     };
-    final message = error;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xs),
@@ -195,10 +188,6 @@ class _Body extends StatelessWidget {
       children: [
         _Header(application: application),
         const SizedBox(height: AppSpacing.sm),
-        if (message != null) ...[
-          _ErrorBanner(message: message),
-          const SizedBox(height: AppSpacing.sm),
-        ],
         if (!application.isPending && !loading) ...[
           _Notice(
             icon: Icons.lock_outline,
@@ -622,36 +611,6 @@ class _Notice extends StatelessWidget {
                 fontSize: 13,
                 height: 1.4,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.dangerTint,
-        border: Border.all(color: AppColors.border),
-        borderRadius: AppRadius.box,
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: AppColors.danger, fontSize: 13),
             ),
           ),
         ],

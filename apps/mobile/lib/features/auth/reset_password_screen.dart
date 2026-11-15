@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import 'auth_messages.dart';
 
 /// Finish the forgot-password flow.
@@ -26,7 +26,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   bool _loading = false;
   bool _obscure = true;
-  String? _error;
 
   bool get _demo => currentEnv.isDemoMode;
 
@@ -41,10 +40,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (_demo) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
 
     try {
       final client = Supabase.instance.client;
@@ -57,17 +53,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       // lets AuthGate route to the dashboard.
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthException catch (error) {
-      setState(() {
-        _loading = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Password not saved',
+      );
     } catch (_) {
-      setState(() {
-        _loading = false;
-        _error = 'Could not save the new password. Check your connection and '
-            'try again.';
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        'Could not save the new password. Check your connection and try again.',
+        title: 'Password not saved',
+      );
     }
+  }
+
+  /// Reports a password failure in a dialog, not an inline banner.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   @override
@@ -91,10 +96,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       style: TextStyle(color: AppColors.inkMuted, height: 1.4),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    if (_error != null) ...[
-                      AppBanner(tone: AppBannerTone.danger, message: _error!),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
                     const Text(
                       'New password',
                       style: TextStyle(

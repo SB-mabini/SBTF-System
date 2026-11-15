@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_banner.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import 'auth_messages.dart';
 import 'reset_password_screen.dart';
 
@@ -54,7 +55,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _loading = false;
   bool _resending = false;
   String? _notice;
-  String? _error;
 
   /// Supabase Auth throttles repeated sends for the same address
   /// (`max_frequency`, 60 s on the hosted project). Asking again inside that
@@ -111,17 +111,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (_email.isEmpty) {
-      setState(() {
-        _error = 'No e-mail address is linked to this request. Return to sign '
-            'in and start again.';
-      });
+      _showError(
+        'No e-mail address is linked to this request. Return to sign in and '
+        'start again.',
+        title: 'Cannot verify',
+      );
       return;
     }
 
     setState(() {
       _loading = true;
       _notice = null;
-      _error = null;
     });
 
     try {
@@ -149,16 +149,19 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       // the AuthGate lets it route straight to the home screen.
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthException catch (error) {
-      setState(() {
-        _loading = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Code not accepted',
+      );
     } catch (_) {
-      setState(() {
-        _loading = false;
-        _error = 'Could not verify the code. Check your connection and try '
-            'again.';
-      });
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _showError(
+        'Could not verify the code. Check your connection and try again.',
+        title: 'Code not accepted',
+      );
     }
   }
 
@@ -166,26 +169,27 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     if (_demo) return;
 
     if (_email.isEmpty) {
-      setState(() {
-        _error = 'No e-mail address is linked to this request, so nothing can '
-            'be resent. Return to sign in and try again.';
-      });
+      _showError(
+        'No e-mail address is linked to this request, so nothing can be '
+        'resent. Return to sign in and try again.',
+        title: 'Cannot resend',
+      );
       return;
     }
 
     if (_secondsUntilResend > 0) {
-      setState(() {
-        _notice = null;
-        _error = 'Please wait $_secondsUntilResend seconds before requesting '
-            'another code.';
-      });
+      setState(() => _notice = null);
+      _showError(
+        'Please wait $_secondsUntilResend seconds before requesting another '
+        'code.',
+        title: 'Please wait',
+      );
       return;
     }
 
     setState(() {
       _resending = true;
       _notice = null;
-      _error = null;
     });
 
     try {
@@ -204,20 +208,28 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       _startCooldown();
     } on AuthException catch (error) {
       if (!mounted) return;
-      setState(() {
-        _resending = false;
-        _error = friendlyAuthMessage(error.message);
-      });
+      setState(() => _resending = false);
+      _showError(
+        friendlyAuthMessage(error.message),
+        title: 'Code not sent',
+      );
       // A confirmed address cannot be resent a signup code. Supabase reports
       // "User already registered"; the friendly message already points at
       // signing in, so leave the button usable in case the driver mistyped.
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _resending = false;
-        _error = 'Could not resend the code. Try again shortly.';
-      });
+      setState(() => _resending = false);
+      _showError(
+        'Could not resend the code. Try again shortly.',
+        title: 'Code not sent',
+      );
     }
+  }
+
+  /// Reports a verification failure in a dialog, not an inline banner.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   Future<void> _backToSignIn() async {
@@ -301,10 +313,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     const SizedBox(height: AppSpacing.md),
                     if (_notice != null) ...[
                       AppBanner(tone: AppBannerTone.success, message: _notice!),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                    if (_error != null) ...[
-                      AppBanner(tone: AppBannerTone.danger, message: _error!),
                       const SizedBox(height: AppSpacing.sm),
                     ],
                     const Text(

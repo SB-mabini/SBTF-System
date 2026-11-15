@@ -59,8 +59,14 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
+    // The problem is raised in a dialog, so it is read without scrolling back
+    // to the top of the step.
+    expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Select an application type.'), findsOneWidget);
     expect(find.textContaining('Step 1 of 5'), findsOneWidget);
+
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Renewal'));
     await tester.pump();
@@ -74,7 +80,13 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Select an accredited TODA.'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Select an accredited TODA.'),
+      ),
+      findsOneWidget,
+    );
     // Still on the first step.
     expect(find.textContaining('Step 1 of 5'), findsOneWidget);
   });

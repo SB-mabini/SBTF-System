@@ -8,6 +8,7 @@ import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_error_dialog.dart';
 import '../../core/widgets/section_header.dart';
 import '../../core/widgets/signature_pad.dart';
 
@@ -76,7 +77,6 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
   bool _uploading = false;
   bool _submitting = false;
   bool _profileApplied = false;
-  String? _error;
 
   bool get _isRenewal => _type == ApplicationType.renewal;
 
@@ -245,7 +245,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
   Future<void> _pickOrCr() async {
     final profile = ref.read(profileProvider).valueOrNull;
     if (profile == null) {
-      setState(() => _error = 'Your profile is still loading. Please wait.');
+      _showError('Your profile is still loading. Please wait.');
       return;
     }
 
@@ -253,18 +253,15 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     if (!mounted || picked == null) return;
 
     if (!picked.isAcceptedType) {
-      setState(() => _error = 'Choose a PDF, JPEG or PNG file.');
+      _showError('Choose a PDF, JPEG or PNG file.');
       return;
     }
     if (!picked.isWithinSizeLimit) {
-      setState(() => _error = 'The OR/CR must not exceed 10 MB.');
+      _showError('The OR/CR must not exceed 10 MB.');
       return;
     }
 
-    setState(() {
-      _uploading = true;
-      _error = null;
-    });
+    setState(() => _uploading = true);
 
     try {
       final path = await ref.read(formRequestServiceProvider).uploadOrCr(
@@ -283,10 +280,8 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       });
     } on AppFailure catch (failure) {
       if (!mounted) return;
-      setState(() {
-        _uploading = false;
-        _error = failure.message;
-      });
+      setState(() => _uploading = false);
+      _showError(failure.message, title: 'Upload failed');
     }
   }
 
@@ -295,23 +290,23 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
   // -------------------------------------------------------------------------
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (_formKey.currentState?.validate() != true) return;
+    if (_formKey.currentState?.validate() != true) {
+      await showFormValidationErrors(context, _formKey.currentState);
+      return;
+    }
 
     final profile = ref.read(profileProvider).valueOrNull;
     if (profile == null) {
-      setState(() => _error = 'Your profile is still loading. Please wait.');
+      _showError('Your profile is still loading. Please wait.');
       return;
     }
 
     if (_orCrPath == null) {
-      setState(() => _error = 'Upload the combined OR/CR file.');
+      _showError('Upload the combined OR/CR file.');
       return;
     }
 
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
+    setState(() => _submitting = true);
 
     try {
       // Draw the signature to PNG only when the driver used the pad.
@@ -372,17 +367,15 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       Navigator.of(context).pop(saved);
     } on AppFailure catch (failure) {
       if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = failure.message;
-      });
+      setState(() => _submitting = false);
+      _showError(failure.message, title: 'Request not sent');
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error =
-            'Could not submit the request. Check your connection and try again.';
-      });
+      setState(() => _submitting = false);
+      _showError(
+        'Could not submit the request. Check your connection and try again.',
+        title: 'Request not sent',
+      );
     }
   }
 
@@ -418,8 +411,17 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       Navigator.of(context).pop();
     } on AppFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _error = failure.message);
+      _showError(failure.message, title: 'Could not cancel');
     }
+  }
+
+  /// Shows a validation or action failure over the current scroll position.
+  ///
+  /// The form is long enough that the inline banner at the top could be off
+  /// screen when Submit is tapped, so every handler reports through a dialog.
+  void _showError(String message, {String title = 'Please check this'}) {
+    if (!mounted) return;
+    showAppErrorDialog(context, message, title: title);
   }
 
   // -------------------------------------------------------------------------
@@ -454,10 +456,6 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
             children: [
               if (existing?.isRejected == true) ...[
                 _RejectionBanner(reason: existing!.rejectionReason),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              if (_error != null) ...[
-                _ErrorBanner(message: _error!),
                 const SizedBox(height: AppSpacing.sm),
               ],
               const SectionHeader('Applicant'),
