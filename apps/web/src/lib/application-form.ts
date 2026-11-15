@@ -148,7 +148,27 @@ export function buildApplicationFormPdf(input: ApplicationFormInput): jsPDF {
 
   if (input.signatureDataUrl) {
     try {
-      doc.addImage(input.signatureDataUrl, "PNG", signatureX, signatureY - 14, 45, 13, undefined, "FAST");
+      // Preserve the drawing's aspect ratio inside a 45 × 13 mm box and sit it
+      // on the signature line instead of stretching it.
+      const properties = doc.getImageProperties(input.signatureDataUrl);
+      const maxWidth = 45;
+      const maxHeight = 13;
+      const scale = Math.min(
+        maxWidth / properties.width,
+        maxHeight / properties.height,
+      );
+      const width = properties.width * scale;
+      const height = properties.height * scale;
+      doc.addImage(
+        input.signatureDataUrl,
+        "PNG",
+        signatureX + (signatureWidth - width) / 2,
+        signatureY - 1 - height,
+        width,
+        height,
+        undefined,
+        "FAST",
+      );
     } catch {
       // A corrupt signature must never block the form.
     }

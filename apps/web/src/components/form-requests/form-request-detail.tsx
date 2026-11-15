@@ -243,13 +243,29 @@ export function FormRequestDetailView({
 
       <Card>
         <CardHeader title="Signature" description="Drawn in the mobile app, or typed when drawing is not possible." />
-        {request.signature_storage_path ? (
+        {signatureDataUrl ? (
+          <div className="space-y-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={signatureDataUrl}
+              alt={`Signature for ${request.form_number}`}
+              className="h-24 w-auto max-w-full rounded-lg border border-line bg-white p-2"
+            />
+            <p className="text-[0.875rem] text-ink">
+              This drawing is included in the printed letter. Check it before approving the request.
+            </p>
+          </div>
+        ) : request.signature_storage_path ? (
           <p className="text-[0.875rem] text-ink">
-            A drawn signature is on file. It is included in the printed letter.
+            A drawn signature is on file, but it could not be loaded for preview. It is still included
+            in the printed letter.
           </p>
         ) : (
           <p className="text-[0.875rem] text-ink">
             Typed signature: {request.signature_typed_name ?? "—"}
+            {request.signature_typed_name
+              ? " — printed in italics on the signature line of the letter."
+              : ""}
           </p>
         )}
       </Card>
