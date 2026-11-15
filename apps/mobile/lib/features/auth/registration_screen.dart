@@ -93,7 +93,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _loading = false;
           _error =
               'An account with this e-mail already exists. Sign in instead, '
-              'or use “Forgot password?” if you do not remember the password.';
+              'or use “Forgot your password?” if you do not remember it.';
         });
         return;
       }

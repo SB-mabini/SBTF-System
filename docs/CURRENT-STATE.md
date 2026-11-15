@@ -4,7 +4,7 @@ Companion to [`STAFF-INVITATIONS-PLAN.md`](./STAFF-INVITATIONS-PLAN.md). This fi
 what has **already been completed**, so the next person does not redo it or assume the
 database is empty.
 
-**Last updated:** 2026-10-15
+**Last updated:** 2026-11-15
 
 ---
 
@@ -17,6 +17,8 @@ database is empty.
 | Branch | `main` |
 | Local app | `npm run web:dev` → `http://localhost:3000` |
 | Deployed web app | `https://sbtf-system.vercel.app` |
+| Driver install page | `https://sbtf-application.vercel.app/install/` (public, no SSO) |
+| Printable poster | `https://sbtf-application.vercel.app/install/poster.html` |
 | Edge Functions live | `ai-decision-support` (Verify JWT ON), `password-recovery` (Verify JWT OFF) |
 | Connectivity check | `npm run db:check` (script at `scripts/check-supabase.mjs`) |
 
@@ -28,7 +30,8 @@ enabled outside local UI review, since it disables all writes.
 
 These were pasted into chat and must be rotated once the outstanding work is verified:
 
-- Supabase **personal access token** (platform admin scope)
+- Supabase **personal access token** (platform admin scope) — still valid at the last check
+  (15 November 2026); revoke it in Dashboard → Account → Access Tokens
 - **Database password**
 - **Groq API key** (used by `ai-decision-support`; revoke at <https://console.groq.com/keys>)
 
@@ -314,7 +317,58 @@ source — exactly what the code flow exists to avoid.
 
 ---
 
-## 6. Staff-driven workflow rebuild (Phases 1–3)
+## 6. Mobile app — install page, updates and releases
+
+The Flutter driver/operator app is published **outside** the Play Store. Drivers install it
+from `https://sbtf-application.vercel.app/install/` (English/Filipino, QR code, step-by-step
+instructions, downloadable QR for barangay notice boards, and a one-page A4 poster at
+`/install/poster.html`).
+
+- **Hosting.** The page is static HTML from `apps/mobile/web/install/`, assembled by
+  `npm run install:page` into `build/web/install/`. It lives in the **`sbtf-application`**
+  Vercel project at `/install`, not in the Next.js console, and must stay public (outside
+  Vercel SSO) because drivers and staff cannot sign in to Vercel.
+- **Binaries.** Split APKs are attached to GitHub Releases, never committed. The committed
+  `apps/mobile/web/install/release.json` records their URLs, sizes and SHA-256 values;
+  the Vercel build downloads them into `/install/download/` and verifies the hashes.
+- **Published build.** `0.1.0` build **3** (`app-v0.1.0-3`), dated 14 November 2026:
+  arm64 30,364,502 bytes, armeabi-v7a 26,299,846 bytes. Build **4** carries the auth-copy
+  fixes from §5 (6-digit-code wording, friendly 429/expired messages) and must be published
+  before drivers see them.
+- **Update checks.** `lib/core/update_service.dart` reads the installed version with
+  `package_info_plus`, fetches `/install/release.json` when the home screen opens, and shows
+  a dismissible update card when the published `build` is higher. Android reports split-APK
+  version codes prefixed by ABI (`1003`/`2003` for build 3), so `normalizeBuildCode` strips
+  the prefix before comparing. Settings → **Application version** shows the installed build;
+  **Check for updates** runs the same comparison on demand. Every release must increase the
+  `+N` build number in `apps/mobile/pubspec.yaml`.
+- **Release automation.** `.github/workflows/mobile-release.yml` runs on `app-v*` tags:
+  validates the tag against `pubspec.yaml` and the published build, builds and signs the
+  split APKs, verifies the keystore fingerprint, publishes the GitHub Release, rewrites
+  `release.json` and pushes it to `main`, which makes Vercel rebuild `/install/`.
+- **Signing.** The release keystore is `apps/mobile/android/app/upload-keystore.jks`
+  (alias `upload`, SHA-256
+  `30176eac860fe1a18d26b5480c683b3381628fc828cf5840596cfc25f8a1b512`).
+  `android/key.properties` and every `*.jks` are git-ignored. Losing the keystore means
+  drivers must uninstall before installing a new build — back it up in the municipality's
+  password manager. Full procedure and secrets list: [`mobile.md`](./mobile.md) §5.
+- **Small screens and text scaling.** `apps/mobile/test/small_screen_test.dart` renders
+  Login, Registration, OTP and Forgot Password at 320×640 with 200% text and fails on any
+  overflow. The install page is verified at 320 px (no horizontal scroll) and has visible
+  `:focus-visible` outlines, larger language-switch hit areas, a wrapped header, and
+  reduced-motion handling.
+
+- **Auth copy (in build 4).** Every driver auth screen now says **6-digit code** — never
+  "verification link". `auth_messages.dart` maps Supabase's raw errors to actionable
+  sentences: bad credentials, unconfirmed account, duplicate e-mail, incorrect/expired OTP,
+  throttle (`For security purposes…` and `over_email_send_rate_limit`), invalid address,
+  weak password and closed registration. `session_guard.dart` describes the confirmation
+  step in the same words. Tests: `test/auth_messages_test.dart` and
+  `test/session_guard_test.dart`.
+
+---
+
+## 7. Staff-driven workflow rebuild (Phases 1–3)
 
 Target workflow is described in [`process.md`](./process.md): staff handle every step of an
 application, administrators are view-only. Implemented so far:
@@ -337,13 +391,15 @@ original four plus `application_appointments`, `form_requests` and `document_rel
 
 ---
 
-## 7. Where to look first
+## 8. Where to look first
 
 | Working on | Read |
 |---|---|
 | Staff invitations, email confirmation | [`STAFF-INVITATIONS-PLAN.md`](./STAFF-INVITATIONS-PLAN.md) |
 | Email copy and wording | [`STAFF-INVITATION-EMAIL-TEMPLATE.md`](./STAFF-INVITATION-EMAIL-TEMPLATE.md) |
 | Admin user management UI | `apps/web/src/app/admin/users/page.tsx`, `apps/web/src/components/users/` |
+| Mobile install page, updates, releases | [`mobile.md`](./mobile.md) §5, `apps/mobile/web/install/`, `lib/core/update_service.dart` |
+| Cutting a mobile release | `.github/workflows/mobile-release.yml` |
 | Roles, permissions, RPCs | `supabase/migrations/20260101090700_phase0_workflow_rpcs.sql` |
 | Row level security | `supabase/migrations/20260101090900_phase0_rls_policies.sql` |
 

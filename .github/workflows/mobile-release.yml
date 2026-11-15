@@ -1,0 +1,189 @@
+name: Mobile Release
+
+# Tag-driven release for the driver app.
+#
+# Create the tag only after the version bump is on `main`:
+#   1. set `version: 0.1.0+4` (build must increase) in apps/mobile/pubspec.yaml
+#   2. commit and push that change
+#   3. git tag app-v0.1.0-4 && git push origin app-v0.1.0-4
+#
+# The workflow builds and signs the split APKs, publishes them to a GitHub
+# Release, rewrites apps/mobile/web/install/release.json and pushes that file
+# back to `main`. Vercel then rebuilds /install/ so the download buttons and the
+# in-app update check pick up the new build automatically.
+#
+# Required repository secrets:
+#   ANDROID_KEYSTORE_BASE64     base64 of upload-keystore.jks
+#   ANDROID_KEYSTORE_PASSWORD   store password
+#   ANDROID_KEY_PASSWORD        key password
+#   ANDROID_KEY_ALIAS           key alias (defaults to `upload`)
+#   ANDROID_KEYSTORE_SHA256     optional; the expected SHA-256 fingerprint
+#   SUPABASE_URL                project URL baked into the APK
+#   SUPABASE_ANON_KEY           publishable anon key baked into the APK
+#
+# The keystore must be the same one every release has used. Signing with a new
+# key means Android refuses to install the update over the copy on drivers'
+# phones; see docs/mobile.md §5.
+
+on:
+  push:
+    tags: ["app-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build (for example app-v0.1.0-4)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, sign and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve and validate the tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          if [[ ! "$TAG" =~ ^app-v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+            echo "::error::'$TAG' is not in app-v<major>.<minor>.<patch>-<build> form."
+            exit 1
+          fi
+
+          VERSION_LINE=$(sed -n 's/^version:[[:space:]]*//p' apps/mobile/pubspec.yaml)
+          VERSION="${VERSION_LINE%%+*}"
+          BUILD="${VERSION_LINE##*+}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+
+          if [ "$TAG" != "app-v${VERSION}-${BUILD}" ]; then
+            echo "::error::Tag $TAG does not match pubspec version ${VERSION}+${BUILD}. Bump the version, commit it, then tag that commit."
+            exit 1
+          fi
+
+          # release.json is committed to main by this job, so the tag has to be
+          # the tip of main; otherwise the push below cannot fast-forward.
+          TAG_SHA=$(git rev-parse "$TAG^{commit}")
+          MAIN_SHA=$(git rev-parse origin/main)
+          if [ "$TAG_SHA" != "$MAIN_SHA" ]; then
+            echo "::error::Tag $TAG points at $TAG_SHA but main is at $MAIN_SHA. Push the version bump first, then tag the resulting main commit."
+            exit 1
+          fi
+
+          PREVIOUS=$(sed -n 's/.*"build": "\([0-9]*\)".*/\1/p' apps/mobile/web/install/release.json | head -n1)
+          if [ -n "$PREVIOUS" ] && [ "$BUILD" -le "$PREVIOUS" ]; then
+            echo "::error::Build $BUILD is not greater than the published build $PREVIOUS. Drivers' update checks compare build numbers, so this release would be invisible."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Install the release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_SHA256: ${{ secrets.ANDROID_KEYSTORE_SHA256 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A release must be signed with the existing key."
+            exit 1
+          fi
+
+          KEYSTORE=apps/mobile/android/app/upload-keystore.jks
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+
+          ALIAS="${ANDROID_KEY_ALIAS:-upload}"
+          {
+            echo "storePassword=${ANDROID_KEYSTORE_PASSWORD}"
+            echo "keyPassword=${ANDROID_KEY_PASSWORD}"
+            echo "keyAlias=${ALIAS}"
+            echo "storeFile=upload-keystore.jks"
+          } > apps/mobile/android/key.properties
+
+          if [ -n "${ANDROID_KEYSTORE_SHA256:-}" ]; then
+            ACTUAL=$(keytool -list -v -keystore "$KEYSTORE" -alias "$ALIAS" \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+              | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' \
+              | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -n1)
+            EXPECTED=$(printf '%s' "$ANDROID_KEYSTORE_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')
+            if [ "$ACTUAL" != "$EXPECTED" ]; then
+              echo "::error::Keystore fingerprint $ACTUAL does not match ANDROID_KEYSTORE_SHA256 ($EXPECTED). Refusing to publish an APK drivers cannot update over."
+              exit 1
+            fi
+            echo "Keystore fingerprint verified: $ACTUAL"
+          fi
+
+      - name: Build split release APKs
+        working-directory: apps/mobile
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY are required; without them the APK only shows the configuration screen."
+            exit 1
+          fi
+          flutter build apk --release --split-per-abi \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+
+      # Publishes the APKs to the GitHub Release for this tag and rewrites
+      # apps/mobile/web/install/release.json from the URLs GitHub returns.
+      - name: Publish release assets and manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/publish-install-release.mjs
+
+      - name: Commit the updated manifest
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile/web/install/release.json
+          if git diff --cached --quiet; then
+            echo "release.json already up to date."
+            exit 0
+          fi
+          git commit -m "release: mobile ${VERSION}+${BUILD}"
+          git push origin HEAD:main
+
+      - name: Summary
+        run: |
+          {
+            echo "### SBTF Android ${VERSION} (build ${BUILD})"
+            echo
+            echo "- Release: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+            echo "- Install page: https://sbtf-application.vercel.app/install/"
+            echo
+            echo "Vercel rebuilds the install page from the manifest commit. Drivers on an older build see the update card the next time they open the app."
+          } >> "$GITHUB_STEP_SUMMARY"

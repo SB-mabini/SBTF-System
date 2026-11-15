@@ -13,7 +13,7 @@ code, and several of them look like bugs but are deliberate.
 | [`docs/CURRENT-STATE.md`](docs/CURRENT-STATE.md) | Live environment, what is done, what is broken, and **credentials that need rotating** |
 | [`docs/deployment.md`](docs/deployment.md) | Migrations, Edge Functions, Vercel sign-in conditions, first-admin bootstrap, diagnosis commands |
 | [`docs/testing.md`](docs/testing.md) | Phase 1–2 acceptance plan (admin A-01…A-17, staff S-01…S-17, security X-01…X-08), seed-data traps, cross-check SQL |
-| [`docs/mobile.md`](docs/mobile.md) | Phase 3 mobile app: implemented slices 1–2, session-guard decision table, acceptance cases MA-01…MA-14, roadmap |
+| [`docs/mobile.md`](docs/mobile.md) | Phase 3 mobile app: implemented slices, session-guard decision table, install page, release process, acceptance cases MA-01…MA-56, roadmap |
 | [`docs/STAFF-INVITATIONS-PLAN.md`](docs/STAFF-INVITATIONS-PLAN.md) | Historical design notes on staff invitations and email confirmation |
 | [`docs/STAFF-INVITATION-EMAIL-TEMPLATE.md`](docs/STAFF-INVITATION-EMAIL-TEMPLATE.md) | Bilingual email copy, awaiting review |
 
@@ -23,6 +23,21 @@ code, and several of them look like bugs but are deliberate.
 - Supabase CLI optional but recommended (`supabase link` / `db push`); the SQL Editor
   route is documented as a fallback.
 - Flutter 3.x stable only for `apps/mobile` (see `docs/mobile.md`).
+
+## Live URLs
+
+| What | Who uses it | URL |
+|---|---|---|
+| Console (sign-in) | Administrators, staff | <https://sbtf-system.vercel.app> |
+| Driver install page | Drivers, operators | <https://sbtf-application.vercel.app/install/> |
+| Printable poster (A4) | Barangay and TODA notice boards | <https://sbtf-application.vercel.app/install/poster.html> |
+| Release manifest | The app's in-app update check | <https://sbtf-application.vercel.app/install/release.json> |
+| APK downloads | GitHub Releases (binaries are not in git) | <https://github.com/SB-mabini/SBTF-System/releases> |
+| Supabase project | Backend, Edge Functions | <https://supabase.com/dashboard/project/qdtmzgaxktebyhsxrgvf> |
+
+Both Vercel URLs are public on purpose and must stay outside Vercel SSO: drivers and staff
+opening an invitation e-mail cannot sign in to Vercel. The install page is plain HTML from
+`apps/mobile/web/install/`; it is **not** part of the Next.js console.
 
 ## Commands
 
@@ -42,6 +57,12 @@ npm run auth:email:apply  # push supabase/templates/* to the hosted project
 npm run install:publish  # upload split release APKs and update the /install manifest
 npm run install:page     # assemble /install (page, QR, APKs) inside build/web
 ```
+
+A mobile release is cut from a tag: bump `version:` in `apps/mobile/pubspec.yaml`, push it,
+then push an `app-v<version>-<build>` tag (for example `app-v0.1.0-4`).
+[`.github/workflows/mobile-release.yml`](.github/workflows/mobile-release.yml) builds and
+signs the APKs, publishes the GitHub Release, and commits the new
+`apps/mobile/web/install/release.json` back to `main`, which makes Vercel rebuild `/install/`.
 
 `npm run db:check` is the fastest way to confirm an environment is healthy;
 `npm run test:verify` runs in CI and needs nothing installed beyond npm.

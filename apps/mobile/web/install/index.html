@@ -46,6 +46,16 @@
 
   a { color: var(--primary-bright); }
 
+  /* Keyboard focus must stay visible on every control; the default outline is
+     removed by some Android browsers. */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   .bar {
     background: linear-gradient(135deg, #33207a, #1b0f4e);
     color: #fff;
@@ -93,7 +103,8 @@
     background: none;
     border: 0;
     border-radius: 999px;
-    padding: 4px 10px;
+    min-height: 32px;
+    padding: 6px 12px;
     cursor: pointer;
   }
 
@@ -196,8 +207,9 @@
 
   .qr-link {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 6px 10px;
     justify-content: center;
     font-size: 12.5px;
     color: var(--ink-muted);
@@ -403,6 +415,16 @@
     .qr-card { max-width: 360px; margin: 0 auto; width: 100%; }
     .columns { grid-template-columns: 1fr; margin-top: 32px; }
     main { padding-top: 28px; }
+  }
+
+  /* At 320-360 dp the seal, title and language switch cannot share one row. */
+  @media (max-width: 420px) {
+    .bar-inner { flex-wrap: wrap; row-gap: 8px; }
+    .lang { margin-left: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .download .btn { transition: none; }
   }
 
   @media print {

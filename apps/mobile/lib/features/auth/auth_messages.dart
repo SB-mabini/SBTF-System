@@ -18,24 +18,39 @@ String friendlyAuthMessage(String message) {
   if (lower.contains('user already registered') ||
       lower.contains('already been registered')) {
     return 'An account with this e-mail already exists. Sign in instead, '
-        'or use “Forgot password?”.';
+        'or use “Forgot your password?”.';
   }
   if (lower.contains('token has expired') ||
       lower.contains('invalid token') ||
       lower.contains('invalid otp') ||
-      (lower.contains('otp') && lower.contains('expired'))) {
+      (lower.contains('otp') && lower.contains('expired')) ||
+      lower.contains('otp_expired')) {
     return 'That code is incorrect or has expired. Request a new code and '
         'try again.';
   }
+  if (lower.contains('for security purposes') &&
+      lower.contains('only request this after')) {
+    return 'Please wait a moment before requesting another code.';
+  }
   if (lower.contains('rate limit') ||
       lower.contains('too many requests') ||
-      lower.contains('email rate limit exceeded')) {
+      lower.contains('email rate limit exceeded') ||
+      lower.contains('over_email_send_rate_limit')) {
     return 'Too many code requests. Wait a minute, then try again.';
   }
   if (lower.contains('password should be') ||
       lower.contains('weak password') ||
       lower.contains('password is too short')) {
     return 'Choose a stronger password — at least 8 characters.';
+  }
+  if (lower.contains('unable to validate email') ||
+      lower.contains('invalid email')) {
+    return 'Enter a valid e-mail address.';
+  }
+  if (lower.contains('signups not allowed') ||
+      lower.contains('signup is disabled')) {
+    return 'Registration is temporarily closed. Contact the municipal office '
+        'for help creating an account.';
   }
   if (lower.contains('same password') ||
       lower.contains('different from the old password')) {

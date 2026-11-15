@@ -57,8 +57,9 @@ String decisionReason(SessionDecision decision) {
     case SessionDecision.requireLogin:
       return 'Sign in with your driver or operator account to continue.';
     case SessionDecision.requireEmailVerification:
-      return 'Please confirm your e-mail address before signing in. '
-          'Check your inbox for the verification link.';
+      return 'Enter the 6-digit code sent to your e-mail to confirm your '
+          'address. If the code has expired, open the confirmation screen and '
+          'request a new one.';
     case SessionDecision.profileMissing:
       return 'No profile is linked to this account yet. '
           'Contact the municipal office to complete your registration.';

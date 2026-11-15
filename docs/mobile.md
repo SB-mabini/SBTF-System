@@ -294,7 +294,26 @@ Settings → **Application version** shows the real `version (build N)`, and
 number, `version:` in `pubspec.yaml` must be bumped (`0.1.0+4`, `0.1.0+5`, …)
 for every release.
 
-To release a new version:
+To release a new version, prefer the tag-driven workflow — it builds, signs, publishes the
+GitHub Release and commits the manifest in one run:
+
+```bash
+# 1. Bump `version:` in apps/mobile/pubspec.yaml (0.1.0+4, 0.1.0+5, …) and push it.
+git add apps/mobile/pubspec.yaml
+git commit -m "chore(mobile): bump to 0.1.0+4"
+git push
+
+# 2. Tag that main commit. This starts .github/workflows/mobile-release.yml.
+git tag app-v0.1.0-4
+git push origin app-v0.1.0-4
+```
+
+The workflow refuses to run when the tag does not match `pubspec.yaml`, when the tag is not
+the tip of `main`, or when the build number is not greater than the one in `release.json`.
+It also verifies the keystore fingerprint before building, if `ANDROID_KEYSTORE_SHA256` is
+set. Required repository secrets are listed in the workflow header.
+
+To do the same by hand (for example when Actions is unavailable):
 
 ```bash
 # 1. Bump `version:` in apps/mobile/pubspec.yaml, then build split APKs.

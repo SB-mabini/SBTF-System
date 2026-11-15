@@ -114,4 +114,19 @@ void main() {
       );
     });
   });
+
+  group('decisionReason', () {
+    test('unconfirmed e-mail talks about a code, never a link', () {
+      final reason = decisionReason(SessionDecision.requireEmailVerification);
+      expect(reason, contains('6-digit code'));
+      expect(reason.toLowerCase(), isNot(contains('link')));
+    });
+
+    test('every refusal has actionable wording', () {
+      for (final decision in SessionDecision.values) {
+        if (decision == SessionDecision.allow) continue;
+        expect(decisionReason(decision), isNotEmpty);
+      }
+    });
+  });
 }

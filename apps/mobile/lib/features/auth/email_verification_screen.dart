@@ -239,9 +239,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final title = _isRecovery ? 'Reset your password' : 'Confirm your e-mail';
     final heading = _email.isEmpty
         ? 'Enter your code'
-        : _isRecovery
+        : widget.codeWasSent
             ? 'Code sent to $_email'
-            : 'Code sent to $_email';
+            : (_isRecovery ? 'Reset your password' : 'Confirm your e-mail');
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -290,8 +290,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                           ? 'Enter the 6-digit code from the e-mail to choose '
                               'a new password. The code expires in 10 minutes.'
                           : 'Enter the 6-digit code from the e-mail to confirm '
-                              'your account. You will be signed in '
-                              'automatically.',
+                              'your account. It expires in 10 minutes, and you '
+                              'will be signed in automatically.',
                       style: const TextStyle(
                         color: AppColors.inkMuted,
                         height: 1.4,

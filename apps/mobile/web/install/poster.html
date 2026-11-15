@@ -60,6 +60,12 @@
   .toolbar a:hover,
   .toolbar button:hover { border-color: var(--primary-bright); }
 
+  .toolbar a:focus-visible,
+  .toolbar button:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+
   .poster {
     width: 210mm;
     min-height: 297mm;

@@ -33,6 +33,34 @@ void main() {
         friendlyAuthMessage('Email rate limit exceeded'),
         contains('Wait a minute'),
       );
+      expect(
+        friendlyAuthMessage(
+          'For security purposes, you can only request this after 42 seconds.',
+        ),
+        contains('wait a moment'),
+      );
+      expect(
+        friendlyAuthMessage('over_email_send_rate_limit'),
+        contains('Wait a minute'),
+      );
+    });
+
+    test('uses the exact forgotten-password label from sign-in', () {
+      expect(
+        friendlyAuthMessage('User already registered'),
+        contains('Forgot your password?'),
+      );
+    });
+
+    test('maps invalid addresses and closed registration', () {
+      expect(
+        friendlyAuthMessage('Unable to validate email address: invalid format'),
+        'Enter a valid e-mail address.',
+      );
+      expect(
+        friendlyAuthMessage('Signups not allowed for this instance'),
+        contains('temporarily closed'),
+      );
     });
 
     test('turns Android socket failures into a connection message', () {
