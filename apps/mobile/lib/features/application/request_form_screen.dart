@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_error.dart';
 import '../../core/models/form_request.dart';
 import '../../core/models/franchise_application.dart';
+import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -60,10 +61,24 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
   String? _signaturePath;
   bool _hasInk = false;
 
+  /// The franchise picked for a renewal and the notice explaining that some
+  /// fields were reused. Both are only present on the renewal path.
+  String? _renewalRecordId;
+  bool _prefilling = false;
+  String? _prefillNotice;
+
+  /// Values this screen filled in automatically, keyed by controller. A value
+  /// the driver has since edited no longer matches, so switching to another
+  /// franchise never overwrites a deliberate change.
+  final Map<TextEditingController, String> _autoFilled =
+      <TextEditingController, String>{};
+
   bool _uploading = false;
   bool _submitting = false;
   bool _profileApplied = false;
   String? _error;
+
+  bool get _isRenewal => _type == ApplicationType.renewal;
 
   bool get _isEditingRejected =>
       widget.existing != null && widget.existing!.isRejected;
@@ -95,6 +110,12 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       _orCrSize = existing.orCrFileSizeBytes;
       _signaturePath = existing.signatureStoragePath;
     }
+
+    if (_isRenewal && existing == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoSelectRenewalRecord();
+      });
+    }
   }
 
   @override
@@ -123,6 +144,98 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     _profileApplied = true;
     if (_ctc.text.isEmpty) {
       // The profile has no CTC column; leave it blank for the driver.
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Renewal prefill
+  // -------------------------------------------------------------------------
+
+  /// Renewals for a driver with exactly one renewable franchise are picked and
+  /// filled automatically. Multiple franchises need an explicit choice on the
+  /// "Franchise to renew" field.
+  Future<void> _autoSelectRenewalRecord() async {
+    if (!mounted || !_isRenewal || widget.existing != null) return;
+    try {
+      final records = await ref.read(myRecordsProvider.future);
+      if (!mounted || !_isRenewal) return;
+      final renewable = records.where((record) => !record.archived).toList();
+      if (renewable.length == 1) {
+        await _applyRenewalPrefill(renewable.single.id);
+      }
+    } catch (_) {
+      // Prefill is optional; the driver can still type everything by hand.
+    }
+  }
+
+  /// Loads the previous application and request for [recordId] and fills the
+  /// fields that are still empty.
+  Future<void> _applyRenewalPrefill(String recordId) async {
+    setState(() {
+      _renewalRecordId = recordId;
+      _prefilling = true;
+    });
+
+    RenewalPrefill? prefill;
+    try {
+      prefill = await ref.read(renewalPrefillProvider(recordId).future);
+    } catch (_) {
+      prefill = null;
+    }
+
+    if (!mounted) return;
+    if (prefill == null) {
+      setState(() => _prefilling = false);
+      return;
+    }
+
+    _prefillField(_ctc, prefill.ctcNumber);
+    _prefillField(_cr, prefill.crNumber);
+    _prefillField(_make, prefill.vehicleMake);
+    _prefillField(_model, prefill.vehicleModel);
+    _prefillField(_engine, prefill.engineNumber);
+    _prefillField(_chassis, prefill.chassisNumber);
+    _prefillField(_plate, prefill.plateNumber);
+    if (_todaId == null || _todaId!.isEmpty) {
+      _todaId = prefill.todaId.isEmpty ? null : prefill.todaId;
+    }
+    if (_purposeController.text.trim().isEmpty) {
+      _purposeController.text = prefill.purpose;
+      _purpose = prefill.purpose;
+    }
+
+    setState(() {
+      _prefilling = false;
+      _prefillNotice = 'Filled from franchise ${prefill!.franchiseNumber}. '
+          'Check the vehicle details and CTC, then change anything that has '
+          'been updated.';
+    });
+  }
+
+  /// Fills [controller] only when it is empty, or when its current text is the
+  /// value this screen put there previously.
+  void _prefillField(TextEditingController controller, String? value) {
+    final next = value?.trim() ?? '';
+    if (next.isEmpty) return;
+    final current = controller.text.trim();
+    final previous = _autoFilled[controller];
+    if (current.isEmpty || (previous != null && current == previous)) {
+      controller.text = next;
+      _autoFilled[controller] = next;
+    }
+  }
+
+  void _selectType(String type, FormFieldState<String> field) {
+    setState(() {
+      _type = type;
+      if (type != ApplicationType.renewal) {
+        _renewalRecordId = null;
+        _prefillNotice = null;
+      }
+    });
+    field.didChange(type);
+    if (type == ApplicationType.renewal) {
+      _autoSelectRenewalRecord();
     }
   }
 
@@ -359,6 +472,18 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
               const SizedBox(height: AppSpacing.xs),
               const SectionHeader('Request'),
               _typeField(),
+              if (_isRenewal) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _renewalField(),
+              ],
+              if (_prefilling) ...[
+                const SizedBox(height: AppSpacing.xs),
+                const LinearProgressIndicator(),
+              ],
+              if (_prefillNotice != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                _PrefillNotice(message: _prefillNotice!),
+              ],
               const SizedBox(height: AppSpacing.sm),
               _todaField(),
               const SizedBox(height: AppSpacing.sm),
@@ -494,6 +619,66 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     );
   }
 
+  Widget _renewalField() {
+    return ref.watch(myRecordsProvider).when(
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => _ErrorBanner(
+            message: 'Could not load your franchises.',
+            onRetry: () => ref.invalidate(myRecordsProvider),
+          ),
+          data: (records) {
+            final renewable =
+                records.where((record) => !record.archived).toList();
+            if (renewable.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.accentTint,
+                  borderRadius: AppRadius.box,
+                ),
+                child: const Text(
+                  'You have no franchise available to renew. Choose "New '
+                  'franchise" instead, or ask the franchising office for help.',
+                  style: TextStyle(
+                    color: AppColors.inkStrong,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              );
+            }
+
+            final validSelection =
+                renewable.any((record) => record.id == _renewalRecordId);
+            return DropdownButtonFormField<String>(
+              key: ValueKey<String>(
+                'renewal-source-${_renewalRecordId ?? 'none'}-${renewable.length}',
+              ),
+              initialValue: validSelection ? _renewalRecordId : null,
+              isExpanded: true,
+              decoration:
+                  const InputDecoration(labelText: 'Franchise to renew'),
+              hint: const Text('Select the franchise to renew'),
+              items: <DropdownMenuItem<String>>[
+                for (final record in renewable)
+                  DropdownMenuItem<String>(
+                    value: record.id,
+                    child: Text(
+                      '${record.franchiseNumber} · ${record.plateNumber ?? ''}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: _prefilling
+                  ? null
+                  : (value) {
+                      if (value != null) _applyRenewalPrefill(value);
+                    },
+            );
+          },
+        );
+  }
+
   Widget _typeField() {
     return FormField<String>(
       initialValue: _type,
@@ -506,20 +691,15 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
             selected: field.value == ApplicationType.newFranchise,
             title: 'New franchise',
             subtitle: 'First franchise for this tricycle',
-            onTap: () {
-              setState(() => _type = ApplicationType.newFranchise);
-              field.didChange(ApplicationType.newFranchise);
-            },
+            onTap: () => _selectType(ApplicationType.newFranchise, field),
           ),
           const SizedBox(height: 8),
           _TypeChoice(
             selected: field.value == ApplicationType.renewal,
             title: 'Renewal',
-            subtitle: 'Renew an existing franchise',
-            onTap: () {
-              setState(() => _type = ApplicationType.renewal);
-              field.didChange(ApplicationType.renewal);
-            },
+            subtitle:
+                'Renew an existing franchise — previous details are filled in',
+            onTap: () => _selectType(ApplicationType.renewal, field),
           ),
           if (field.hasError)
             Padding(
@@ -546,6 +726,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
         onRetry: () => ref.invalidate(todaListProvider),
       ),
       data: (todas) => FormField<String>(
+        key: ValueKey<String>('request-toda-${_todaId ?? ''}'),
         initialValue: todas.any((toda) => toda.id == _todaId) ? _todaId : null,
         validator: (value) => value == null || value.isEmpty
             ? 'Select an accredited TODA.'
@@ -939,6 +1120,40 @@ class _ErrorBanner extends StatelessWidget {
           ),
           if (onRetry != null)
             TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrefillNotice extends StatelessWidget {
+  const _PrefillNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.successTint,
+        borderRadius: AppRadius.box,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_fix_high, color: AppColors.success, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.inkStrong,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -68,6 +68,36 @@ Two behaviour details the app relies on:
 | 8 — hardening & release | Hardening pass over the finished screens, with no new screen and no new dependency: one classified error surface for every slice (`lib/core/widgets/error_view.dart`), a stronger error taxonomy with a reason + actionable hint mirroring the web console (`lib/core/app_error.dart`), the session gate classifying and retrying its own failures (`lib/features/auth/auth_gate.dart`), and optional release signing for the Android build (`android/app/build.gradle.kts`, `android/key.properties.example`, §5) |
 | 9 — appointments | Appointment list and detail (`lib/features/appointments/appointment_list_screen.dart`, `appointment_detail_screen.dart`) over `AppointmentService`: the dashboard gains a "My appointments" row under "Track & updates" carrying the live count of visits still to attend; the list splits the schedule into **Upcoming** and **Past** (the same split the staff console uses), each row showing the kind of visit, the date and time, the venue and the application it belongs to; a row opens the detail, which shows the venue, the date, the status, the outcome and any note the office left, and a way into the owning application's tracker. Appointments are **read-only** — the staff book and close them out from the web console, so the app writes nothing. The slice-7 notification feed deep-links an `appointment_scheduled` / `appointment_updated` notice into this detail |
 
+### Renewal prefill
+
+A renewal reuses the driver's own stored data instead of asking them to type
+everything again. Both screens load it through `RenewalPrefill`
+(`lib/core/models/renewal_prefill.dart`, provider `renewalPrefillProvider`):
+
+- The **request form** shows a "Franchise to renew" picker as soon as Renewal is
+  selected. With exactly one renewable franchise it is chosen automatically. The
+  picker fills the vehicle identity (make, model, engine, chassis, plate), the CR
+  number from the request that produced that franchise, the CTC number, the TODA
+  and a "Renewal of franchise …" purpose. The OR/CR file and the signature are
+  **never** reused — the driver uploads a current OR/CR and signs again.
+- The **application wizard** preselects the same franchise (again, automatically
+  when there is only one) and fills the operator address, barangay, applied
+  route, ownership type, registered owner, citizenship, vehicle year/color,
+  seating capacity, MTOP and body number. Vehicle identity and CTC stay locked
+  to the staff-approved request when the wizard was opened from one; the server
+  uses the request's values anyway.
+- Only **empty** fields are filled, and only while they still hold the value the
+  screen put there. Anything the driver edits is never overwritten, including
+  when they switch to another franchise.
+- A green notice names the franchise that supplied the data, so a reused value
+  is never mistaken for something the driver just entered.
+
+There are no schema changes: the prefill reads `franchise_records`,
+`franchise_applications` and the converted `form_requests` row (matched by
+`converted_application_id`), all under the driver's own RLS policies. Tests:
+`test/renewal_prefill_test.dart` (mapping and fallbacks) and
+`test/renewal_prefill_screen_test.dart` (auto-selection and edit-safety).
+
 ### Slice data layer (3–9) — implemented
 
 Every slice's database contract is already wrapped in a typed service; the slice 3

@@ -331,10 +331,11 @@ instructions, downloadable QR for barangay notice boards, and a one-page A4 post
 - **Binaries.** Split APKs are attached to GitHub Releases, never committed. The committed
   `apps/mobile/web/install/release.json` records their URLs, sizes and SHA-256 values;
   the Vercel build downloads them into `/install/download/` and verifies the hashes.
-- **Published build.** `0.1.0` build **4** (`app-v0.1.0-4`), dated 15 November 2026:
-  arm64 30,364,502 bytes, armeabi-v7a 26,299,846 bytes. It carries the auth-copy fixes
-  below. Drivers on build 3 see the update card the next time they open the app; the APKs
-  are signed with the same release key, so the update installs over the old copy.
+- **Published build.** `0.1.0` build **5** (`app-v0.1.0-5`), dated 15 November 2026:
+  arm64 30,364,614 bytes, armeabi-v7a 26,316,342 bytes. It carries the auth-copy fixes and
+  the renewal prefill below. Drivers on build 4 (and 3) see the update card the next time
+  they open the app; the APKs are signed with the same release key, so the update installs
+  over the old copy.
 - **Update checks.** `lib/core/update_service.dart` reads the installed version with
   `package_info_plus`, fetches `/install/release.json` when the home screen opens, and shows
   a dismissible update card when the published `build` is higher. Android reports split-APK
@@ -358,14 +359,24 @@ instructions, downloadable QR for barangay notice boards, and a one-page A4 post
   `:focus-visible` outlines, larger language-switch hit areas, a wrapped header, and
   reduced-motion handling.
 
-- **Auth copy (in build 4).** Every driver auth screen now says **6-digit code** — never
+- **Auth copy.** Every driver auth screen now says **6-digit code** — never
   "verification link". `auth_messages.dart` maps Supabase's raw errors to actionable
   sentences: bad credentials, unconfirmed account, duplicate e-mail, incorrect/expired OTP,
   throttle (`For security purposes…` and `over_email_send_rate_limit`), invalid address,
   weak password and closed registration. `session_guard.dart` describes the confirmation
   step in the same words. Tests: `test/auth_messages_test.dart` and
   `test/session_guard_test.dart`; the 320 dp / 200% text checks live in
-  `test/small_screen_test.dart`.
+  `test/small_screen_test.dart`. Shipped in build 4.
+- **Renewal prefill (build 5).** A renewal no longer starts from a blank form. Both the
+  request form and the application wizard show a **Franchise to renew** picker, select the
+  franchise automatically when the driver has exactly one renewable record, and fill the
+  stored vehicle identity, CTC, CR number, TODA, address/barangay, route, ownership and
+  registered owner. Only empty fields are filled, and only until the driver edits them, so
+  nothing deliberate is overwritten — even when switching franchises. The OR/CR file and
+  signature are never reused. Data comes from the driver's own `franchise_records`,
+  `franchise_applications` and converted `form_requests` rows (no schema change); mapping
+  and edit-safety are covered by `test/renewal_prefill_test.dart` and
+  `test/renewal_prefill_screen_test.dart`. Details: [`mobile.md`](./mobile.md).
 
 ---
 

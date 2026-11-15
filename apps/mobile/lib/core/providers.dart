@@ -10,6 +10,7 @@ import 'models/franchise_application.dart';
 import 'models/franchise_record.dart';
 import 'models/form_request.dart';
 import 'models/profile.dart';
+import 'models/renewal_prefill.dart';
 import 'models/toda.dart';
 import 'qr_scanner.dart';
 import 'url_opener.dart';
@@ -271,6 +272,38 @@ final myRecordsProvider = FutureProvider<List<FranchiseRecord>>(
 final activeRecordProvider = FutureProvider<FranchiseRecord?>(
   (ref) => ref.watch(certificateServiceProvider).activeRecord(),
 );
+
+/// Data reused when filing a renewal for [recordId].
+///
+/// Reads the franchise record, the application that created it and the
+/// approved request behind that application. All three queries are RLS-scoped
+/// to the caller, so a driver can only prefill their own records.
+final renewalPrefillProvider =
+    FutureProvider.family<RenewalPrefill?, String>((ref, recordId) async {
+  final records = await ref.watch(myRecordsProvider.future);
+  FranchiseRecord? record;
+  for (final candidate in records) {
+    if (candidate.id == recordId) {
+      record = candidate;
+      break;
+    }
+  }
+  if (record == null) return null;
+
+  final applicationService = ref.watch(applicationServiceProvider);
+  final application = await applicationService.getById(record.applicationId);
+  final request = application == null
+      ? null
+      : await ref
+          .watch(formRequestServiceProvider)
+          .latestForApplication(record.applicationId);
+
+  return RenewalPrefill(
+    record: record,
+    application: application,
+    request: request,
+  );
+});
 
 /// The public base address encoded into a certificate QR code (slice 6).
 ///

@@ -5,6 +5,7 @@ import '../../core/app_error.dart';
 import '../../core/constants.dart';
 import '../../core/models/franchise_application.dart';
 import '../../core/models/form_request.dart';
+import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -91,6 +92,13 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   bool _submitting = false;
   String? _submitError;
 
+  /// Values reused from the previous franchise application, plus a notice so
+  /// the driver knows why fields are already populated.
+  final Map<TextEditingController, String> _autoFilled =
+      <TextEditingController, String>{};
+  String? _prefillNotice;
+  bool _ownershipTouched = false;
+
   final Map<String, ApplicationDocumentUpload> _uploads =
       <String, ApplicationDocumentUpload>{};
   final Set<String> _uploading = <String>{};
@@ -123,6 +131,16 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _lastName.text = profile.lastName;
       _contact.text = approved?.contactNumber ?? profile.contactNumber ?? '';
       _email.text = profile.email;
+    }
+
+    // These defaults are not user choices yet, so a renewal may replace them.
+    _autoFilled[_citizenship] = _citizenship.text.trim();
+    _autoFilled[_seating] = _seating.text.trim();
+
+    if (_isRenewal) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybeAutoSelectRenewal();
+      });
     }
   }
 
@@ -170,6 +188,94 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   bool get _isRenewal => _type == ApplicationType.renewal;
+
+  // -------------------------------------------------------------------------
+  // Renewal prefill
+  // -------------------------------------------------------------------------
+
+  /// With exactly one renewable franchise there is nothing to ask: select it
+  /// and fill the previous application's details. With several, the driver
+  /// picks one and [_selectRenewalRecord] fills it.
+  Future<void> _maybeAutoSelectRenewal() async {
+    if (!mounted || !_isRenewal || _recordId != null) return;
+    try {
+      final records = await ref.read(myRecordsProvider.future);
+      if (!mounted || !_isRenewal || _recordId != null) return;
+      final renewable = records.where((record) => !record.archived).toList();
+      if (renewable.length == 1) {
+        await _selectRenewalRecord(renewable.single.id);
+      }
+    } catch (_) {
+      // Prefill is optional; the driver can still complete the form by hand.
+    }
+  }
+
+  Future<void> _selectRenewalRecord(String? recordId) async {
+    if (recordId == null) return;
+    setState(() => _recordId = recordId);
+
+    RenewalPrefill? prefill;
+    try {
+      prefill = await ref.read(renewalPrefillProvider(recordId).future);
+    } catch (_) {
+      prefill = null;
+    }
+    if (!mounted || prefill == null) return;
+    _applyRenewalPrefill(prefill);
+  }
+
+  /// Fills fields the driver has not typed into yet. Values that came from a
+  /// previously selected franchise are replaced when another one is chosen.
+  void _applyRenewalPrefill(RenewalPrefill prefill) {
+    _prefillField(_address, prefill.addressLine);
+    _prefillField(_route, prefill.appliedRoute);
+    _prefillField(_registeredOwner, prefill.registeredOwner);
+    _prefillField(_citizenship, prefill.citizenship);
+    _prefillField(_vehicleYear, prefill.vehicleYear?.toString());
+    _prefillField(_vehicleColor, prefill.vehicleColor);
+    _prefillField(_seating, prefill.seatingCapacity?.toString());
+    _prefillField(_mtop, prefill.mtopNumber);
+    _prefillField(_body, prefill.bodyNumber);
+
+    // Vehicle identity and CTC are locked once staff approved the request, and
+    // the server uses the request's values anyway.
+    if (!_hasApprovedRequest) {
+      _prefillField(_ctc, prefill.ctcNumber);
+      _prefillField(_crNumber, prefill.crNumber);
+      _prefillField(_vehicleMake, prefill.vehicleMake);
+      _prefillField(_vehicleModel, prefill.vehicleModel);
+      _prefillField(_plate, prefill.plateNumber);
+      _prefillField(_engine, prefill.engineNumber);
+      _prefillField(_chassis, prefill.chassisNumber);
+    }
+
+    if ((_todaId == null || _todaId!.isEmpty) && prefill.todaId.isNotEmpty) {
+      _todaId = prefill.todaId;
+    }
+    if ((_barangayCode == null || _barangayCode!.isEmpty) &&
+        prefill.barangayCode.isNotEmpty) {
+      _barangayCode = prefill.barangayCode;
+    }
+    if (!_ownershipTouched && prefill.ownershipType.isNotEmpty) {
+      _ownershipType = prefill.ownershipType;
+    }
+
+    setState(() {
+      _prefillNotice = 'Filled from franchise ${prefill.franchiseNumber}. '
+          'Check each detail and change anything that has been updated.';
+    });
+  }
+
+  void _prefillField(TextEditingController controller, String? value) {
+    final next = value?.trim() ?? '';
+    if (next.isEmpty) return;
+    final current = controller.text.trim();
+    final previous = _autoFilled[controller];
+    if (current.isEmpty || (previous != null && current == previous)) {
+      controller.text = next;
+      _autoFilled[controller] = next;
+    }
+  }
 
   // -------------------------------------------------------------------------
   // Navigation
@@ -485,10 +591,13 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           subtitle: 'Renew an existing franchise',
           onTap: _hasApprovedRequest
               ? null
-              : () => setState(() {
+              : () {
+                  setState(() {
                     _type = ApplicationType.renewal;
                     _submitError = null;
-                  }),
+                  });
+                  _maybeAutoSelectRenewal();
+                },
         ),
         const SizedBox(height: AppSpacing.md),
         const _SectionTitle('TODA & barangay'),
@@ -513,6 +622,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           const SizedBox(height: AppSpacing.sm),
           _renewalRecordField(),
         ],
+        if (_prefillNotice != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _PrefillNotice(message: _prefillNotice!),
+        ],
       ],
     );
   }
@@ -521,6 +634,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     final initialId = todas.any((toda) => toda.id == _todaId) ? _todaId : null;
 
     return FormField<String>(
+      key: ValueKey<String>('toda-${_todaId ?? ''}'),
       initialValue: initialId,
       validator: (value) => value == null ? 'Select an accredited TODA.' : null,
       builder: (field) {
@@ -651,6 +765,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             : null;
 
     return FormField<String>(
+      key: ValueKey<String>('barangay-${_barangayCode ?? ''}'),
       initialValue: initialCode,
       validator: (value) =>
           value == null || value.isEmpty ? 'Select a barangay.' : null,
@@ -791,7 +906,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             final validSelection =
                 renewable.any((record) => record.id == _recordId);
             return DropdownButtonFormField<String>(
-              key: ValueKey<String>('renewal-record-$_type'),
+              key: ValueKey<String>(
+                'renewal-record-${_type ?? 'none'}-${_recordId ?? 'none'}',
+              ),
               initialValue: validSelection ? _recordId : null,
               isExpanded: true,
               decoration:
@@ -813,7 +930,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               ],
               onChanged: renewable.isEmpty
                   ? null
-                  : (value) => setState(() => _recordId = value),
+                  : (value) => _selectRenewalRecord(value),
               validator: (value) => renewable.isEmpty
                   ? 'You have no franchise that can be renewed.'
                   : (value == null
@@ -925,6 +1042,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         ),
         const SizedBox(height: AppSpacing.xs),
         DropdownButtonFormField<String>(
+          key: ValueKey<String>('ownership-$_ownershipType'),
           initialValue: _ownershipType,
           decoration: const InputDecoration(labelText: 'Type of ownership'),
           items: const <DropdownMenuItem<String>>[
@@ -946,7 +1064,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             ),
           ],
           onChanged: (value) {
-            if (value != null) setState(() => _ownershipType = value);
+            if (value != null) {
+              setState(() {
+                _ownershipType = value;
+                _ownershipTouched = true;
+              });
+            }
           },
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -1646,6 +1769,40 @@ class _ErrorBanner extends StatelessWidget {
             child: Text(
               message,
               style: const TextStyle(color: AppColors.danger, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrefillNotice extends StatelessWidget {
+  const _PrefillNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.successTint,
+        borderRadius: AppRadius.box,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_fix_high, color: AppColors.success, size: 20),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.inkStrong,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
           ),
         ],

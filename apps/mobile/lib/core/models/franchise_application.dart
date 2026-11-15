@@ -322,6 +322,11 @@ class FranchiseApplication {
     this.bodyNumber,
     this.renewalOfRecordId,
     this.remarks,
+    this.ctcNumber,
+    this.appliedRoute = '',
+    this.registeredOwner,
+    this.ownershipType = 'not_applicable',
+    this.operatorCitizenship = 'Filipino',
     this.rejectionReason,
     this.submittedAt,
     this.reviewedAt,
@@ -360,6 +365,15 @@ class FranchiseApplication {
 
   final String? renewalOfRecordId;
   final String? remarks;
+
+  /// Official application-form fields (Image 1), stored by
+  /// `rpc_driver_set_application_details`. A renewal copies these from the
+  /// previous application so the driver only edits what changed.
+  final String? ctcNumber;
+  final String appliedRoute;
+  final String? registeredOwner;
+  final String ownershipType;
+  final String operatorCitizenship;
 
   /// Present when [status] is `rejected`.
   final String? rejectionReason;
@@ -450,6 +464,12 @@ class FranchiseApplication {
       bodyNumber: map['body_number']?.toString(),
       renewalOfRecordId: map['renewal_of_record_id']?.toString(),
       remarks: map['remarks']?.toString(),
+      ctcNumber: map['ctc_number']?.toString(),
+      appliedRoute: (map['applied_route'] ?? '').toString(),
+      registeredOwner: map['registered_owner']?.toString(),
+      ownershipType: (map['ownership_type'] ?? 'not_applicable').toString(),
+      operatorCitizenship:
+          (map['operator_citizenship'] ?? 'Filipino').toString(),
       rejectionReason: map['rejection_reason']?.toString(),
       submittedAt: _asDate(map['submitted_at']),
       reviewedAt: _asDate(map['reviewed_at']),

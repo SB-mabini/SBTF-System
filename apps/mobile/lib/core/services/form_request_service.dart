@@ -45,6 +45,23 @@ class FormRequestService extends SupabaseService {
     });
   }
 
+  /// The approved request that was converted into [applicationId], if any.
+  ///
+  /// A renewal reuses this row's CR number and CTC; the vehicle identity lives
+  /// on the application itself.
+  Future<FormRequest?> latestForApplication(String applicationId) {
+    return guard(() async {
+      final rows = await client
+          .from('form_requests')
+          .select(_select)
+          .eq('converted_application_id', applicationId)
+          .order('issued_at', ascending: false)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      return FormRequest.fromMap(Map<String, dynamic>.from(rows.first as Map));
+    });
+  }
+
   /// The request occupying the driver's open slot (`requested` or `issued`),
   /// if any.
   Future<FormRequest?> openRequest() {
