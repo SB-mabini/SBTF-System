@@ -9,7 +9,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(34);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -159,6 +159,43 @@ select throws_ok(
   'a driver may only have one open request'
 );
 
+-- Another driver cannot claim a vehicle that is already on an open request.
+select pg_temp.login((select driver2_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver2 from ids), (select toda from ids), 'DUP1')
+        || jsonb_build_object('chassis_number', 'CHS-FR1'))$$,
+  'P0001', null,
+  'a request with another request''s chassis number is refused'
+);
+
+select throws_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver2 from ids), (select toda from ids), 'DUP2')
+        || jsonb_build_object('engine_number', 'ENG-FR1'))$$,
+  'P0001', null,
+  'a request with another request''s engine number is refused'
+);
+
+select throws_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver2 from ids), (select toda from ids), 'DUP3')
+        || jsonb_build_object('plate_number', 'PLT FR1'))$$,
+  'P0001', null,
+  'a request with another request''s plate number is refused'
+);
+
+select throws_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver2 from ids), (select toda from ids), 'DUP4')
+        || jsonb_build_object('cr_number', 'CR-FR1'))$$,
+  'P0001', null,
+  'a request with another request''s CR number is refused'
+);
+
+select pg_temp.login((select driver_auth from fx));
+
 select throws_ok(
   $$select public.rpc_staff_issue_form_request(
       (select id from public.form_requests where requested_by = (select driver from ids)))$$,
@@ -301,6 +338,18 @@ select is(
   (select status::text from public.form_requests where requested_by = (select driver from ids)),
   'converted',
   'the request is consumed by the submission'
+);
+
+-- The vehicle now belongs to a pending application, so another request for it
+-- must be refused before it reaches staff.
+select pg_temp.login((select driver2_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver2 from ids), (select toda from ids), 'DUP5')
+        || jsonb_build_object('plate_number', 'PLT FR1C'))$$,
+  'P0001', null,
+  'a request cannot reuse a vehicle on a pending application'
 );
 
 -- ---------------------------------------------------------------------------
