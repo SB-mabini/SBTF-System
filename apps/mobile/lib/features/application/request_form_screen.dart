@@ -60,7 +60,6 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
   int? _orCrSize;
 
   String? _signaturePath;
-  bool _hasInk = false;
 
   /// The franchise picked for a renewal and the notice explaining that some
   /// fields were reused. Both are only present on the renewal path.
@@ -312,16 +311,22 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       // Draw the signature to PNG only when the driver used the pad.
       String? signaturePath = _signaturePath;
       String? typed;
-      if (_hasInk) {
+      if (_signature.hasInk.value) {
         final bytes = await _signature.exportPng();
         if (bytes != null) {
           signaturePath = await ref
               .read(formRequestServiceProvider)
               .uploadSignature(profileId: profile.id, bytes: bytes);
+          typed = null;
+        } else {
+          // Ink was drawn but could not be rasterised; fall back to whatever
+          // the driver typed so the request still carries a signature.
+          typed = _typedSignature.text.trim().isEmpty
+              ? null
+              : _typedSignature.text.trim();
         }
-        typed = null;
       } else {
-        signaturePath = null;
+        // Keep a drawing already on file when a rejected request is resubmitted.
         typed = _typedSignature.text.trim().isEmpty
             ? null
             : _typedSignature.text.trim();
@@ -580,11 +585,10 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
               SignaturePad(
                 controller: _signature,
                 onChanged: (hasInk) => setState(() {
-                  _hasInk = hasInk;
                   if (hasInk) _signaturePath = null;
                 }),
               ),
-              if (!_hasInk)
+              if (!_signature.hasInk.value)
                 _field(
                   label: 'Typed signature',
                   controller: _typedSignature,

@@ -124,7 +124,27 @@ export function buildFormRequestLetterPdf(input: FormRequestLetterInput): jsPDF 
   // ---- signature ----------------------------------------------------------
   if (input.signatureDataUrl) {
     try {
-      doc.addImage(input.signatureDataUrl, "PNG", margin, cursor - 14, 55, 18, undefined, "FAST");
+      // Preserve the drawing's aspect ratio inside a 55 × 18 mm box instead of
+      // stretching it to the box.
+      const properties = doc.getImageProperties(input.signatureDataUrl);
+      const maxWidth = 55;
+      const maxHeight = 18;
+      const scale = Math.min(
+        maxWidth / properties.width,
+        maxHeight / properties.height,
+      );
+      const width = properties.width * scale;
+      const height = properties.height * scale;
+      doc.addImage(
+        input.signatureDataUrl,
+        "PNG",
+        margin,
+        cursor - height + 4,
+        width,
+        height,
+        undefined,
+        "FAST",
+      );
     } catch {
       // A corrupt image must not stop the letter from being printed.
     }

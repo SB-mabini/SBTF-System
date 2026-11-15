@@ -3,37 +3,90 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 /// A controller for [SignaturePad].
 ///
-/// The screen keeps one controller in its state, listens to [hasInk] to enable
-/// the submit button, and calls [exportPng] to upload the drawing.
+/// The screen keeps one controller in its state, listens to [hasInk] to show the
+/// submit control, and calls [exportPng] to upload the drawing.
+///
+/// The strokes live here rather than in the pad's [State] so the drawing
+/// survives the pad being rebuilt or scrolled out of the list. Previously the
+/// list could dispose the pad while the driver scrolled down to Submit, which
+/// silently emptied the drawing and uploaded a blank pad.
 class SignaturePadController {
-  final GlobalKey _boundaryKey = GlobalKey();
+  /// Every stroke drawn so far, in pad coordinates.
+  final List<List<Offset>> strokes = <List<Offset>>[];
 
   /// True once at least one stroke has been drawn.
   final ValueNotifier<bool> hasInk = ValueNotifier<bool>(false);
+
+  /// The pad's last laid-out size. Only used to rasterise the export.
+  Size _size = const Size(360, 180);
 
   VoidCallback? _clear;
 
   /// Clears every stroke.
   void clear() => _clear?.call();
 
-  /// Exports the drawing as a PNG (transparent ink on white).
+  /// Exports the drawing as a transparent PNG.
+  ///
+  /// Strokes are replayed onto a fresh canvas instead of screenshotting the
+  /// widget, so the file carries only the ink — not the pad's border or its
+  /// "Sign here" placeholder. The image is cropped to the ink with a small
+  /// margin, so the printed letter shows a signature and not a mostly blank
+  /// box.
   ///
   /// Returns null when nothing has been drawn.
   Future<Uint8List?> exportPng({double pixelRatio = 3}) async {
-    if (!hasInk.value) return null;
+    if (!hasInk.value || strokes.isEmpty) return null;
 
-    final boundary = _boundaryKey.currentContext?.findRenderObject()
-        as RenderRepaintBoundary?;
-    if (boundary == null) return null;
+    final bounds = _inkBounds();
+    if (bounds == null) return null;
 
-    final image = await boundary.toImage(pixelRatio: pixelRatio);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(pixelRatio);
+    canvas.translate(-bounds.left, -bounds.top);
+    _paintStrokes(canvas, strokes);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(
+      (bounds.width * pixelRatio).round().clamp(1, 100000),
+      (bounds.height * pixelRatio).round().clamp(1, 100000),
+    );
+    picture.dispose();
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
     return data?.buffer.asUint8List();
+  }
+
+  /// The smallest rectangle that contains every stroke, padded a little and
+  /// clamped to the pad.
+  Rect? _inkBounds() {
+    double? left, top, right, bottom;
+    for (final stroke in strokes) {
+      for (final point in stroke) {
+        left = left == null ? point.dx : (point.dx < left ? point.dx : left);
+        top = top == null ? point.dy : (point.dy < top ? point.dy : top);
+        right =
+            right == null ? point.dx : (point.dx > right ? point.dx : right);
+        bottom =
+            bottom == null ? point.dy : (point.dy > bottom ? point.dy : bottom);
+      }
+    }
+    if (left == null || top == null || right == null || bottom == null) {
+      return null;
+    }
+
+    const padding = 8.0;
+    final rect = Rect.fromLTRB(
+      (left - padding).clamp(0.0, _size.width),
+      (top - padding).clamp(0.0, _size.height),
+      (right + padding).clamp(0.0, _size.width),
+      (bottom + padding).clamp(0.0, _size.height),
+    );
+    if (rect.width < 1 || rect.height < 1) return null;
+    return rect;
   }
 
   void dispose() {
@@ -44,9 +97,8 @@ class SignaturePadController {
 /// A simple in-app signature drawing surface.
 ///
 /// Uses only Flutter primitives (no plugin): pointer strokes are painted by a
-/// [CustomPainter] inside a [RepaintBoundary], which is rasterised to PNG for
-/// upload. The signature is an electronic signature; the office may still ask
-/// for a wet-signed printed copy.
+/// [CustomPainter] and rasterised to PNG for upload. The signature is an
+/// electronic signature; the office may still ask for a wet-signed printed copy.
 class SignaturePad extends StatefulWidget {
   const SignaturePad({
     super.key,
@@ -64,10 +116,8 @@ class SignaturePad extends StatefulWidget {
 }
 
 class _SignaturePadState extends State<SignaturePad> {
-  final List<List<Offset>> _strokes = <List<Offset>>[];
   List<Offset>? _current;
   SignaturePadController? _owned;
-  Size _size = Size.zero;
   int? _activePointer;
 
   SignaturePadController get _controller =>
@@ -96,7 +146,7 @@ class _SignaturePadState extends State<SignaturePad> {
 
   void _clear() {
     setState(() {
-      _strokes.clear();
+      _controller.strokes.clear();
       _current = null;
       _activePointer = null;
     });
@@ -111,7 +161,7 @@ class _SignaturePadState extends State<SignaturePad> {
   void _start(Offset point) {
     setState(() {
       _current = <Offset>[point];
-      _strokes.add(_current!);
+      _controller.strokes.add(_current!);
     });
     _setInk(true);
   }
@@ -131,77 +181,75 @@ class _SignaturePadState extends State<SignaturePad> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RepaintBoundary(
-          key: _controller._boundaryKey,
-          child: Container(
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                _size = Size(constraints.maxWidth, constraints.maxHeight);
-                // The eager recognizer claims the pointer before the
-                // surrounding scroll view can turn a vertical stroke into a
-                // page scroll. The Listener draws from raw pointer events, so
-                // the first dot is captured too.
-                return RawGestureDetector(
-                  gestures: <Type, GestureRecognizerFactory>{
-                    EagerGestureRecognizer:
-                        GestureRecognizerFactoryWithHandlers<
-                                EagerGestureRecognizer>(
-                            EagerGestureRecognizer.new, (_) {}),
-                  },
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (event) {
-                      if (_activePointer != null) return;
-                      _activePointer = event.pointer;
-                      _start(event.localPosition);
-                    },
-                    onPointerMove: (event) {
-                      if (event.pointer != _activePointer) return;
-                      _extend(event.localPosition);
-                    },
-                    onPointerUp: (event) {
-                      if (event.pointer != _activePointer) return;
-                      _activePointer = null;
-                      _end();
-                    },
-                    onPointerCancel: (event) {
-                      if (event.pointer != _activePointer) return;
-                      _activePointer = null;
-                      _end();
-                    },
-                    child: CustomPaint(
-                      size: _size,
-                      painter: _SignaturePainter(strokes: _strokes),
-                      child: _strokes.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Sign here',
-                                style: TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.expand(),
-                    ),
+        Container(
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              _controller._size =
+                  Size(constraints.maxWidth, constraints.maxHeight);
+              // The eager recognizer claims the pointer before the
+              // surrounding scroll view can turn a vertical stroke into a
+              // page scroll. The Listener draws from raw pointer events, so
+              // the first dot is captured too.
+              return RawGestureDetector(
+                gestures: <Type, GestureRecognizerFactory>{
+                  EagerGestureRecognizer: GestureRecognizerFactoryWithHandlers<
+                      EagerGestureRecognizer>(
+                    EagerGestureRecognizer.new,
+                    (_) {},
                   ),
-                );
-              },
-            ),
+                },
+                child: Listener(
+                  behavior: HitTestBehavior.opaque,
+                  onPointerDown: (event) {
+                    if (_activePointer != null) return;
+                    _activePointer = event.pointer;
+                    _start(event.localPosition);
+                  },
+                  onPointerMove: (event) {
+                    if (event.pointer != _activePointer) return;
+                    _extend(event.localPosition);
+                  },
+                  onPointerUp: (event) {
+                    if (event.pointer != _activePointer) return;
+                    _activePointer = null;
+                    _end();
+                  },
+                  onPointerCancel: (event) {
+                    if (event.pointer != _activePointer) return;
+                    _activePointer = null;
+                    _end();
+                  },
+                  child: CustomPaint(
+                    painter: _SignaturePainter(strokes: _controller.strokes),
+                    child: _controller.strokes.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Sign here',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.expand(),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
-            onPressed: _strokes.isEmpty ? null : _clear,
+            onPressed: _controller.strokes.isEmpty ? null : _clear,
             icon: const Icon(Icons.undo, size: 18),
             label: const Text('Clear signature'),
           ),
@@ -211,34 +259,38 @@ class _SignaturePadState extends State<SignaturePad> {
   }
 }
 
+/// Draws [strokes] with the app's signature ink. Shared by the on-screen pad
+/// and the PNG export so the printed signature matches what was drawn.
+void _paintStrokes(Canvas canvas, List<List<Offset>> strokes) {
+  final paint = Paint()
+    ..color = const Color(0xFF0F172A)
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.6;
+
+  for (final stroke in strokes) {
+    if (stroke.isEmpty) continue;
+    if (stroke.length == 1) {
+      canvas.drawCircle(stroke.first, 1.3, paint..style = PaintingStyle.fill);
+      paint.style = PaintingStyle.stroke;
+      continue;
+    }
+    final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
+    for (final point in stroke.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(path, paint);
+  }
+}
+
 class _SignaturePainter extends CustomPainter {
   _SignaturePainter({required this.strokes});
 
   final List<List<Offset>> strokes;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF0F172A)
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.6;
-
-    for (final stroke in strokes) {
-      if (stroke.isEmpty) continue;
-      if (stroke.length == 1) {
-        canvas.drawCircle(stroke.first, 1.3, paint..style = PaintingStyle.fill);
-        paint.style = PaintingStyle.stroke;
-        continue;
-      }
-      final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
-      for (final point in stroke.skip(1)) {
-        path.lineTo(point.dx, point.dy);
-      }
-      canvas.drawPath(path, paint);
-    }
-  }
+  void paint(Canvas canvas, Size size) => _paintStrokes(canvas, strokes);
 
   @override
   bool shouldRepaint(covariant _SignaturePainter oldDelegate) => true;
