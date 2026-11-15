@@ -331,10 +331,10 @@ instructions, downloadable QR for barangay notice boards, and a one-page A4 post
 - **Binaries.** Split APKs are attached to GitHub Releases, never committed. The committed
   `apps/mobile/web/install/release.json` records their URLs, sizes and SHA-256 values;
   the Vercel build downloads them into `/install/download/` and verifies the hashes.
-- **Published build.** `0.1.0` build **3** (`app-v0.1.0-3`), dated 14 November 2026:
-  arm64 30,364,502 bytes, armeabi-v7a 26,299,846 bytes. Build **4** carries the auth-copy
-  fixes from §5 (6-digit-code wording, friendly 429/expired messages) and must be published
-  before drivers see them.
+- **Published build.** `0.1.0` build **4** (`app-v0.1.0-4`), dated 15 November 2026:
+  arm64 30,364,502 bytes, armeabi-v7a 26,299,846 bytes. It carries the auth-copy fixes
+  below. Drivers on build 3 see the update card the next time they open the app; the APKs
+  are signed with the same release key, so the update installs over the old copy.
 - **Update checks.** `lib/core/update_service.dart` reads the installed version with
   `package_info_plus`, fetches `/install/release.json` when the home screen opens, and shows
   a dismissible update card when the published `build` is higher. Android reports split-APK
@@ -364,7 +364,8 @@ instructions, downloadable QR for barangay notice boards, and a one-page A4 post
   throttle (`For security purposes…` and `over_email_send_rate_limit`), invalid address,
   weak password and closed registration. `session_guard.dart` describes the confirmation
   step in the same words. Tests: `test/auth_messages_test.dart` and
-  `test/session_guard_test.dart`.
+  `test/session_guard_test.dart`; the 320 dp / 200% text checks live in
+  `test/small_screen_test.dart`.
 
 ---
 
