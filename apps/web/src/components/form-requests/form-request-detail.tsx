@@ -81,7 +81,11 @@ export function FormRequestDetailView({
     setError(null);
     try {
       const pdf = buildFormRequestLetterPdf(letterInput);
-      pdf.save(`${request.form_number}.pdf`);
+      const url = pdf.output("bloburl");
+      const preview = window.open(String(url), "_blank");
+      if (!preview) {
+        setError("The print preview was blocked. Allow pop-ups for this site and try again.");
+      }
     } catch (printError) {
       setError(
         printError instanceof Error
