@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
@@ -111,7 +111,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       obscureText: _obscure,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        hintText: 'At least 8 characters',
+                        hintText: tr('At least 8 characters'),
                         suffixIcon: Semantics(
                           label: _obscure ? 'Show password' : 'Hide password',
                           child: IconButton(
@@ -128,7 +128,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                       ),
                       validator: (value) => (value ?? '').length < 8
-                          ? 'Password must be at least 8 characters.'
+                          ? tr('Password must be at least 8 characters.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -147,11 +147,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       obscureText: _obscure,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _save(),
-                      decoration: const InputDecoration(
-                        hintText: 'Re-enter the new password',
+                      decoration: InputDecoration(
+                        hintText: tr('Re-enter the new password'),
                       ),
                       validator: (value) => value != _passwordController.text
-                          ? 'Passwords do not match.'
+                          ? tr('Passwords do not match.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.md),

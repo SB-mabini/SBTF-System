@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/onboarding/onboarding_state.dart';
@@ -38,6 +38,9 @@ class _LaunchGateState extends ConsumerState<LaunchGate> {
     final store = ref.read(onboardingStoreProvider);
     final state = await store.load();
     if (!mounted) return;
+    // Initialise the reactive language provider from the persisted preference
+    // so the whole app immediately renders in the driver's chosen language.
+    ref.read(languageCodeProvider.notifier).state = state.languageCode;
     setState(() => _state = state);
   }
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
@@ -329,6 +329,7 @@ class _DocumentCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   doc.remarks!,
+                  translate: false,
                   style: const TextStyle(
                     color: AppColors.danger,
                     fontSize: 12,
@@ -456,7 +457,7 @@ class _DocumentPreviewDialogState
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: tr('Close'),
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
                   ),

@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'document_picker.dart';
+import 'l10n/app_localizations.dart';
+import 'onboarding/language.dart';
 import 'onboarding/onboarding_store.dart';
 import 'models/announcement.dart';
 import 'models/app_notification.dart';
@@ -368,3 +370,25 @@ final announcementsStreamProvider = StreamProvider<List<Announcement>>(
 final myAppointmentsStreamProvider = StreamProvider<List<Appointment>>(
   (ref) => ref.watch(appointmentServiceProvider).watchMine(),
 );
+
+// ---------------------------------------------------------------------------
+// Localisation providers
+// ---------------------------------------------------------------------------
+
+/// Current UI language code — updated by onboarding and Settings.
+///
+/// Defaults to [AppLanguages.fallbackCode]. The launch gate initialises it
+/// from the persisted onboarding state after loading; the Settings screen
+/// updates it whenever the driver picks a different language.
+final languageCodeProvider = StateProvider<String>(
+  (ref) => AppLanguages.fallbackCode,
+);
+
+/// Localised strings for the current UI language.
+///
+/// Rebuilds whenever [languageCodeProvider] changes, so any widget that
+/// watches this automatically re-renders with the new language.
+final appLocalizationsProvider = Provider<AppLocalizations>((ref) {
+  final code = ref.watch(languageCodeProvider);
+  return AppLocalizations(code);
+});

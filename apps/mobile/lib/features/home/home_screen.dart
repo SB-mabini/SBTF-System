@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
 
   Future<void> _signOut(BuildContext context) async {
+    final l10n = ref.read(appLocalizationsProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
@@ -51,18 +52,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Log Out?',
-                style: TextStyle(
+              Text(
+                l10n.authLogOut,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppColors.inkStrong,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              const Text(
-                'Are you sure you want to log out?',
-                style: TextStyle(
+              Text(
+                l10n.authLogOutConfirm,
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.inkMuted,
                   height: 1.5,
@@ -82,9 +83,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           borderRadius: AppRadius.input,
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.authCancel,
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -102,9 +103,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           borderRadius: AppRadius.input,
                         ),
                       ),
-                      child: const Text(
-                        'Log out',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.authLogOutButton,
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -174,11 +175,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     } catch (_) {
       if (!context.mounted) return;
+      final l10n = ref.read(appLocalizationsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not load your request form. Check your connection and try again.',
-          ),
+        SnackBar(
+          content: Text(l10n.errorCouldNotLoadRequest),
         ),
       );
     }
@@ -241,6 +241,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.watch(myAppointmentsStreamProvider).valueOrNull ?? const [];
     final upcoming =
         appointments.where((appointment) => appointment.isUpcoming).length;
+    final l10n = ref.watch(appLocalizationsProvider);
 
     ref.listen<AsyncValue<List<AppNotification>>>(notificationsStreamProvider,
         (previous, next) {
@@ -269,7 +270,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   messenger.hideCurrentSnackBar();
                   _openNotifications(context);
                 },
-                child: Text(notif.title),
+                child: Text(notif.title, translate: false),
               ),
               action: SnackBarAction(
                 label: 'View',
@@ -303,7 +304,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Stack(
             children: [
               IconButton(
-                tooltip: 'Notifications',
+                tooltip: tr('Notifications'),
                 icon: const Icon(Icons.notifications_outlined),
                 onPressed: () => _openNotifications(context),
               ),
@@ -335,14 +336,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           IconButton(
-            tooltip: 'Settings',
+            tooltip: tr('Settings'),
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
             ),
           ),
           IconButton(
-            tooltip: 'Sign out',
+            tooltip: tr('Sign out'),
             icon: const Icon(Icons.logout),
             onPressed: () => _signOut(context),
           ),
@@ -399,26 +400,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primaryTint,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppColors.primary),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home, color: AppColors.primary),
+            label: l10n.navHome,
           ),
           NavigationDestination(
-            icon: Icon(Icons.note_add_outlined),
-            selectedIcon: Icon(Icons.note_add, color: AppColors.primary),
-            label: 'Apply',
+            icon: const Icon(Icons.note_add_outlined),
+            selectedIcon: const Icon(Icons.note_add, color: AppColors.primary),
+            label: l10n.navApply,
           ),
           NavigationDestination(
-            icon: Icon(Icons.track_changes_outlined),
-            selectedIcon: Icon(Icons.track_changes, color: AppColors.primary),
-            label: 'Track',
+            icon: const Icon(Icons.track_changes_outlined),
+            selectedIcon:
+                const Icon(Icons.track_changes, color: AppColors.primary),
+            label: l10n.navTrack,
           ),
           NavigationDestination(
-            icon: Icon(Icons.folder_outlined),
-            selectedIcon: Icon(Icons.folder, color: AppColors.primary),
-            label: 'Documents',
+            icon: const Icon(Icons.folder_outlined),
+            selectedIcon: const Icon(Icons.folder, color: AppColors.primary),
+            label: l10n.navDocuments,
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
@@ -155,14 +155,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       autocorrect: false,
                       enableSuggestions: false,
                       onFieldSubmitted: (_) => _sendCode(),
-                      decoration: const InputDecoration(
-                        hintText: 'name@example.com',
+                      decoration: InputDecoration(
+                        hintText: tr('name@example.com'),
                         prefixIcon: Icon(Icons.email_outlined, size: 20),
                       ),
                       validator: (value) {
                         final email = value?.trim() ?? '';
                         if (email.isEmpty || !email.contains('@')) {
-                          return 'Enter a valid e-mail address.';
+                          return tr('Enter a valid e-mail address.');
                         }
                         return null;
                       },

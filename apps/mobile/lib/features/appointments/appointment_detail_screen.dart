@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
@@ -219,6 +219,7 @@ class _NoteCard extends StatelessWidget {
             Expanded(
               child: Text(
                 text,
+                translate: false,
                 style: const TextStyle(
                   color: AppColors.inkStrong,
                   fontSize: 13,

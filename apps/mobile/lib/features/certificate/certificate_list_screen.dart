@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
@@ -29,7 +29,7 @@ class CertificateListScreen extends ConsumerWidget {
         title: const Text('Certificate & QR'),
         actions: [
           IconButton(
-            tooltip: 'Verify a certificate',
+            tooltip: tr('Verify a certificate'),
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => _openVerify(context),
           ),

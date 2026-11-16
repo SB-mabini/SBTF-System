@@ -32,8 +32,14 @@ abstract final class AppLanguages {
     nativeName: 'English',
   );
 
+  static const AppLanguage filipino = AppLanguage(
+    code: 'fil',
+    englishName: 'Filipino',
+    nativeName: 'Filipino',
+  );
+
   /// Every language this build fully supports.
-  static const List<AppLanguage> supported = <AppLanguage>[english];
+  static const List<AppLanguage> supported = <AppLanguage>[english, filipino];
 
   static const String fallbackCode = 'en';
 

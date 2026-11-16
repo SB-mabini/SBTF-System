@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -58,12 +58,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final latest = await AppUpdateService.latest();
       if (!mounted) return;
 
+      final l10n = ref.read(appLocalizationsProvider);
+
       if (latest == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not check for updates. Check your connection and try again.',
-            ),
+          SnackBar(
+            content: Text(l10n.settingsCouldNotCheckUpdates),
           ),
         );
         return;
@@ -72,8 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!latest.isNewerThan(installed)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('You are on the latest version (${installed.label}).'),
+            content: Text(l10n.latestVersionLabel(installed.label)),
           ),
         );
         return;
@@ -82,19 +81,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final open = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Update available'),
+          title: Text(l10n.settingsUpdateAvailable),
           content: Text(
-            'MTOP ${latest.version} (build ${latest.build}) can be downloaded '
-            'from the install page. Your account and documents stay as they are.',
+            l10n.updateAvailableContent(latest.version, latest.build),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Later'),
+              child: Text(l10n.settingsLater),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Open install page'),
+              child: Text(l10n.settingsOpenInstallPage),
             ),
           ],
         ),
@@ -107,8 +105,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
     } catch (_) {
       if (!mounted) return;
+      final l10n = ref.read(appLocalizationsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not check for updates.')),
+        SnackBar(content: Text(l10n.settingsCouldNotCheckUpdatesShort)),
       );
     } finally {
       if (mounted) setState(() => _checkingUpdates = false);
@@ -128,6 +127,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await _store.setLanguage(code);
     if (!mounted) return;
     setState(() => _state = _store.state);
+    // Update the reactive provider so the entire app re-renders immediately.
+    ref.read(languageCodeProvider.notifier).state = code;
   }
 
   void _openAgreement() {
@@ -167,9 +168,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final acceptedAt = _state.agreementAcceptedAt?.toLocal();
+    final l10n = ref.watch(appLocalizationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -214,7 +216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
-                _SectionLabel('Preferences'),
+                _SectionLabel(l10n.settingsPreferences),
                 const SizedBox(height: AppSpacing.xs),
                 Card(
                   child: Column(
@@ -225,8 +227,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           title: Text(language.displayName),
                           subtitle: Text(
                             language.code == _state.languageCode
-                                ? 'Current language'
-                                : 'Tap to use this language',
+                                ? l10n.settingsCurrentLanguage
+                                : l10n.settingsTapToUse,
                           ),
                           trailing: language.code == _state.languageCode
                               ? const Icon(
@@ -242,16 +244,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                const Text(
-                  'Only languages the application can fully display are listed.',
-                  style: TextStyle(
+                Text(
+                  l10n.settingsOnlyFullLanguages,
+                  style: const TextStyle(
                     color: AppColors.inkMuted,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                _SectionLabel('User Agreement'),
+                _SectionLabel(l10n.settingsUserAgreement),
                 const SizedBox(height: AppSpacing.xs),
                 Card(
                   child: Column(
@@ -271,9 +273,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         subtitle: Text(
                           _state.agreementIsCurrent
                               ? acceptedAt == null
-                                  ? 'Accepted'
-                                  : 'Accepted ${_formatDate(acceptedAt)}'
-                              : 'Acceptance required',
+                                  ? l10n.settingsAccepted
+                                  : '${l10n.settingsAccepted} ${_formatDate(acceptedAt)}'
+                              : l10n.settingsAcceptanceRequired,
                         ),
                         trailing: _state.agreementIsCurrent
                             ? const Icon(
@@ -291,7 +293,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.menu_book_outlined),
-                        title: const Text('Read the complete agreement'),
+                        title: Text(l10n.settingsReadAgreement),
                         subtitle: const Text(
                           'Effective ${AppBranding.agreementEffectiveDate}',
                         ),
@@ -306,7 +308,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                _SectionLabel('About'),
+                _SectionLabel(l10n.settingsAbout),
                 const SizedBox(height: AppSpacing.xs),
                 Card(
                   child: Column(
@@ -319,7 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.info_outline),
-                        title: const Text('Application version'),
+                        title: Text(l10n.settingsAppVersion),
                         subtitle: Text(
                           _versionLabel +
                               (_loaded
@@ -337,10 +339,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.system_update_alt),
-                        title: const Text('Check for updates'),
-                        subtitle: const Text(
-                          'See whether a newer build is available',
-                        ),
+                        title: Text(l10n.settingsCheckUpdates),
+                        subtitle: Text(l10n.settingsCheckUpdatesSubtitle),
                         trailing: const Icon(
                           Icons.chevron_right,
                           color: AppColors.inkMuted,
@@ -350,7 +350,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.public_outlined),
-                        title: const Text('Web address'),
+                        title: Text(l10n.settingsWebAddress),
                         subtitle: const Text(AppBranding.publicUrl),
                       ),
                     ],
@@ -370,7 +370,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 OutlinedButton.icon(
                   onPressed: _signOut,
                   icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Log out'),
+                  label: Text(l10n.settingsLogOut),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.danger,
                     side: BorderSide(

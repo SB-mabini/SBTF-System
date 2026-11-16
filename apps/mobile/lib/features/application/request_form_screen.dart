@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
@@ -683,7 +683,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
               initialValue: validSelection ? _renewalRecordId : null,
               isExpanded: true,
               decoration:
-                  const InputDecoration(labelText: 'Franchise to renew'),
+                  InputDecoration(labelText: tr('Franchise to renew')),
               hint: const Text('Select the franchise to renew'),
               items: <DropdownMenuItem<String>>[
                 for (final record in renewable)
@@ -709,7 +709,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     return FormField<String>(
       initialValue: _type,
       validator: (value) =>
-          value == null ? 'Select an application type.' : null,
+          value == null ? tr('Select an application type.') : null,
       builder: (field) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -755,7 +755,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
         key: ValueKey<String>('request-toda-${_todaId ?? ''}'),
         initialValue: todas.any((toda) => toda.id == _todaId) ? _todaId : null,
         validator: (value) => value == null || value.isEmpty
-            ? 'Select an accredited TODA.'
+            ? tr('Select an accredited TODA.')
             : null,
         builder: (field) {
           Toda? selected;
@@ -767,7 +767,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
           }
           return InputDecorator(
             decoration: InputDecoration(
-              labelText: 'TODA',
+              labelText: tr('TODA'),
               floatingLabelBehavior: FloatingLabelBehavior.always,
               suffixIcon: const Icon(Icons.arrow_drop_down),
               errorText: field.errorText,
@@ -837,7 +837,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
                 return requiredMessage;
               }
               if (maxLength != null && text.length > maxLength) {
-                return 'Must not exceed $maxLength characters.';
+                return tr('Must not exceed $maxLength characters.');
               }
               return null;
             },
@@ -866,7 +866,7 @@ class _WaitingScaffold extends StatelessWidget {
         title: const Text('Request form'),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: tr('Refresh'),
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh),
           ),

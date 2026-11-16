@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 import '../../core/branding.dart';
 import '../../core/onboarding/language.dart';
 import '../../core/onboarding/onboarding_content.dart';
 import '../../core/onboarding/onboarding_state.dart';
 import '../../core/onboarding/onboarding_store.dart';
+import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/brand_mark.dart';
 import 'full_agreement_screen.dart';
@@ -15,7 +17,7 @@ import 'full_agreement_screen.dart';
 /// Agreement, and a completion summary. The flow never touches Supabase or the
 /// existing auth/session logic; it only writes local preferences, and
 /// `AgreementService` mirrors the acceptance after sign-in.
-class OnboardingFlow extends StatefulWidget {
+class OnboardingFlow extends ConsumerStatefulWidget {
   const OnboardingFlow({
     super.key,
     required this.store,
@@ -32,10 +34,10 @@ class OnboardingFlow extends StatefulWidget {
   final VoidCallback onFinished;
 
   @override
-  State<OnboardingFlow> createState() => _OnboardingFlowState();
+  ConsumerState<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-class _OnboardingFlowState extends State<OnboardingFlow> {
+class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   late final PageController _pageController;
   late int _page;
   late String _languageCode;
@@ -111,6 +113,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Future<void> _selectLanguage(String code) async {
     if (code == _languageCode) return;
     setState(() => _languageCode = code);
+    // Switch the whole app immediately; the choice is persisted below so it
+    // survives a restart and can be changed again in Settings.
+    ref.read(languageCodeProvider.notifier).state = code;
     await widget.store.setLanguage(code);
   }
 
@@ -725,7 +730,7 @@ class _IntroStep extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           _StepTitle(
-            eyebrow: 'Step 2 of 3 · ${slide.eyebrow}',
+            eyebrow: '${tr('Step')} 2 ${tr('of')} 3 · ${slide.eyebrow}',
             title: slide.title,
             summary: slide.summary,
           ),
@@ -781,7 +786,7 @@ class _IntroStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Center(
             child: Text(
-              '${index + 1} of ${onboardingSlides.length}',
+              '${index + 1} ${tr('of')} ${onboardingSlides.length}',
               style: const TextStyle(
                 color: AppColors.inkMuted,
                 fontSize: 11,

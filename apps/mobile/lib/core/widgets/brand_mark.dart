@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 import '../branding.dart';
 import '../theme.dart';
@@ -26,7 +26,7 @@ class BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '${AppBranding.officeName} official seal',
+      label: tr('${AppBranding.officeName} official seal'),
       image: true,
       child: Container(
         width: size,

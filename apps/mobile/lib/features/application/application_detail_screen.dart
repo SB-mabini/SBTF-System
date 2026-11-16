@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
@@ -375,6 +375,7 @@ class _DocumentRow extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               note,
+              translate: false,
               style: const TextStyle(
                 color: AppColors.danger,
                 fontSize: 12,

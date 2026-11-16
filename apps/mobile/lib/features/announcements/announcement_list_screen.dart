@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
@@ -144,6 +144,7 @@ class _AnnouncementCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       announcement.title,
+                      translate: false,
                       style: const TextStyle(
                         color: AppColors.inkStrong,
                         fontWeight: FontWeight.w700,
@@ -160,6 +161,7 @@ class _AnnouncementCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 announcement.body,
+                translate: false,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

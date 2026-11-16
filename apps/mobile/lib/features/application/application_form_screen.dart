@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
@@ -286,7 +286,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   void _next() {
     FocusScope.of(context).unfocus();
     if (_step == 0 && _type == null) {
-      _showError('Select an application type.');
+      _showError(tr('Select an application type.'));
       return;
     }
     if (_step == 3) {
@@ -435,7 +435,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     FocusScope.of(context).unfocus();
     final applicationType = _type;
     if (applicationType == null) {
-      _showError('Select an application type.');
+      _showError(tr('Select an application type.'));
       return;
     }
     final submission = _buildSubmission(applicationType: applicationType);
@@ -640,7 +640,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     return FormField<String>(
       key: ValueKey<String>('toda-${_todaId ?? ''}'),
       initialValue: initialId,
-      validator: (value) => value == null ? 'Select an accredited TODA.' : null,
+      validator: (value) => value == null ? tr('Select an accredited TODA.') : null,
       builder: (field) {
         Toda? selected;
         for (final toda in todas) {
@@ -663,7 +663,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 },
           child: InputDecorator(
             decoration: InputDecoration(
-              labelText: 'TODA',
+              labelText: tr('TODA'),
               floatingLabelBehavior: FloatingLabelBehavior.always,
               suffixIcon: const Icon(Icons.arrow_drop_down),
               errorText: field.errorText,
@@ -713,7 +713,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close',
+                      tooltip: tr('Close'),
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       icon: const Icon(Icons.close),
                     ),
@@ -772,7 +772,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       key: ValueKey<String>('barangay-${_barangayCode ?? ''}'),
       initialValue: initialCode,
       validator: (value) =>
-          value == null || value.isEmpty ? 'Select a barangay.' : null,
+          value == null || value.isEmpty ? tr('Select a barangay.') : null,
       builder: (field) {
         Barangay? selected;
         for (final barangay in barangays) {
@@ -795,7 +795,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 },
           child: InputDecorator(
             decoration: InputDecoration(
-              labelText: 'Barangay',
+              labelText: tr('Barangay'),
               floatingLabelBehavior: FloatingLabelBehavior.always,
               suffixIcon: const Icon(Icons.arrow_drop_down),
               errorText: field.errorText,
@@ -845,7 +845,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Close',
+                      tooltip: tr('Close'),
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       icon: const Icon(Icons.close),
                     ),
@@ -927,7 +927,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               initialValue: validSelection ? _recordId : null,
               isExpanded: true,
               decoration:
-                  const InputDecoration(labelText: 'Franchise to renew'),
+                  InputDecoration(labelText: tr('Franchise to renew')),
               hint: Text(
                 renewable.isEmpty
                     ? (opens == null
@@ -951,7 +951,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               validator: (value) => renewable.isEmpty
                   ? emptyMessage
                   : (value == null
-                      ? 'Select the franchise being renewed.'
+                      ? tr('Select the franchise being renewed.')
                       : null),
             );
           },
@@ -1061,7 +1061,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         DropdownButtonFormField<String>(
           key: ValueKey<String>('ownership-$_ownershipType'),
           initialValue: _ownershipType,
-          decoration: const InputDecoration(labelText: 'Type of ownership'),
+          decoration: InputDecoration(labelText: tr('Type of ownership')),
           items: const <DropdownMenuItem<String>>[
             DropdownMenuItem(
               value: 'single_proprietorship',
@@ -1572,32 +1572,36 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
 String? _required(String? value, String label, {int min = 1, int max = 200}) {
   final text = (value ?? '').trim();
-  if (text.length < min) return '$label is required.';
-  if (text.length > max) return '$label must not exceed $max characters.';
+  if (text.length < min) return tr('$label is required.');
+  if (text.length > max) {
+    return tr('$label must not exceed $max characters.');
+  }
   return null;
 }
 
 String? _optional(String? value, String label, int max) {
   final text = (value ?? '').trim();
-  if (text.length > max) return '$label must not exceed $max characters.';
+  if (text.length > max) {
+    return tr('$label must not exceed $max characters.');
+  }
   return null;
 }
 
 String? _validateYear(String? value) {
   final year = int.tryParse((value ?? '').trim());
   final maxYear = DateTime.now().year + 1;
-  if (year == null) return 'Enter the vehicle year.';
+  if (year == null) return tr('Enter the vehicle year.');
   if (year < 1950 || year > maxYear) {
-    return 'Year must be between 1950 and $maxYear.';
+    return tr('Year must be between 1950 and $maxYear.');
   }
   return null;
 }
 
 String? _validateSeating(String? value) {
   final capacity = int.tryParse((value ?? '').trim());
-  if (capacity == null) return 'Enter the seating capacity.';
+  if (capacity == null) return tr('Enter the seating capacity.');
   if (capacity < 1 || capacity > 12) {
-    return 'Capacity must be between 1 and 12.';
+    return tr('Capacity must be between 1 and 12.');
   }
   return null;
 }
@@ -1674,7 +1678,7 @@ class _StepHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Step ${step + 1} of ${titles.length} · ${titles[step]}',
+            '${tr('Step')} ${step + 1} ${tr('of')} ${titles.length} · ${titles[step]}',
             style: const TextStyle(
               color: AppColors.inkStrong,
               fontSize: 13,

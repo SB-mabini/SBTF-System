@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -341,9 +341,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         letterSpacing: 8,
                         color: AppColors.inkStrong,
                       ),
-                      decoration: const InputDecoration(
-                        counterText: '',
-                        hintText: '123456',
+                      decoration: InputDecoration(
+                        counterText: tr(''),
+                        hintText: tr('123456'),
                         hintStyle: TextStyle(
                           fontSize: 20,
                           letterSpacing: 6,
@@ -354,7 +354,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       validator: (value) {
                         final code = (value ?? '').trim();
                         if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-                          return 'Enter the 6-digit code from the e-mail.';
+                          return tr('Enter the 6-digit code from the e-mail.');
                         }
                         return null;
                       },

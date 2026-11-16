@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/branding.dart';
@@ -206,14 +206,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                               autocorrect: false,
                                               enableSuggestions: false,
                                               decoration: _fieldDecoration(
-                                                hintText: 'name@example.com',
+                                                hintText: tr('name@example.com'),
                                               ),
                                               validator: (value) {
                                                 final email =
                                                     value?.trim() ?? '';
                                                 if (email.isEmpty ||
                                                     !email.contains('@')) {
-                                                  return 'Enter a valid e-mail address.';
+                                                  return tr('Enter a valid e-mail address.');
                                                 }
                                                 return null;
                                               },
@@ -230,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               onFieldSubmitted: (_) =>
                                                   _signIn(),
                                               decoration: _fieldDecoration(
-                                                hintText: 'Enter your password',
+                                                hintText: tr('Enter your password'),
                                                 suffixIcon: Semantics(
                                                   label: _obscure
                                                       ? 'Show password'
@@ -255,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ),
                                               validator: (value) {
                                                 if ((value ?? '').isEmpty) {
-                                                  return 'Enter your password.';
+                                                  return tr('Enter your password.');
                                                 }
                                                 return null;
                                               },

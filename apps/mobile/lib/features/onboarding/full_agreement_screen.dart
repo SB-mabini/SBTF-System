@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 import '../../core/branding.dart';
 import '../../core/onboarding/onboarding_content.dart';

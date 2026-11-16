@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
@@ -68,12 +68,12 @@ class _NotificationListScreenState
         title: const Text('Notifications'),
         actions: [
           IconButton(
-            tooltip: 'Clear read notifications',
+            tooltip: tr('Clear read notifications'),
             icon: const Icon(Icons.delete_sweep_outlined),
             onPressed: _demo || readCount == 0 || _clearing ? null : _clearRead,
           ),
           IconButton(
-            tooltip: 'Mark all as read',
+            tooltip: tr('Mark all as read'),
             icon: const Icon(Icons.done_all),
             onPressed: unread == 0 || _markingAll ? null : _markAll,
           ),
@@ -452,6 +452,7 @@ class _NotificationCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             notification.title,
+                            translate: false,
                             style: const TextStyle(
                               color: AppColors.inkStrong,
                               fontWeight: FontWeight.w600,
@@ -473,6 +474,7 @@ class _NotificationCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       notification.message,
+                      translate: false,
                       style: const TextStyle(
                         color: AppColors.inkStrong,
                         fontSize: 12,

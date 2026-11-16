@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/date_format.dart';
@@ -69,7 +69,7 @@ class _CertificateVerifyScreenState
         actions: [
           if (result != null)
             IconButton(
-              tooltip: 'Scan again',
+              tooltip: tr('Scan again'),
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: _reset,
             ),
@@ -201,9 +201,9 @@ class _ManualEntry extends StatelessWidget {
               textCapitalization: TextCapitalization.characters,
               autocorrect: false,
               onSubmitted: (_) => onSubmit(),
-              decoration: const InputDecoration(
-                labelText: 'Verification code',
-                hintText: 'e.g. ABCD 2345 EFGH',
+              decoration: InputDecoration(
+                labelText: tr('Verification code'),
+                hintText: tr('e.g. ABCD 2345 EFGH'),
                 prefixIcon: Icon(Icons.tag),
               ),
             ),

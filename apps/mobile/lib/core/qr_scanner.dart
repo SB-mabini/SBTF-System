@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Receives the first QR value a scanner view reads.

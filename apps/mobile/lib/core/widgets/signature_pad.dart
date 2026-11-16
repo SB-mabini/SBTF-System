@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 /// A controller for [SignaturePad].
 ///

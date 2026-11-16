@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 import '../core/branding.dart';
 import '../core/env.dart';
+import '../core/l10n/app_localizations.dart';
+import '../core/providers.dart';
 import '../core/theme.dart';
 import '../features/onboarding/launch_gate.dart';
 import 'config_missing_screen.dart';
@@ -23,10 +25,20 @@ class SbtfApp extends ConsumerWidget {
     final showConfigMissing =
         !currentEnv.isConfigured && !currentEnv.isDemoMode;
 
+    final languageCode = ref.watch(languageCodeProvider);
+    // Keep the context-free translator (validators, decorations) in step with
+    // the locale that MaterialApp is about to install.
+    if (currentLanguageCode.value != languageCode) {
+      currentLanguageCode.value = languageCode;
+    }
+
     return MaterialApp(
       title: AppBranding.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      locale: Locale(languageCode),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.delegates,
       home:
           showConfigMissing ? const ConfigMissingScreen() : const LaunchGate(),
     );

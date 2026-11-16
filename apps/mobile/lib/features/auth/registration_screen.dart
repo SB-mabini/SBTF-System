@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/env.dart';
@@ -173,11 +173,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       enabled: !_demo,
                       textCapitalization: TextCapitalization.words,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        hintText: 'Juan',
+                      decoration: InputDecoration(
+                        hintText: tr('Juan'),
                       ),
                       validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'First name is required.'
+                          ? tr('First name is required.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -195,11 +195,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       enabled: !_demo,
                       textCapitalization: TextCapitalization.words,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        hintText: 'Dela Cruz',
+                      decoration: InputDecoration(
+                        hintText: tr('Dela Cruz'),
                       ),
                       validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Last name is required.'
+                          ? tr('Last name is required.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -217,11 +217,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       enabled: !_demo,
                       keyboardType: TextInputType.phone,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        hintText: '0917 123 4567',
+                      decoration: InputDecoration(
+                        hintText: tr('0917 123 4567'),
                       ),
                       validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Contact number is required.'
+                          ? tr('Contact number is required.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -241,13 +241,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       textInputAction: TextInputAction.next,
                       autocorrect: false,
                       enableSuggestions: false,
-                      decoration: const InputDecoration(
-                        hintText: 'name@example.com',
+                      decoration: InputDecoration(
+                        hintText: tr('name@example.com'),
                       ),
                       validator: (value) {
                         final email = value?.trim() ?? '';
                         if (email.isEmpty || !email.contains('@')) {
-                          return 'Enter a valid e-mail address.';
+                          return tr('Enter a valid e-mail address.');
                         }
                         return null;
                       },
@@ -268,7 +268,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       obscureText: _obscure,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        hintText: 'Enter a strong password',
+                        hintText: tr('Enter a strong password'),
                         suffixIcon: Semantics(
                           label: _obscure ? 'Show password' : 'Hide password',
                           child: IconButton(
@@ -285,7 +285,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                       ),
                       validator: (value) => (value ?? '').length < 8
-                          ? 'Password must be at least 8 characters.'
+                          ? tr('Password must be at least 8 characters.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -305,7 +305,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _register(),
                       decoration: InputDecoration(
-                        hintText: 'Re-enter your password',
+                        hintText: tr('Re-enter your password'),
                         suffixIcon: Semantics(
                           label: _obscure ? 'Show password' : 'Hide password',
                           child: IconButton(
@@ -322,7 +322,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                       ),
                       validator: (value) => value != _passwordController.text
-                          ? 'Passwords do not match.'
+                          ? tr('Passwords do not match.')
                           : null,
                     ),
                     const SizedBox(height: AppSpacing.md),

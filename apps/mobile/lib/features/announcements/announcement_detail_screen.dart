@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:sbtf_mobile/core/ui.dart';
 
 import '../../core/date_format.dart';
 import '../../core/models/announcement.dart';
@@ -53,6 +53,7 @@ class AnnouncementDetailScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     announcement.title,
+                    translate: false,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -78,6 +79,7 @@ class AnnouncementDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 child: Text(
                   announcement.body,
+                  translate: false,
                   style: const TextStyle(
                     color: AppColors.inkStrong,
                     fontSize: 14,

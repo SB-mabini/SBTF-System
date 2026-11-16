@@ -6,6 +6,8 @@
 /// both clients. Pure and dependency-free, so it is trivially unit-testable.
 library;
 
+import 'l10n/app_localizations.dart';
+
 /// Human-readable labels for the `public.appointment_kind` values the database
 /// defines today.
 const Map<String, String> appointmentKindLabels = {
@@ -55,13 +57,15 @@ String appointmentDayLabel(DateTime scheduledAt, {DateTime? now}) {
   final day = _dateOnly(scheduledAt);
   final difference = day.difference(today).inDays;
 
-  if (difference == 0) return 'Today';
-  if (difference == 1) return 'Tomorrow';
-  if (difference > 1 && difference < 7) return 'In $difference days';
-  if (difference == -1) return 'Yesterday';
+  if (difference == 0) return tr('Today');
+  if (difference == 1) return tr('Tomorrow');
+  if (difference > 1 && difference < 7) {
+    return '${tr('In')} $difference ${tr('days')}';
+  }
+  if (difference == -1) return tr('Yesterday');
   if (difference < -1 && difference > -7) {
     final days = difference.abs();
-    return '$days ${days == 1 ? 'day' : 'days'} ago';
+    return '$days ${days == 1 ? tr('day') : tr('days')} ${tr('ago')}';
   }
   return '';
 }
