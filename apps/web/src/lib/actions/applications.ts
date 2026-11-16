@@ -177,20 +177,31 @@ export async function recordApplicationAction(applicationId: string): Promise<Ac
   if (isDemoMode()) return DEMO_WRITE_BLOCKED;
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("rpc_staff_record_application", {
+  const { error } = await supabase.rpc("rpc_staff_record_application", {
     p_application_id: applicationId,
   });
 
   refreshApplicationViews(applicationId);
   if (error) return { ok: false, message: error.message };
 
-  const record = (Array.isArray(data) ? data[0] : data) as { id?: string; franchise_number?: string } | null;
-  refreshApplicationViews(applicationId, record?.id);
   return {
     ok: true,
-    message: `Application recorded. Franchise ${record?.franchise_number ?? ""} is ready for endorsement.`,
-    details: { recordId: record?.id, franchiseNumber: record?.franchise_number },
+    message: "Application recorded. Forward it for approval next. No franchise is issued until the application is approved.",
   };
+}
+
+export async function forwardForApprovalAction(applicationId: string): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rpc_staff_forward_for_approval", {
+    p_application_id: applicationId,
+  });
+
+  refreshApplicationViews(applicationId);
+  return error
+    ? { ok: false, message: error.message }
+    : { ok: true, message: "Application forwarded for approval. Record the approval or rejection before endorsement." };
 }
 
 export async function recordEndorsementAction(input: {
@@ -216,7 +227,7 @@ export async function recordEndorsementAction(input: {
   refreshApplicationViews(input.applicationId);
   return error
     ? { ok: false, message: error.message }
-    : { ok: true, message: "Endorsement recorded. The application is now for approval." };
+    : { ok: true, message: "Endorsement recorded. The application is now ready for release." };
 }
 
 export async function recordDecisionAction(input: {
@@ -255,8 +266,8 @@ export async function recordDecisionAction(input: {
         ok: true,
         message:
           input.decision === "approved"
-            ? "Decision recorded: approved and ready for release."
-            : "Decision recorded: rejected. The applicant has been notified.",
+            ? "Decision recorded: approved. The franchise has been issued and the application is now for endorsement."
+            : "Decision recorded: rejected. No franchise will be issued and the application cannot be endorsed.",
       };
 }
 

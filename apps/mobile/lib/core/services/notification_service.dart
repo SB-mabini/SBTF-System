@@ -26,6 +26,20 @@ class NotificationService extends SupabaseService {
     });
   }
 
+  /// One notification by id, or null when it does not exist or does not
+  /// belong to the caller (RLS makes the two indistinguishable on purpose).
+  Future<AppNotification?> getById(String id) {
+    return guard(() async {
+      final row = await client
+          .from('notifications')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+      if (row == null) return null;
+      return AppNotification.fromMap(Map<String, dynamic>.from(row));
+    });
+  }
+
   /// How many of the caller's notifications are unread — the badge count.
   Future<int> unreadCount() {
     return guard(() async {

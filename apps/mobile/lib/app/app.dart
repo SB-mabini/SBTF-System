@@ -8,6 +8,7 @@ import '../core/providers.dart';
 import '../core/theme.dart';
 import '../features/onboarding/launch_gate.dart';
 import 'config_missing_screen.dart';
+import 'push_tap_listener.dart';
 
 /// The root widget. Chooses between the config-missing diagnostic screen and the
 /// session-driven auth flow, and applies the shared theme.
@@ -15,6 +16,9 @@ import 'config_missing_screen.dart';
 /// [LaunchGate] shows the branded splash, then routes first-time drivers through
 /// onboarding before [AuthGate]; returning drivers go straight to the existing
 /// session/role routing.
+///
+/// [PushTapListener] sits above [MaterialApp] so a notification tap can open a
+/// screen wherever the driver happens to be, including a cold start.
 class SbtfApp extends ConsumerWidget {
   const SbtfApp({super.key});
 
@@ -32,15 +36,19 @@ class SbtfApp extends ConsumerWidget {
       currentLanguageCode.value = languageCode;
     }
 
-    return MaterialApp(
-      title: AppBranding.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      locale: Locale(languageCode),
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.delegates,
-      home:
-          showConfigMissing ? const ConfigMissingScreen() : const LaunchGate(),
+    return PushTapListener(
+      child: MaterialApp(
+        title: AppBranding.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        navigatorKey: pushNavigatorKey,
+        scaffoldMessengerKey: pushMessengerKey,
+        locale: Locale(languageCode),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.delegates,
+        home:
+            showConfigMissing ? const ConfigMissingScreen() : const LaunchGate(),
+      ),
     );
   }
 }

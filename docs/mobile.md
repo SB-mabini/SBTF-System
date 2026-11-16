@@ -283,7 +283,104 @@ flutter build apk --release          # installable APK
 flutter build appbundle --release    # Play Store bundle (.aab)
 ```
 
+### Push notifications (Android / FCM)
+
+Push is layered on top of `public.notifications`, so every existing event
+(announcement, application decision, document remark, appointment, form
+request, renewal reminder, release) is delivered without changing business
+code:
+
+```
+insert into public.notifications
+        │ trigger trg_notifications_enqueue_push
+        ▼
+public.push_outbox  (pending → sending → sent | failed | skipped)
+        │ polled by the push-dispatch Edge Function
+        ▼
+Firebase Cloud Messaging HTTP v1 → phone
+```
+
+The app is Android-only, so APNs/iOS is out of scope until an `ios/` platform
+folder exists.
+
+**One-time server setup**
+
+1. `supabase secrets set --env-file supabase/.env.push` with
+   `FCM_SERVICE_ACCOUNT_JSON` holding the compact one-line service-account
+   JSON (Firebase console → Project settings → Service accounts → *Generate
+   new private key*). Never commit it.
+2. `supabase secrets set PUSH_CRON_SECRET=<64 random hex characters>` — the
+   shared secret the database presents to the function.
+3. `supabase functions deploy push-dispatch`
+4. Point the database at the deployed function (one row per project; never
+   commit it):
+
+   ```sql
+   insert into private.push_dispatch_config (id, endpoint, secret)
+   values (true,
+           'https://<project-ref>.supabase.co/functions/v1/push-dispatch',
+           '<PUSH_CRON_SECRET>')
+   on conflict (id) do update
+     set endpoint = excluded.endpoint,
+         secret = excluded.secret,
+         updated_at = now();
+   ```
+
+   Migration `20261116000400_push_dispatch_schedule.sql` installs the pg_cron
+   job `sbtf-push-dispatch` (every minute, through pg_net) and the nightly
+   prune. Until the row above exists the tick is a no-op and notifications
+   simply stay queued, so the order of steps 1–4 does not matter.
+
+   The function refuses calls without the secret, so the scheduled job is the
+   only caller.
+
+**One-time app setup**
+
+`apps/mobile/android/app/google-services.json` (Firebase → Android app
+`ph.gov.mabini.sbtf_mobile`) is **not committed**. CI restores it from the
+`GOOGLE_SERVICES_JSON` repository secret (base64 of the file):
+
+```bash
+base64 -w0 apps/mobile/android/app/google-services.json   # paste into the secret
+```
+
+Without the file the app still builds and runs; it simply has no push.
+
+**How the client behaves**
+
+- permission is requested once after the first frame (`POST_NOTIFICATIONS` on
+  Android 13+);
+- the FCM token is upserted into `public.device_tokens` through
+  `rpc_register_device_token` on sign-in, on token rotation and on resume;
+- signing out calls `rpc_unregister_device_token` **before** the session ends,
+  so the phone stops receiving the previous driver's pushes;
+- a foreground message is drawn with `flutter_local_notifications` (channel
+  `sbtf_updates`); background/closed messages are drawn by Android from the
+  `notification` payload;
+- tapping a push opens the same screen as tapping the in-app feed, by
+  re-reading the target through RLS (`lib/core/notification_navigation.dart`).
+
+**Testing**
+
+1. Install the APK, sign in, then confirm a row in `public.device_tokens`.
+2. Firebase console → Cloud Messaging → *Send test message* → paste the FCM
+   token from the device log (`flutter run` prints it via `_syncToken`; you can
+   also read it from `device_tokens`).
+3. Trigger a real event (publish an announcement, approve an application) and
+   watch `push_outbox.status` move to `sent`.
+
+**Troubleshooting**
+
+| Symptom | Cause |
+| --- | --- |
+| No row in `device_tokens` | Firebase config missing, permission denied, or no signed-in profile |
+| `push_outbox` stuck `pending` | the cron job is not scheduled, or the function was called without the secret |
+| `last_error` says `UNREGISTERED` | the token was pruned; the app re-registers on next launch |
+| Notification arrives silently | channel importance or the OS battery optimisation |
+
 ### Install page and QR code
+
+
 
 `https://sbtf-application.vercel.app/install/` is a plain HTML page (not part of
 the Flutter bundle) that shows a QR code, the install steps, and the APK

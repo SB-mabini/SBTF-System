@@ -8,6 +8,7 @@ import '../../core/models/app_notification.dart';
 import '../../core/models/franchise_application.dart';
 import '../../core/models/profile.dart';
 import '../../core/providers.dart';
+import '../../core/services/push_notification_service.dart';
 import '../../core/theme.dart';
 import '../../core/update_service.dart';
 import '../../core/widgets/brand_mark.dart';
@@ -121,6 +122,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
 
     if (confirmed != true) return;
+
+    // Stop this handset from receiving the driver's pushes before the session
+    // disappears — after signOut there is no JWT left to authorise the delete.
+    await ref.read(pushNotificationServiceProvider).unregisterCurrent();
 
     try {
       await Supabase.instance.client.auth.signOut();

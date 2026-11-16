@@ -6,15 +6,11 @@ import '../../core/date_format.dart';
 import '../../core/env.dart';
 import '../../core/models/app_notification.dart';
 import '../../core/notification_format.dart';
+import '../../core/notification_navigation.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/error_view.dart';
-import '../application/application_detail_screen.dart';
-import '../application/request_form_screen.dart';
-import '../announcements/announcement_detail_screen.dart';
-import '../appointments/appointment_detail_screen.dart';
-import '../certificate/certificate_detail_screen.dart';
 
 /// The driver's notification feed, newest first — slice 7.
 ///
@@ -133,109 +129,16 @@ class _NotificationListScreenState
     return right.compareTo(left);
   }
 
+  /// Marks the notification read and opens whatever it points at.
+  ///
+  /// The routing lives in [NotificationOpener] because push taps have to land
+  /// on exactly the same screens without a widget context.
   Future<void> _handleTap(AppNotification notification) async {
-    if (!notification.read) {
-      try {
-        await ref.read(notificationServiceProvider).markRead(notification.id);
-      } on AppFailure {
-        // The Realtime stream will correct the state; a failed mark must not
-        // stop the driver from opening what the notification points at.
-      }
-      if (!mounted) return;
-    }
-
-    if (notification.targetsApplication) {
-      await _openApplication(notification.targetId!);
-    } else if (notification.targetsRecord) {
-      await _openRecord(notification.targetId!);
-    } else if (notification.targetsAppointment) {
-      await _openAppointment(notification.targetId!);
-    } else if (notification.targetsFormRequest) {
-      await _openFormRequest(notification.targetId!);
-    } else if (notification.targetsAnnouncement) {
-      await _openAnnouncement(notification.targetId!);
-    }
-  }
-
-  Future<void> _openAnnouncement(String id) async {
-    final announcement = await _load(
-      () => ref.read(announcementServiceProvider).getById(id),
-      'That announcement is no longer available.',
+    await NotificationOpener(ref).open(
+      notification,
+      navigator: Navigator.of(context),
+      messenger: ScaffoldMessenger.of(context),
     );
-    if (announcement == null || !mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AnnouncementDetailScreen(announcement: announcement),
-      ),
-    );
-  }
-
-  Future<void> _openFormRequest(String id) async {
-    final request = await _load(
-      () => ref.read(formRequestServiceProvider).getById(id),
-      'That form request is no longer available.',
-    );
-    if (request == null || !mounted) return;
-
-    ref.invalidate(openFormRequestProvider);
-    ref.invalidate(latestRejectedFormRequestProvider);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RequestFormScreen(existing: request),
-      ),
-    );
-  }
-
-  Future<void> _openApplication(String id) async {
-    final application = await _load(
-      () => ref.read(applicationServiceProvider).getById(id),
-      'That application is no longer available.',
-    );
-    if (application == null || !mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ApplicationDetailScreen(application: application),
-      ),
-    );
-  }
-
-  Future<void> _openRecord(String id) async {
-    final record = await _load(
-      () => ref.read(certificateServiceProvider).getById(id),
-      'That certificate is no longer available.',
-    );
-    if (record == null || !mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => CertificateDetailScreen(record: record),
-      ),
-    );
-  }
-
-  Future<void> _openAppointment(String id) async {
-    final appointment = await _load(
-      () => ref.read(appointmentServiceProvider).getById(id),
-      'That appointment is no longer available.',
-    );
-    if (appointment == null || !mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AppointmentDetailScreen(appointment: appointment),
-      ),
-    );
-  }
-
-  /// Runs [fetch], surfacing a friendly message for a missing row or a failure.
-  Future<T?> _load<T>(
-      Future<T?> Function() fetch, String missingMessage) async {
-    try {
-      final value = await fetch();
-      if (value == null && mounted) _showMessage(missingMessage);
-      return value;
-    } on AppFailure catch (failure) {
-      if (mounted) _showMessage(failure.message, isError: true);
-      return null;
-    }
   }
 
   Future<void> _markAll() async {

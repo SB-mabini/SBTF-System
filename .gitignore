@@ -37,6 +37,8 @@ apps/mobile/ios/Flutter/Flutter.framework
 apps/mobile/ios/Flutter/Flutter.podspec
 apps/mobile/ios/Flutter/Generated.xcconfig
 apps/mobile/ios/Flutter/flutter_export_environment.sh
+# Firebase config is project-specific and injected by CI (GOOGLE_SERVICES_JSON).
+apps/mobile/android/app/google-services.json
 *.iml
 
 # Supabase CLI local state

@@ -20,6 +20,8 @@ name: Mobile Release
 #   ANDROID_KEYSTORE_SHA256     optional; the expected SHA-256 fingerprint
 #   SUPABASE_URL                project URL baked into the APK
 #   SUPABASE_ANON_KEY           publishable anon key baked into the APK
+#   GOOGLE_SERVICES_JSON        base64 of android/app/google-services.json
+#                               (Firebase / FCM — required for push)
 #
 # The keystore must be the same one every release has used. Signing with a new
 # key means Android refuses to install the update over the copy on drivers'
@@ -102,6 +104,21 @@ jobs:
       - name: Resolve dependencies
         working-directory: apps/mobile
         run: flutter pub get
+
+      # Push notifications need the Firebase project file at build time. The
+      # secret is the base64 of android/app/google-services.json; the release
+      # fails loudly if it is missing, because an APK without FCM cannot be
+      # fixed after drivers install it.
+      - name: Restore Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON is not set. Push notifications would be silently disabled in this release."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > apps/mobile/android/app/google-services.json
 
       - name: Install the release keystore
         env:

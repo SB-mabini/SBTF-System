@@ -14,6 +14,7 @@ import { ConfirmDialog, Modal } from "@/components/dialog";
 import {
   assignApplicationAction,
   completeApplicationAction,
+  forwardForApprovalAction,
   markVerifiedAction,
   recordApplicationAction,
   recordDecisionAction,
@@ -124,9 +125,8 @@ export function HandlingPanel({
     });
   }
 
-  const currentIndex = APPLICATION_STAGE_ORDER.indexOf(
-    stage === "rejected" ? "completed" : stage,
-  );
+  const stageIndex = APPLICATION_STAGE_ORDER.indexOf(stage);
+  const decisionIndex = APPLICATION_STAGE_ORDER.indexOf("for_approval");
 
   return (
     <div className="space-y-4">
@@ -146,7 +146,10 @@ export function HandlingPanel({
 
         <ol className="mb-4 space-y-1.5">
           {APPLICATION_STAGE_ORDER.map((entry, index) => {
-            const done = currentIndex > index && !(stage === "rejected" && index > 6);
+            // A rejected application stops at the decision step, so the
+            // approval stage is shown as reached while endorsement and release
+            // remain unticked.
+            const done = stage === "rejected" ? index <= decisionIndex : index < stageIndex;
             const active = entry === stage;
             return (
               <li key={entry} className="flex items-center gap-2.5 text-[0.8125rem]">
@@ -233,9 +236,9 @@ export function HandlingPanel({
                   </Button>
                 ) : null}
 
-                {["recorded", "for_endorsement"].includes(stage) ? (
-                  <Button disabled={busy} onClick={() => setEndorsementOpen(true)}>
-                    Record endorsement
+                {stage === "recorded" ? (
+                  <Button disabled={busy} onClick={() => run(forwardForApprovalAction(application.id))}>
+                    Forward for approval
                   </Button>
                 ) : null}
 
@@ -245,6 +248,12 @@ export function HandlingPanel({
                   </Button>
                 ) : null}
               </>
+            ) : null}
+
+            {approved && stage === "for_endorsement" ? (
+              <Button disabled={busy} onClick={() => setEndorsementOpen(true)}>
+                Record endorsement
+              </Button>
             ) : null}
 
             {approved && stage === "ready_for_release" ? (
@@ -428,7 +437,7 @@ export function HandlingPanel({
       <Modal
         open={endorsementOpen}
         title="Record endorsement"
-        description="Record the body or office the application is endorsed to for approval."
+        description="Record the body or office the approved application is endorsed to before release."
         onClose={() => setEndorsementOpen(false)}
         footer={
           <>
@@ -489,7 +498,7 @@ export function HandlingPanel({
       <Modal
         open={decisionOpen}
         title="Record decision"
-        description="Capture the decision of the approving authority. Staff record the outcome; they do not decide it."
+        description="Record the official decision before endorsement. A rejection is final: no franchise is issued and the application cannot be endorsed."
         onClose={() => setDecisionOpen(false)}
         footer={
           <>

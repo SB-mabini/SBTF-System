@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds need INTERNET declared here: the Flutter template only
+         adds it to the debug/profile manifests, which is why push (and every
+         other network call) would fail in a release APK. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ runtime permission for notifications. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:label="MTOP System"
         android:name="${applicationName}"
@@ -30,6 +37,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FCM: messages that arrive while the app is backgrounded/closed are
+             drawn by Android itself, so the channel and small icon must be
+             declared here. The channel id matches pushChannelId in
+             lib/core/services/push_notification_service.dart. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="sbtf_updates" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_sbtf" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

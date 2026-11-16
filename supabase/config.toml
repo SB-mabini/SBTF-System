@@ -133,5 +133,10 @@ verify_jwt = false
 [functions.renewal-reminders]
 verify_jwt = false
 
+# Push dispatcher: drained by a scheduled job that presents the project's
+# service-role key (or PUSH_CRON_SECRET) instead of an end-user JWT.
+[functions.push-dispatch]
+verify_jwt = false
+
 [analytics]
 enabled = false

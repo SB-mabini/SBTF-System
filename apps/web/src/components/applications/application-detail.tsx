@@ -51,7 +51,15 @@ export async function ApplicationDetail({
   // full franchise record so the certificate and archive controls — the same
   // components the Franchise Records page uses — can be handled without
   // leaving this application.
-  const record = application.record ? await getFranchiseRecord(application.record.id) : null;
+  // A rejected application has no franchise. Even if a legacy record exists
+  // from the old "record application" flow, none of its issuance controls are
+  // offered here: rejection is terminal and cannot produce a franchise.
+  const record =
+    application.status === "rejected"
+      ? null
+      : application.record
+        ? await getFranchiseRecord(application.record.id)
+        : null;
   let certificateUrl: string | null = null;
   const settings: SystemSetting[] = await listSettings();
   if (record) {
@@ -76,10 +84,10 @@ export async function ApplicationDetail({
           <LinkButton variant="outline" href={`${basePath}/applications`}>
             Back to register
           </LinkButton>
-          {application.record ? (
-            <LinkButton href={`${basePath}/franchises/${application.record.id}`}>
+          {record ? (
+            <LinkButton href={`${basePath}/franchises/${record.id}`}>
               <Stamp className="h-4 w-4" />
-              {application.record.franchise_number}
+              {record.franchise_number}
             </LinkButton>
           ) : null}
         </div>

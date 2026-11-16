@@ -101,7 +101,7 @@ export function ApplicationTable({
                     <StatusBadge status={application.status} />
                   </td>
                   <td>
-                    {application.record ? (
+                    {application.record && application.status !== "rejected" ? (
                       <Link
                         className="font-mono text-[0.8125rem] font-medium text-primary hover:underline"
                         href={`${basePath}/franchises/${application.record.id}`}

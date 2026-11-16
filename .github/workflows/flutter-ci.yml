@@ -103,6 +103,21 @@ jobs:
       - name: Generate Android platform
         run: flutter create --platforms=android --org ph.gov.mabini .
 
+      # Firebase config is project-specific and must not be committed. The
+      # secret holds the base64 of android/app/google-services.json. Without it
+      # the build still succeeds, just without push (the Gradle plugin is only
+      # applied when the file exists).
+      - name: Restore Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+            echo "Firebase configuration restored."
+          else
+            echo "::notice title=Firebase not configured::GOOGLE_SERVICES_JSON is not set; this APK will not receive push notifications."
+          fi
+
       - run: flutter pub get
 
       - name: Build debug APK

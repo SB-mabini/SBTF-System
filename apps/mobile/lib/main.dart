@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/env.dart';
-import 'core/services/push_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,10 +18,8 @@ Future<void> main() async {
     );
   }
 
+  // Push is initialised by [PushTapListener] after the first frame, using this
+  // same provider container — the previous boot-time initialisation ran on a
+  // throwaway container, so its token/registration state was never reused.
   runApp(const ProviderScope(child: SbtfApp()));
-
-  final container = ProviderContainer();
-  try {
-    await container.read(pushNotificationServiceProvider).initialize();
-  } catch (_) {}
 }

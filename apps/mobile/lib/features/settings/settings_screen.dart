@@ -8,6 +8,7 @@ import '../../core/onboarding/language.dart';
 import '../../core/onboarding/onboarding_state.dart';
 import '../../core/onboarding/onboarding_store.dart';
 import '../../core/providers.dart';
+import '../../core/services/push_notification_service.dart';
 import '../../core/theme.dart';
 import '../../core/update_service.dart';
 import '../../core/widgets/brand_mark.dart';
@@ -156,6 +157,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
+    // Remove this device from the account while the session still authorises
+    // it; otherwise the phone keeps receiving the previous driver's pushes.
+    await ref.read(pushNotificationServiceProvider).unregisterCurrent();
+
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (_) {
