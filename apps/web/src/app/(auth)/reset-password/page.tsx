@@ -4,7 +4,7 @@ import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 
-export const metadata = { title: "Set a new password — MTOP System" };
+export const metadata = { title: "Set a new password" };
 
 /**
  * Reached in two ways, both of which already established a session:

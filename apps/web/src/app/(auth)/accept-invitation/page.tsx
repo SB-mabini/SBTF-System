@@ -4,7 +4,7 @@ import { AcceptInvitationForm } from "@/components/auth/accept-invitation-form";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 
-export const metadata = { title: "Set your password — MTOP System" };
+export const metadata = { title: "Set your password" };
 
 /**
  * Reached only after /auth/confirm has verified an invitation token

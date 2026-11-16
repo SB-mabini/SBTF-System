@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Alert } from "@/components/ui";
 import { MUNICIPALITY } from "@/lib/constants";
 
-export const metadata = { title: "Access denied — MTOP System" };
+export const metadata = { title: "Access denied" };
 
 const REASONS: Record<string, { title: string; body: string }> = {
   forbidden: {

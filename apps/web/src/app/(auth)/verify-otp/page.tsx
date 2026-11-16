@@ -5,7 +5,7 @@ import { readRecoveryEmail } from "@/lib/auth/recovery";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 
-export const metadata = { title: "Enter your verification code — MTOP System" };
+export const metadata = { title: "Enter your verification code" };
 
 /**
  * Step two of password recovery: type the code that was e-mailed.

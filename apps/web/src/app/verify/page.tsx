@@ -7,7 +7,7 @@ import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
 import { BrandMark } from "@/components/layout/brand-mark";
 
 export const metadata = {
-  title: "Verify a franchise certificate — MTOP System",
+  title: "Verify a franchise certificate",
   description:
     "Public verification of a tricycle franchise certificate issued by the Municipality of Mabini, Batangas.",
 };

@@ -7,7 +7,7 @@ import { BrandMark } from "@/components/layout/brand-mark";
 import { Alert, Spinner } from "@/components/ui";
 import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
 
-export const metadata = { title: "Sign in — MTOP System" };
+export const metadata = { title: "Sign in" };
 
 export default async function LoginPage({
   searchParams,

@@ -25,7 +25,7 @@ import {
 import { formatDateTime, formatNumber, formatPercent, relativeTime } from "@/lib/format";
 import { requireAdministrator } from "@/lib/auth-guard";
 
-export const metadata = { title: "Administrator dashboard — MTOP System" };
+export const metadata = { title: "Administrator dashboard" };
 
 export default async function AdminDashboardPage() {
   await requireAdministrator();

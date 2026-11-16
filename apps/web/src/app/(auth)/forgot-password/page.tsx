@@ -1,6 +1,6 @@
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
-export const metadata = { title: "Password recovery — MTOP System" };
+export const metadata = { title: "Password recovery" };
 
 export default function ForgotPasswordPage() {
   return (
