@@ -849,6 +849,13 @@ RegExp _buildPhrasePattern() {
   return RegExp('(?<![A-Za-z0-9])(?:$alternation)(?![A-Za-z0-9])');
 }
 
+/// Everything the dictionary can emit. Used to keep already-translated strings
+/// (for example a getter that returns Filipino) from being translated twice.
+final Set<String> _filipinoValues = <String>{
+  ...filipinoTranslations.values,
+  ...filipinoAgreementTranslations.values,
+};
+
 /// Translates [source] into Filipino.
 ///
 /// Exact matches win so full sentences read naturally; otherwise the fixed
@@ -857,6 +864,7 @@ RegExp _buildPhrasePattern() {
 String translateToFilipino(String source) {
   if (source.isEmpty) return source;
   final normalised = _normalize(source);
+  if (_filipinoValues.contains(normalised)) return source;
   final exact = filipinoTranslations[normalised] ??
       filipinoAgreementTranslations[normalised];
   if (exact != null) return exact;

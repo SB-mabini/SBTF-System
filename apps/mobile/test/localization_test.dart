@@ -50,6 +50,12 @@ void main() {
     test('unknown strings are left alone', () {
       expect(translateToFilipino('ABC 1234'), 'ABC 1234');
     });
+
+    test('Filipino getter output is not translated twice', () {
+      const l10n = AppLocalizations('fil');
+      expect(l10n.t(l10n.homeRenewal), 'Pag-renew');
+      expect(l10n.t(l10n.navHome), 'Tahanan');
+    });
   });
 
   group('context translator', () {
