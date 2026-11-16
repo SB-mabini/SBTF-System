@@ -582,6 +582,13 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
+              if (_signaturePath != null && !_signature.hasInk.value) ...[
+                const _PrefillNotice(
+                  message: 'A signature is already on file from your previous '
+                      'submission. Draw again only if you want to replace it.',
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
               SignaturePad(
                 controller: _signature,
                 onChanged: (hasInk) => setState(() {
