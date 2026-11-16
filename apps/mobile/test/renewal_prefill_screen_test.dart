@@ -151,4 +151,33 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('request form explains when an early renewal becomes available',
+      (tester) async {
+    final early = FranchiseRecord(
+      id: 'record-early',
+      applicationId: 'application-early',
+      operatorId: 'profile-1',
+      todaId: 'toda-1',
+      franchiseNumber: 'MTOP-2026-0002',
+      verificationCode: 'ABC124',
+      issuedAt: DateTime.now(),
+      expiresAt: DateTime.now().add(const Duration(days: 200)),
+      plateNumber: 'ABC 124',
+    );
+
+    await tester.pumpWidget(
+      harness(
+        const RequestFormScreen(initialType: ApplicationType.renewal),
+        records: <FranchiseRecord>[early],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Renewal opens 30 days before a franchise expires'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('earliest renewal date'), findsOneWidget);
+  });
 }

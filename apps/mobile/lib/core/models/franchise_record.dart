@@ -55,10 +55,23 @@ class FranchiseRecord {
   final int? vehicleYear;
   final String? operatorName;
 
+  /// Days before expiry at which a franchise becomes renewable. Must match the
+  /// server-side `fn_renewal_window_days()` helper.
+  static const int renewalWindowDays = 30;
+
   bool get hasCertificate =>
       certificateStoragePath != null && certificateStoragePath!.isNotEmpty;
 
   bool get isExpired => expiresAt.isBefore(DateTime.now());
+
+  /// The moment this record enters its renewal window: 30 days before expiry.
+  DateTime get renewalOpensAt =>
+      expiresAt.subtract(const Duration(days: renewalWindowDays));
+
+  /// Whether a renewal application may be filed now. The window opens 30 days
+  /// before expiry and stays open after expiry, so lapsed franchises can still
+  /// be renewed. Archived records are never renewable.
+  bool get canRenew => !archived && !DateTime.now().isBefore(renewalOpensAt);
 
   /// Within 90 days of expiry (and not already expired/archived) — the reminder
   /// window defined by the scheduled `rpc_generate_renewal_reminders` job.

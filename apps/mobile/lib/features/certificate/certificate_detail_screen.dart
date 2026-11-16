@@ -185,7 +185,8 @@ class _Header extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             record.state == 'active'
-                ? 'Valid until ${formatDate(record.expiresAt)}.'
+                ? 'Valid until ${formatDate(record.expiresAt)}. Renewal opens '
+                    'on ${formatDate(record.renewalOpensAt)}.'
                 : _stateSentence(record),
             style: const TextStyle(
               color: Colors.white70,
@@ -202,10 +203,15 @@ class _Header extends StatelessWidget {
     switch (record.state) {
       case 'expiring':
         final days = record.daysRemaining;
-        return 'Expires in $days ${days == 1 ? 'day' : 'days'} '
-            '(${formatDate(record.expiresAt)}). Renew before then.';
+        final remaining = 'Expires in $days ${days == 1 ? 'day' : 'days'} '
+            '(${formatDate(record.expiresAt)}).';
+        return record.canRenew
+            ? '$remaining Your renewal window is open.'
+            : '$remaining Renewal opens on '
+                '${formatDate(record.renewalOpensAt)}.';
       case 'expired':
-        return 'Expired on ${formatDate(record.expiresAt)}.';
+        return 'Expired on ${formatDate(record.expiresAt)}. '
+            'You can still file a renewal.';
       default:
         return 'This franchise has been archived'
             '${record.archiveReason == null ? '.' : ': ${record.archiveReason}'}';

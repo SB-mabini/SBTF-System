@@ -187,6 +187,31 @@ void main() {
         lessThan(0),
       );
     });
+
+    test('renewal opens 30 days before expiry and stays open after expiry', () {
+      expect(
+        recordWith(untilExpiry: const Duration(days: 31)).canRenew,
+        isFalse,
+      );
+      expect(
+        recordWith(untilExpiry: const Duration(days: 30)).canRenew,
+        isTrue,
+      );
+      expect(
+        recordWith(untilExpiry: const Duration(days: -10)).canRenew,
+        isTrue,
+      );
+      expect(recordWith(archived: true).canRenew, isFalse);
+    });
+
+    test('renewalOpensAt is 30 days before expiry', () {
+      final record = recordWith(untilExpiry: const Duration(days: 45));
+      expect(
+          record.renewalOpensAt,
+          record.expiresAt.subtract(
+            const Duration(days: FranchiseRecord.renewalWindowDays),
+          ));
+    });
   });
 
   group('CertificateVerification', () {

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
 import '../../core/constants.dart';
+import '../../core/date_format.dart';
 import '../../core/models/franchise_application.dart';
+import '../../core/models/franchise_record.dart';
 import '../../core/models/form_request.dart';
 import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
@@ -201,7 +203,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     try {
       final records = await ref.read(myRecordsProvider.future);
       if (!mounted || !_isRenewal || _recordId != null) return;
-      final renewable = records.where((record) => !record.archived).toList();
+      final renewable = records.where((record) => record.canRenew).toList();
       if (renewable.length == 1) {
         await _selectRenewalRecord(renewable.single.id);
       }
@@ -904,7 +906,18 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           ),
           data: (records) {
             final renewable =
+                records.where((record) => record.canRenew).toList();
+            final blocked =
                 records.where((record) => !record.archived).toList();
+            DateTime? opens;
+            for (final record in blocked) {
+              final opening = record.renewalOpensAt;
+              if (opens == null || opening.isBefore(opens)) opens = opening;
+            }
+            final emptyMessage = opens == null
+                ? 'You have no franchise available to renew.'
+                : 'Renewal opens on ${formatDate(opens)} — '
+                    '${FranchiseRecord.renewalWindowDays} days before expiry.';
             final validSelection =
                 renewable.any((record) => record.id == _recordId);
             return DropdownButtonFormField<String>(
@@ -917,7 +930,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   const InputDecoration(labelText: 'Franchise to renew'),
               hint: Text(
                 renewable.isEmpty
-                    ? 'No franchise available to renew'
+                    ? (opens == null
+                        ? 'No franchise available to renew'
+                        : 'Renewal not open yet')
                     : 'Select the franchise to renew',
               ),
               items: <DropdownMenuItem<String>>[
@@ -934,7 +949,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   ? null
                   : (value) => _selectRenewalRecord(value),
               validator: (value) => renewable.isEmpty
-                  ? 'You have no franchise that can be renewed.'
+                  ? emptyMessage
                   : (value == null
                       ? 'Select the franchise being renewed.'
                       : null),

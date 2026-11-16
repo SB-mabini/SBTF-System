@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_error.dart';
+import '../../core/date_format.dart';
 import '../../core/models/form_request.dart';
 import '../../core/models/franchise_application.dart';
+import '../../core/models/franchise_record.dart';
 import '../../core/models/renewal_prefill.dart';
 import '../../core/models/toda.dart';
 import '../../core/providers.dart';
@@ -158,7 +160,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
     try {
       final records = await ref.read(myRecordsProvider.future);
       if (!mounted || !_isRenewal) return;
-      final renewable = records.where((record) => !record.archived).toList();
+      final renewable = records.where((record) => record.canRenew).toList();
       if (renewable.length == 1) {
         await _applyRenewalPrefill(renewable.single.id);
       }
@@ -637,18 +639,33 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
           ),
           data: (records) {
             final renewable =
-                records.where((record) => !record.archived).toList();
+                records.where((record) => record.canRenew).toList();
             if (renewable.isEmpty) {
+              final blocked =
+                  records.where((record) => !record.archived).toList();
+              DateTime? opens;
+              for (final record in blocked) {
+                final opening = record.renewalOpensAt;
+                if (opens == null || opening.isBefore(opens)) opens = opening;
+              }
+
               return Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: AppColors.accentTint,
                   borderRadius: AppRadius.box,
                 ),
-                child: const Text(
-                  'You have no franchise available to renew. Choose "New '
-                  'franchise" instead, or ask the franchising office for help.',
-                  style: TextStyle(
+                child: Text(
+                  opens == null
+                      ? 'You have no franchise available to renew. Choose "New '
+                          'franchise" instead, or ask the franchising office '
+                          'for help.'
+                      : 'Renewal opens ${FranchiseRecord.renewalWindowDays} '
+                          'days before a franchise expires. Your earliest '
+                          'renewal date is ${formatDate(opens)}. Choose "New '
+                          'franchise" instead, or ask the franchising office '
+                          'for help.',
+                  style: const TextStyle(
                     color: AppColors.inkStrong,
                     fontSize: 13,
                     height: 1.4,

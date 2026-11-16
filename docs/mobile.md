@@ -75,7 +75,14 @@ everything again. Both screens load it through `RenewalPrefill`
 (`lib/core/models/renewal_prefill.dart`, provider `renewalPrefillProvider`):
 
 - The **request form** shows a "Franchise to renew" picker as soon as Renewal is
-  selected. With exactly one renewable franchise it is chosen automatically. The
+  selected. Only franchises inside the **30-day renewal window** (30 days before
+  expiry, and afterwards including expired records) are listed; archived records
+  never are. If no franchise is eligible yet, the screen states the date the
+  earliest one opens instead of offering an empty picker. The server enforces the
+  same rule in `rpc_driver_request_form` and `rpc_driver_submit_application`
+  through `fn_renewal_window_days()`, so the window cannot be bypassed by an old
+  client.
+- With exactly one renewable franchise it is chosen automatically. The
   picker fills the vehicle identity (make, model, engine, chassis, plate), the CR
   number from the request that produced that franchise, the CTC number, the TODA
   and a "Renewal of franchise …" purpose. The OR/CR file and the signature are
