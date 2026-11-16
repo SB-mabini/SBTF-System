@@ -6,7 +6,7 @@ import { isDemoMode } from "@/lib/env";
 import { requireStaff } from "@/lib/auth-guard";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Form Request — SBTF Staff" };
+export const metadata = { title: "Form Request — MTOP Staff" };
 
 export default async function StaffFormRequestDetailPage({
   params,

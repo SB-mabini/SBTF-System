@@ -47,7 +47,7 @@ void main() {
     expect(find.text('juan@example.com'), findsOneWidget);
     expect(find.text('Driver / Operator'), findsOneWidget);
     expect(find.text('Welcome back'), findsNothing);
-    expect(find.text('SBTF System'), findsOneWidget);
+    expect(find.text('MTOP System'), findsOneWidget);
   });
 
   testWidgets('keeps destinations on the Track and Documents tabs',

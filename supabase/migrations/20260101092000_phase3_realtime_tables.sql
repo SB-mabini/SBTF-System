@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 3.1
+-- MTOP System — Phase 3.1
 -- Realtime publication for the Phase 1 workflow tables.
 --
 -- The Phase 0 publication covered the four tables that existed then. Appointments,

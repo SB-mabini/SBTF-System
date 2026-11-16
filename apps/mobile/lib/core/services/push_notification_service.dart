@@ -87,8 +87,8 @@ class PushNotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'sbtf_notifications',
-      'SBTF Notifications',
-      channelDescription: 'Notifications for SBTF System',
+      'MTOP Notifications',
+      channelDescription: 'Notifications for MTOP System',
       importance: Importance.high,
       priority: Priority.high,
     );

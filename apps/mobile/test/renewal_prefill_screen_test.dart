@@ -28,7 +28,7 @@ void main() {
     applicationId: 'application-1',
     operatorId: 'profile-1',
     todaId: 'toda-1',
-    franchiseNumber: 'SBTF-2026-0001',
+    franchiseNumber: 'MTOP-2026-0001',
     verificationCode: 'ABC123',
     issuedAt: DateTime(2025, 3, 1),
     expiresAt: DateTime(2026, 3, 1),
@@ -103,7 +103,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Filled from franchise SBTF-2026-0001'),
+    expect(find.textContaining('Filled from franchise MTOP-2026-0001'),
         findsOneWidget);
     expect(find.text('Sto. Nino TODA'), findsOneWidget);
     expect(find.text('Sto. Nino'), findsOneWidget);
@@ -123,9 +123,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Filled from franchise SBTF-2026-0001'),
+    expect(find.textContaining('Filled from franchise MTOP-2026-0001'),
         findsOneWidget);
-    expect(find.text('SBTF-2026-0001 · ABC 123'), findsOneWidget);
+    expect(find.text('MTOP-2026-0001 · ABC 123'), findsOneWidget);
     expect(find.text('Sto. Nino TODA'), findsOneWidget);
     // The CR number is only on the previous request, not on the application.
     await tester.scrollUntilVisible(

@@ -28,7 +28,7 @@ FranchiseApplication _application({
 }) {
   return FranchiseApplication.fromMap({
     'id': 'app-1',
-    'application_number': 'SBTF-2026-0001',
+    'application_number': 'MTOP-2026-0001',
     'status': status,
     'submitted_at': '2026-09-01T00:00:00Z',
     'documents': documents,
@@ -403,9 +403,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('My documents'), findsOneWidget);
-    expect(find.text('SBTF-2026-0001'), findsOneWidget);
+    expect(find.text('MTOP-2026-0001'), findsOneWidget);
 
-    await tester.tap(find.text('SBTF-2026-0001'));
+    await tester.tap(find.text('MTOP-2026-0001'));
     await tester.pumpAndSettle();
 
     expect(find.text('Documents'), findsOneWidget);

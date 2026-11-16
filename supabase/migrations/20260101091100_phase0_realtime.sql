@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.12
+-- MTOP System — Phase 0.12
 -- Supabase Realtime publication.
 --
 -- Realtime applies the same Row Level Security policies as normal queries, so

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.3
+-- MTOP System — Phase 0.3
 -- TODAs, TODA membership masterlist, and application user profiles.
 --
 -- Authentication itself is delegated entirely to Supabase Auth (auth.users).

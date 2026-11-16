@@ -25,7 +25,7 @@ import { corsHeaders, errorResponse, json } from "../_shared/http.ts";
 
 const GENERIC_MESSAGE =
   "If an account exists for that address, a verification code has been sent. " +
-  "Drivers and operators set access through the one-time password option in the SBTF mobile app.";
+  "Drivers and operators set access through the one-time password option in the MTOP mobile app.";
 
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get("origin");

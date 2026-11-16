@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — reconcile the request-form schema that was applied directly
+-- MTOP System — reconcile the request-form schema that was applied directly
 -- to the project before this branch's migrations existed.
 --
 -- The earlier implementation required four request documents, snapshotted the

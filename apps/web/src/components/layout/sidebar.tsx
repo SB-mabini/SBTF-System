@@ -20,7 +20,7 @@ export function Sidebar({
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <BrandMark size="sm" priority />
         <div className="leading-tight">
-          <p className="text-[0.8125rem] font-semibold text-ink">SBTF System</p>
+          <p className="text-[0.8125rem] font-semibold text-ink">MTOP System</p>
           <p className="text-[0.6875rem] text-muted">Mabini, Batangas</p>
         </div>
       </div>

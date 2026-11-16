@@ -177,9 +177,9 @@ async function findOrCreateRelease(token) {
 
   const created = await api(token, "POST", `/repos/${repo}/releases`, {
     tag_name: tag,
-    name: `SBTF Android ${version} (build ${build})`,
+    name: `MTOP Android ${version} (build ${build})`,
     body:
-      `Installable APKs for the SBTF driver/operator app.\n\n` +
+      `Installable APKs for the MTOP driver/operator app.\n\n` +
       `Install from ${installUrl} — that page carries the QR code and instructions.\n\n` +
       `Version ${version}, build ${build}.`,
     draft: false,

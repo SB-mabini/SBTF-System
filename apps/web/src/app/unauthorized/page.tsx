@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Alert } from "@/components/ui";
 import { MUNICIPALITY } from "@/lib/constants";
 
-export const metadata = { title: "Access denied — SBTF System" };
+export const metadata = { title: "Access denied — MTOP System" };
 
 const REASONS: Record<string, { title: string; body: string }> = {
   forbidden: {
@@ -24,7 +24,7 @@ const REASONS: Record<string, { title: string; body: string }> = {
   driver_on_web: {
     title: "Drivers and operators use the mobile application",
     body:
-      "Franchise applications, document uploads, status tracking and certificate downloads are available in the SBTF mobile application.",
+      "Franchise applications, document uploads, status tracking and certificate downloads are available in the MTOP mobile application.",
   },
 };
 

@@ -4,7 +4,7 @@ import { AcceptInvitationForm } from "@/components/auth/accept-invitation-form";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 
-export const metadata = { title: "Set your password — SBTF System" };
+export const metadata = { title: "Set your password — MTOP System" };
 
 /**
  * Reached only after /auth/confirm has verified an invitation token
@@ -24,7 +24,7 @@ export default async function AcceptInvitationPage() {
       <div className="sbtf-card p-6">
         <h1 className="text-lg font-semibold text-ink">Set your password</h1>
         <p className="mt-1 text-[0.8125rem] text-muted">
-          Your SBTF staff account has been created. Choose a password you do not use for another
+          Your MTOP staff account has been created. Choose a password you do not use for another
           service, then sign in.
         </p>
 

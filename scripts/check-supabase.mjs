@@ -126,7 +126,7 @@ function readEnvFile() {
   return env;
 }
 
-console.log("SBTF Supabase diagnosis — read-only, 8 steps\n");
+console.log("MTOP Supabase diagnosis — read-only, 8 steps\n");
 
 /* -------------------------------------------------------------------------- */
 /* 1. Environment                                                              */
@@ -292,7 +292,7 @@ let missingRpc = 0;
 // payload). Functions the anon role may not execute then answer 42501, which
 // still proves the function is present.
 const PROBE_UUID = "00000000-0000-0000-0000-000000000000";
-const PROBE_TEXT = "SBTF diagnostic probe";
+const PROBE_TEXT = "MTOP diagnostic probe";
 const PROBE_ENUM = "sbtf_probe"; // invalid for every enum used here
 
 const RPC_PROBES = {

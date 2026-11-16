@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — first administrator bootstrap
+-- MTOP System — first administrator bootstrap
 -- Municipality of Mabini, Batangas
 --
 -- Run this ONCE, by hand, in the Supabase SQL Editor, when a fresh project has
@@ -167,7 +167,7 @@ begin
     raise exception 'The administrator profile could not be linked to the auth account.';
   end if;
 
-  raise notice 'SBTF first administrator ready: %', v_email;
+  raise notice 'MTOP first administrator ready: %', v_email;
 end
 $$;
 

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# SBTF System — root ignore file (monorepo)
+# MTOP System — root ignore file (monorepo)
 # ---------------------------------------------------------------------------
 
 # Environment / secrets — never commit real credentials

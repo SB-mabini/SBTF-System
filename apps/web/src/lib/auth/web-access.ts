@@ -39,7 +39,7 @@ export async function resolveWebAccess(
       message:
         profile.account_status === "pending"
           ? "This account is awaiting approval by a municipal administrator. You will be able to sign in once it has been approved."
-          : "This account is not active. Contact the administrator of the SBTF System at the municipal office.",
+          : "This account is not active. Contact the administrator of the MTOP System at the municipal office.",
     };
   }
 
@@ -47,7 +47,7 @@ export async function resolveWebAccess(
     return {
       ok: false,
       message:
-        "Tricycle drivers and operators use the SBTF mobile application. The web console is for municipal staff and administrators only.",
+        "Tricycle drivers and operators use the MTOP mobile application. The web console is for municipal staff and administrators only.",
     };
   }
 

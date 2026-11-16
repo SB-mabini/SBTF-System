@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.10
+-- MTOP System — Phase 0.10
 -- Row Level Security policies and privilege grants.
 --
 -- This file is the authoritative description of what each role may do. The

@@ -45,10 +45,10 @@ void main() {
     await tester.pumpWidget(
       harness(
         stream: Stream.value([
-          application(id: 'app-1', number: 'SBTF-2026-0001'),
+          application(id: 'app-1', number: 'MTOP-2026-0001'),
           application(
             id: 'app-2',
-            number: 'SBTF-2026-0002',
+            number: 'MTOP-2026-0002',
             status: ApplicationStatus.approved,
           ),
         ]),
@@ -56,8 +56,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('SBTF-2026-0001'), findsOneWidget);
-    expect(find.text('SBTF-2026-0002'), findsOneWidget);
+    expect(find.text('MTOP-2026-0001'), findsOneWidget);
+    expect(find.text('MTOP-2026-0002'), findsOneWidget);
     expect(find.text('Pending review'), findsOneWidget);
     expect(find.text('Approved'), findsOneWidget);
   });
@@ -68,12 +68,12 @@ void main() {
         stream: Stream.value([
           application(
             id: 'app-old',
-            number: 'SBTF-2026-0001',
+            number: 'MTOP-2026-0001',
             submittedAt: '2026-09-01T00:00:00Z',
           ),
           application(
             id: 'app-new',
-            number: 'SBTF-2026-0002',
+            number: 'MTOP-2026-0002',
             submittedAt: '2026-10-01T00:00:00Z',
           ),
         ]),
@@ -81,8 +81,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final newest = tester.getTopLeft(find.text('SBTF-2026-0002')).dy;
-    final oldest = tester.getTopLeft(find.text('SBTF-2026-0001')).dy;
+    final newest = tester.getTopLeft(find.text('MTOP-2026-0002')).dy;
+    final oldest = tester.getTopLeft(find.text('MTOP-2026-0001')).dy;
     expect(newest, lessThan(oldest));
   });
 
@@ -118,14 +118,14 @@ void main() {
       (tester) async {
     final summary = application(
       id: 'app-1',
-      number: 'SBTF-2026-0001',
+      number: 'MTOP-2026-0001',
       status: ApplicationStatus.rejected,
       submittedAt: '2026-09-01T00:00:00Z',
     );
 
     final detail = application(
       id: 'app-1',
-      number: 'SBTF-2026-0001',
+      number: 'MTOP-2026-0001',
       status: ApplicationStatus.rejected,
       submittedAt: '2026-09-01T00:00:00Z',
       extra: {
@@ -164,7 +164,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('SBTF-2026-0001'));
+    await tester.tap(find.text('MTOP-2026-0001'));
     await tester.pumpAndSettle();
 
     final trackerScrollable = find.descendant(

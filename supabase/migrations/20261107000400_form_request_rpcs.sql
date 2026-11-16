@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Request-form-first workflow (part 3 of 3)
+-- MTOP System — Request-form-first workflow (part 3 of 3)
 -- RPCs: submit a complete request, edit/resubmit a rejected request, staff
 -- approve/reject/print, the staff review-deadline monitor, and the hard gate
 -- in rpc_driver_submit_application().

@@ -19,7 +19,7 @@ import {
 import { formatDate, formatDays, formatNumber, formatPercent } from "@/lib/format";
 import { requireAdministrator } from "@/lib/auth-guard";
 
-export const metadata = { title: "Analytics — SBTF Administrator" };
+export const metadata = { title: "Analytics — MTOP Administrator" };
 
 export default async function AdminAnalyticsPage() {
   await requireAdministrator();

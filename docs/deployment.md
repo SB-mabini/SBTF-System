@@ -1,6 +1,6 @@
 # Deployment Guide
 
-How the SBTF System goes from this repository to a working deployment.
+How the MTOP System goes from this repository to a working deployment.
 
 **Last updated:** 2026-10-13 · applies to migrations `20260101090000` … `20260101091300` (20 files).
 
@@ -172,7 +172,7 @@ Dashboard → **Authentication → Emails → SMTP Settings**:
 | Port | `587` (STARTTLS) — `465` also works (SSL) |
 | Username | `sangguniangbayan.mabini.batangas@gmail.com` |
 | Password | a 16-character **Google App Password** (not the account password) |
-| Sender name | e.g. `SBTF System` |
+| Sender name | e.g. `MTOP System` |
 | Sender email | the same Gmail address |
 
 The Gmail account must have 2-Step Verification enabled to generate an App Password
@@ -259,10 +259,10 @@ Email Templates**:
 
 | Template | Source file | Subject |
 |---|---|---|
-| Reset Password | `supabase/templates/recovery.html` | `Your SBTF verification code — SBTF System` |
-| Magic Link | `supabase/templates/magic_link.html` | `One-time password — SBTF System` |
-| Invite user | `supabase/templates/invite.html` | `SBTF staff account invitation — SBTF System` |
-| Confirm signup | `supabase/templates/confirmation.html` | `Confirm your SBTF account — verification code` |
+| Reset Password | `supabase/templates/recovery.html` | `Your MTOP verification code — MTOP System` |
+| Magic Link | `supabase/templates/magic_link.html` | `One-time password — MTOP System` |
+| Invite user | `supabase/templates/invite.html` | `MTOP staff account invitation — MTOP System` |
+| Confirm signup | `supabase/templates/confirmation.html` | `Confirm your MTOP account — verification code` |
 
 **The files in `supabase/templates/` do nothing on their own.** `supabase/config.toml`
 only configures `supabase start` locally; the hosted project keeps its own copies.
@@ -296,13 +296,13 @@ Check what the project actually holds (Management API, `/v1/projects/{ref}/confi
 |---|---|
 | `mailer_templates_recovery_content` | contains `{{ .Token }}`; contains **no** `ConfirmationURL` or `TokenHash` |
 | `mailer_templates_confirmation_content` | contains `{{ .Token }}`; contains **no** `ConfirmationURL` or `TokenHash` |
-| `mailer_subjects_recovery` | `Your SBTF verification code — SBTF System` |
+| `mailer_subjects_recovery` | `Your MTOP verification code — MTOP System` |
 | `mailer_otp_length` | `6` — must match `otp_length` in `config.toml` |
 | `mailer_otp_exp` | `600` seconds — must match `otp_expiry` |
 | `site_url` | the production origin, **without** a trailing slash |
 | `mailer_templates_magic_link_content` | `{{ .Token }}` |
 | `mailer_templates_invite_content` | contains `{{ .TokenHash }}` and `/auth/confirm`; contains **no** `ConfirmationURL` |
-| `mailer_subjects_invite` | `SBTF staff account invitation — SBTF System` |
+| `mailer_subjects_invite` | `MTOP staff account invitation — MTOP System` |
 
 The code is single-use, so a second `POST /verify` with the same digits answers
 `403 "One-time token not found"`. That is reuse, not an early expiry. An expired code

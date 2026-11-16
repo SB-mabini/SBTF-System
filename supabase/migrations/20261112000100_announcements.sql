@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Announcements and broadcasting
+-- MTOP System — Announcements and broadcasting
 --
 -- Announcements are content records with an audience. Publishing fans the
 -- content out into the EXISTING public.notifications table (via fn_notify),

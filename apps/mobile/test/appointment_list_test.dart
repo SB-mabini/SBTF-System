@@ -15,7 +15,7 @@ Appointment _upcoming({
   String kind = 'evaluation',
   DateTime? scheduledAt,
   String venue = 'Franchising Office, Counter 2',
-  String? applicationNumber = 'SBTF-2026-0001',
+  String? applicationNumber = 'MTOP-2026-0001',
 }) {
   return Appointment(
     id: id,
@@ -124,7 +124,7 @@ void main() {
       expect(find.text('Evaluation'), findsOneWidget);
       expect(find.text('Scheduled'), findsOneWidget);
       expect(find.text('Franchising Office, Counter 2'), findsOneWidget);
-      expect(find.text('SBTF-2026-0001'), findsOneWidget);
+      expect(find.text('MTOP-2026-0001'), findsOneWidget);
       expect(find.text('1 upcoming appointment.'), findsOneWidget);
     });
 

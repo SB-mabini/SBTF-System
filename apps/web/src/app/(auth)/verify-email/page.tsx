@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Alert } from "@/components/ui";
 
-export const metadata = { title: "Verify your e-mail — SBTF System" };
+export const metadata = { title: "Verify your e-mail — MTOP System" };
 
 export default function VerifyEmailPage() {
   return (

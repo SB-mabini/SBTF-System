@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.9
+-- MTOP System — Phase 0.9
 -- Descriptive and prescriptive analytics.
 --
 -- Every figure is computed inside PostgreSQL from the authoritative tables, so

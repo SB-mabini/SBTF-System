@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — security / Row Level Security test suite (pgTAP)
+-- MTOP System — security / Row Level Security test suite (pgTAP)
 --
 -- Run with:
 --     supabase db reset                    -- applies migrations + seed.sql

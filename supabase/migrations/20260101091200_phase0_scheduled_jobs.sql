@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.13
+-- MTOP System — Phase 0.13
 -- Scheduled renewal reminders (90 / 60 / 30 days before expiry).
 --
 -- Implemented as a server-side scheduled database job, not as a client action:

@@ -1,6 +1,6 @@
-# SBTF Mobile (Phase 3)
+# MTOP Mobile (Phase 3)
 
-Driver/operator mobile application for the **SBTF System** — a Web and
+Driver/operator mobile application for the **MTOP System** — a Web and
 Mobile-Based Franchising and Tricycle Driver Registration System for the
 Municipality of Mabini, Batangas.
 

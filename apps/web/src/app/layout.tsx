@@ -9,12 +9,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "SBTF System — Municipality of Mabini, Batangas",
-    template: "%s · SBTF System",
+    default: "MTOP System — Municipality of Mabini, Batangas",
+    template: "%s · MTOP System",
   },
   description:
     "Franchising and Tricycle Driver Registration System with Descriptive and Prescriptive Analytics and Decision Support for the Municipality of Mabini, Batangas.",
-  applicationName: "SBTF System",
+  applicationName: "MTOP System",
   robots: { index: false, follow: false },
   icons: {
     icon: [{ url: "/seal.png", type: "image/png", sizes: "512x512" }],

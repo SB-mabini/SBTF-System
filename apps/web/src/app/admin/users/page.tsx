@@ -20,7 +20,7 @@ import { accountStatusLabel, formatDateTime, roleLabel } from "@/lib/format";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { AccountStatus, UserRole } from "@/types/database";
 
-export const metadata = { title: "Users — SBTF Administrator" };
+export const metadata = { title: "Users — MTOP Administrator" };
 
 /** Colour the status pill the same way the rest of the console colours state. */
 const STATUS_TONE: Record<AccountStatus, "success" | "pending" | "neutral" | "rejected"> = {
@@ -87,7 +87,7 @@ export default async function AdminUsersPage({
             <UsersToolbar />
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs text-muted shadow-sm">
-              Registered via SBTF Mobile App
+              Registered via MTOP Mobile App
             </span>
           )
         }
@@ -183,7 +183,7 @@ export default async function AdminUsersPage({
           description={
             isStaffTab
               ? "Municipal staff accounts can be created by clicking “Add staff account” above."
-              : "Tricycle drivers and operators register themselves using the SBTF mobile application."
+              : "Tricycle drivers and operators register themselves using the MTOP mobile application."
           }
         />
       ) : (

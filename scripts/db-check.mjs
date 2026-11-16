@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Connectivity and schema check for the SBTF System.
+ * Connectivity and schema check for the MTOP System.
  *
  * Verifies, in order:
  *   1. the web app's environment is configured (not demo mode, URL + key set);
@@ -49,7 +49,7 @@ const bad = (message) => {
 };
 
 // --- 1. environment ---------------------------------------------------------
-console.log("SBTF database connectivity check\n");
+console.log("MTOP database connectivity check\n");
 
 let env = {};
 try {

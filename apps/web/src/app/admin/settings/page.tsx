@@ -6,7 +6,7 @@ import { Card, CardHeader, SectionTitle } from "@/components/ui";
 import { listSettings, listTodas, listBarangays } from "@/lib/data";
 import { requireAdministrator } from "@/lib/auth-guard";
 
-export const metadata = { title: "Settings — SBTF Administrator" };
+export const metadata = { title: "Settings — MTOP Administrator" };
 
 export default async function AdminSettingsPage() {
   const session = await requireAdministrator();

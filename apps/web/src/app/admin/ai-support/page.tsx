@@ -4,7 +4,7 @@ import { getSavedAiBriefing, listSettings, listTodas } from "@/lib/data";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { AiAdvisory, SystemSetting } from "@/types/database";
 
-export const metadata = { title: "AI decision support — SBTF Administrator" };
+export const metadata = { title: "AI decision support — MTOP Administrator" };
 
 function setting(settings: SystemSetting[], key: string): SystemSetting | undefined {
   return settings.find((candidate) => candidate.key === key);

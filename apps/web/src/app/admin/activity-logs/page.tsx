@@ -9,7 +9,7 @@ import { ACTIVITY_ACTIONS } from "@/lib/activity-actions";
 import { requireAdministrator } from "@/lib/auth-guard";
 import type { ActivityAction } from "@/types/database";
 
-export const metadata = { title: "Activity logs — SBTF Administrator" };
+export const metadata = { title: "Activity logs — MTOP Administrator" };
 
 function single(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];

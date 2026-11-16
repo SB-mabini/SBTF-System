@@ -1,4 +1,4 @@
-# Static analysis for the SBTF mobile application.
+# Static analysis for the MTOP mobile application.
 #
 # flutter_lints provides the recommended rule set. CI runs `flutter analyze`
 # with this file, so anything it flags fails the build. Kept deliberately

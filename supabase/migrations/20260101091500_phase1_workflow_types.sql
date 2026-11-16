@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 1.1
+-- MTOP System — Phase 1.1
 -- Workflow enumerated types for the staff-driven franchising process
 -- (docs/process.md): a processing pipeline (stage) distinct from the decision
 -- outcome (status stays pending/approved/rejected), form requests, scheduled

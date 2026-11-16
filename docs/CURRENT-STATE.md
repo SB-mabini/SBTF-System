@@ -236,7 +236,7 @@ Configuration the hosted project must hold (check it with the Management API, as
 |---|---|
 | `mailer_otp_length` | `6` |
 | `mailer_otp_exp` | `600` seconds |
-| `mailer_subjects_recovery` | `Your SBTF verification code — SBTF System` |
+| `mailer_subjects_recovery` | `Your MTOP verification code — MTOP System` |
 | `mailer_templates_recovery_content` | `supabase/templates/recovery.html`, contains `{{ .Token }}` and no link |
 | `site_url` | `https://sbtf-system.vercel.app` — no trailing slash |
 

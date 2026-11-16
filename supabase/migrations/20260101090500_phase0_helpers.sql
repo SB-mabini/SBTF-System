@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.6
+-- MTOP System — Phase 0.6
 -- Authorisation helpers, audit logging, notifications and timeline helpers.
 --
 -- All helpers are SECURITY DEFINER so that Row Level Security policies can

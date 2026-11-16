@@ -2,7 +2,7 @@
 
 **Status:** implemented 13 November 2026.
 **Source of truth:** [`supabase/templates/invite.html`](../supabase/templates/invite.html).
-**Subject:** `SBTF staff account invitation — SBTF System`
+**Subject:** `MTOP staff account invitation — MTOP System`
 
 Delivery is Supabase Auth's mailer, not Nodemailer. The `admin-users` Edge Function calls
 `inviteUserByEmail()`, and the hosted project's Gmail SMTP sends the message.

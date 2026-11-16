@@ -4,7 +4,7 @@ import { Alert, Card, CardHeader } from "@/components/ui";
 import { MUNICIPALITY } from "@/lib/constants";
 import { isDemoMode, isSupabaseConfigured } from "@/lib/env";
 
-export const metadata = { title: "Setup required — SBTF System" };
+export const metadata = { title: "Setup required — MTOP System" };
 
 /**
  * Shown when the database is not in a usable state.

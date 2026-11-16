@@ -933,7 +933,7 @@ class _AgreementStep extends StatelessWidget {
                     const Expanded(
                       child: Text(
                         'I have read and understood the User Agreement, and I '
-                        'accept its terms for using the SBTF System.',
+                        'accept its terms for using the MTOP System.',
                         style: TextStyle(
                           color: AppColors.inkStrong,
                           fontSize: 13,

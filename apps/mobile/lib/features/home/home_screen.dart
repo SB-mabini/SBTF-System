@@ -1292,7 +1292,7 @@ class _UpdateNoticeState extends State<_UpdateNotice> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'SBTF ${release.version} is ready'
+                      'MTOP ${release.version} is ready'
                       '${release.released == null ? '' : ' � ${release.released}'}. '
                       'Your applications and documents stay on the server.',
                       style: const TextStyle(

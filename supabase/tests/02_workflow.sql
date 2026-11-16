@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — business workflow test suite (pgTAP)
+-- MTOP System — business workflow test suite (pgTAP)
 --
 -- Exercises the complete franchise lifecycle end to end through the same
 -- SECURITY DEFINER RPCs the web and mobile clients call:

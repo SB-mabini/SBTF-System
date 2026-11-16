@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.8
+-- MTOP System — Phase 0.8
 -- Business workflow RPCs (SECURITY DEFINER).
 --
 -- These functions are the ONLY way applications move through the workflow.

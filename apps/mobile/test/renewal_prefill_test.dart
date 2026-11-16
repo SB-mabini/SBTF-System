@@ -10,7 +10,7 @@ FranchiseRecord _record() {
     applicationId: 'application-1',
     operatorId: 'profile-1',
     todaId: 'toda-1',
-    franchiseNumber: 'SBTF-2026-0001',
+    franchiseNumber: 'MTOP-2026-0001',
     verificationCode: 'ABC123',
     issuedAt: DateTime(2025, 3, 1),
     expiresAt: DateTime(2026, 3, 1),
@@ -81,8 +81,8 @@ void main() {
         request: _request(),
       );
 
-      expect(prefill.franchiseNumber, 'SBTF-2026-0001');
-      expect(prefill.purpose, 'Renewal of franchise SBTF-2026-0001');
+      expect(prefill.franchiseNumber, 'MTOP-2026-0001');
+      expect(prefill.purpose, 'Renewal of franchise MTOP-2026-0001');
       expect(prefill.plateNumber, 'ABC 1234');
       expect(prefill.vehicleModel, 'TMX 155');
       expect(prefill.engineNumber, 'ENG-12345');
@@ -108,7 +108,7 @@ void main() {
       expect(prefill.engineNumber, isEmpty);
       expect(prefill.crNumber, isEmpty);
       expect(prefill.ctcNumber, isEmpty);
-      expect(prefill.purpose, contains('SBTF-2026-0001'));
+      expect(prefill.purpose, contains('MTOP-2026-0001'));
       expect(prefill.addressLine, isEmpty);
       expect(prefill.appliedRoute, isEmpty);
       expect(prefill.ownershipType, 'single_proprietorship');

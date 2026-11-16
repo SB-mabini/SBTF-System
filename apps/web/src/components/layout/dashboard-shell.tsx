@@ -45,7 +45,7 @@ export async function DashboardShell({
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 pb-24 lg:px-8 md:pb-6">{children}</main>
 
         <footer className="border-t border-line bg-white px-4 py-3 pb-24 text-center text-[0.6875rem] text-muted lg:px-8 md:pb-3">
-          SBTF System — Municipality of Mabini, Batangas · Franchising and Tricycle Driver
+          MTOP System — Municipality of Mabini, Batangas · Franchising and Tricycle Driver
           Registration with Descriptive and Prescriptive Analytics
         </footer>
       </div>

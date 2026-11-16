@@ -7,7 +7,7 @@ import { BrandMark } from "@/components/layout/brand-mark";
 import { Alert, Spinner } from "@/components/ui";
 import { MUNICIPALITY, PROVINCE, SYSTEM_TITLE } from "@/lib/constants";
 
-export const metadata = { title: "Sign in — SBTF System" };
+export const metadata = { title: "Sign in — MTOP System" };
 
 export default async function LoginPage({
   searchParams,
@@ -46,7 +46,7 @@ export default async function LoginPage({
         <div className="relative z-10 w-full max-w-[26rem]">
           <div className="rounded-2xl border border-white/60 bg-white/95 p-6 shadow-[0_24px_70px_-20px_rgba(21,10,56,0.65)] backdrop-blur-md sm:p-8">
             <div className="text-center">
-              <h1 className="text-lg font-semibold text-ink">Sign in to the SBTF System</h1>
+              <h1 className="text-lg font-semibold text-ink">Sign in to the MTOP System</h1>
               <p className="mt-1 text-[0.8125rem] text-muted">
                 Municipal staff and administrators only.
               </p>

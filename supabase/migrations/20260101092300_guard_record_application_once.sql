@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — guard: an application can be recorded only once
+-- MTOP System — guard: an application can be recorded only once
 --
 -- rpc_staff_record_application() (migration 20260101091700) only rejected
 -- applications whose status was no longer 'pending'. It never looked at the

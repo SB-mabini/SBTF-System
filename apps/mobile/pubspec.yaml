@@ -1,10 +1,10 @@
 name: sbtf_mobile
 description: >-
-  Driver/operator mobile application for the SBTF System — a Web and
+  Driver/operator mobile application for the MTOP System — a Web and
   Mobile-Based Franchising and Tricycle Driver Registration System for the
   Municipality of Mabini, Batangas.
 publish_to: "none"
-version: 0.1.0+6
+version: 0.1.0+7
 
 environment:
   sdk: ">=3.5.0 <4.0.0"

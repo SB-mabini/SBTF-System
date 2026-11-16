@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Alert } from "@/components/ui";
 
-export const metadata = { title: "E-mail confirmed — SBTF System" };
+export const metadata = { title: "E-mail confirmed — MTOP System" };
 
 /**
  * Landing page for a confirmed address.

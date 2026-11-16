@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Request-form-first workflow (part 1 of 3)
+-- MTOP System — Request-form-first workflow (part 1 of 3)
 -- Type values, settings category and the editable form letterhead.
 --
 -- IMPORTANT: enum values added by ALTER TYPE ... ADD VALUE may not be used in

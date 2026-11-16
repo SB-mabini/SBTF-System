@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.5
+-- MTOP System — Phase 0.5
 -- Notifications, activity logging and AI request logging.
 --
 -- Activity logs are append-only: they can never be updated or deleted by any

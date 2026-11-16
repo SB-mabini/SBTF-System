@@ -1,4 +1,4 @@
-/// Build-time configuration for the SBTF mobile application.
+/// Build-time configuration for the MTOP mobile application.
 ///
 /// Values arrive through `--dart-define` at build time and are compiled into the
 /// binary. Nothing in this file is a secret: the URL is public and the anon /

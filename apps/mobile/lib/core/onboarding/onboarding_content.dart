@@ -101,7 +101,7 @@ const List<AgreementSection> agreementSections = <AgreementSection>[
     summary: 'Use only your own account and only for legitimate franchise and '
         'driver registration transactions.',
     paragraphs: <String>[
-      'Access to the SBTF System is limited to drivers, operators and '
+      'Access to the MTOP System is limited to drivers, operators and '
           'authorized Sangguniang Bayan personnel who need it for franchising '
           'and tricycle driver registration.',
       'Your account credentials are personal. Do not share your password, '

@@ -89,19 +89,19 @@ otp_expiry = 600
 #             token hash against /auth/confirm, which verifies the invitation
 #             and sends the visitor to /accept-invitation to choose a password.
 [auth.email.template.recovery]
-subject = "Your SBTF verification code — SBTF System"
+subject = "Your MTOP verification code — MTOP System"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.magic_link]
-subject = "One-time password — SBTF System"
+subject = "One-time password — MTOP System"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.confirmation]
-subject = "Confirm your SBTF account — verification code"
+subject = "Confirm your MTOP account — verification code"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.invite]
-subject = "SBTF staff account invitation — SBTF System"
+subject = "MTOP staff account invitation — MTOP System"
 content_path = "./supabase/templates/invite.html"
 
 [auth.sms]

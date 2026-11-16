@@ -1,4 +1,4 @@
-// Shared HTTP helpers for the SBTF Edge Functions.
+// Shared HTTP helpers for the MTOP Edge Functions.
 //
 // CORS is deliberately restricted to the configured web origin(s). Secrets
 // (GROQ_API_KEY, SUPABASE_SERVICE_ROLE_KEY) only ever exist inside the Edge

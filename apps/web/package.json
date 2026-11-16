@@ -2,7 +2,7 @@
   "name": "@sbtf/web",
   "version": "1.0.0",
   "private": true,
-  "description": "Administrator and Staff web application for the SBTF System (Municipality of Mabini, Batangas)",
+  "description": "Administrator and Staff web application for the MTOP System (Municipality of Mabini, Batangas)",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",

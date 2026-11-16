@@ -99,7 +99,7 @@ export function SessionTimeout() {
     <Modal
       open={secondsLeft !== null}
       title="Are you still there?"
-      description="For your security, the SBTF System signs you out automatically when you are inactive."
+      description="For your security, the MTOP System signs you out automatically when you are inactive."
       onClose={resetIdle}
       width="sm"
       footer={

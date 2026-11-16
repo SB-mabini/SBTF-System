@@ -6,7 +6,7 @@
 /// tricycle/document application icon used only for launcher/PWA/favicon.
 abstract final class AppBranding {
   /// Short product name shown in app bars, the splash and the PWA manifest.
-  static const String appName = 'SBTF System';
+  static const String appName = 'MTOP System';
 
   /// The office that owns the system.
   static const String officeName = 'Sangguniang Bayan ng Mabini';

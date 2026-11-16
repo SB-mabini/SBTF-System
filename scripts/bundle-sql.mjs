@@ -50,7 +50,7 @@ if (migrations.length === 0) {
 const parts = [];
 
 parts.push(`-- ===========================================================================
--- SBTF System — complete schema bundle
+-- MTOP System — complete schema bundle
 -- Municipality of Mabini, Batangas
 --
 -- GENERATED FILE — do not edit. Regenerate with:
@@ -109,19 +109,19 @@ begin
 
   if v_tables < ${MINIMUM_TABLES} then
     raise exception
-      'SBTF setup incomplete: % public table(s) found, expected at least ${MINIMUM_TABLES}',
+      'MTOP setup incomplete: % public table(s) found, expected at least ${MINIMUM_TABLES}',
       v_tables
       using hint = 'A migration probably failed. Read the message above this one.';
   end if;
 
   if v_barangays <> ${EXPECTED_BARANGAYS} then
     raise exception
-      'SBTF setup incomplete: % barangay row(s) found, expected exactly ${EXPECTED_BARANGAYS}',
+      'MTOP setup incomplete: % barangay row(s) found, expected exactly ${EXPECTED_BARANGAYS}',
       v_barangays
       using hint = 'supabase/migrations/20260101090100_phase0_reference_data.sql did not apply.';
   end if;
 
-  raise notice 'SBTF setup complete: % public table(s), % barangay row(s).', v_tables, v_barangays;
+  raise notice 'MTOP setup complete: % public table(s), % barangay row(s).', v_tables, v_barangays;
 end
 $$;
 

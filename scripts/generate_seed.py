@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generates supabase/seed.sql — the anonymised demonstration dataset for the
-SBTF System (Municipality of Mabini, Batangas).
+MTOP System (Municipality of Mabini, Batangas).
 
 Why a generator?
   * The specification requires approximately 24 TODAs and 817 anonymised
@@ -131,7 +131,7 @@ lines: list[str] = []
 w = lines.append
 
 w("-- " + "=" * 75)
-w("-- SBTF System — demonstration / development dataset (ANONYMISED)")
+w("-- MTOP System — demonstration / development dataset (ANONYMISED)")
 w("-- Municipality of Mabini, Batangas — Franchising and Tricycle Driver")
 w("-- Registration System")
 w("--")

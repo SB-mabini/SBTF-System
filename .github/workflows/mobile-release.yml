@@ -180,7 +180,7 @@ jobs:
       - name: Summary
         run: |
           {
-            echo "### SBTF Android ${VERSION} (build ${BUILD})"
+            echo "### MTOP Android ${VERSION} (build ${BUILD})"
             echo
             echo "- Release: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
             echo "- Install page: https://sbtf-application.vercel.app/install/"

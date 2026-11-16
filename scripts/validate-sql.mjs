@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Static SQL validation for the SBTF System.
+ * Static SQL validation for the MTOP System.
  *
  * The build environment has no PostgreSQL server, so this script runs the real
  * PostgreSQL grammar through libpg-query (the parser PostgreSQL itself uses):
@@ -207,7 +207,7 @@ const files = [
     .map((f) => join(ROOT, "supabase", "tests", f)),
 ];
 
-console.log("SBTF static SQL validation (libpg-query)\n");
+console.log("MTOP static SQL validation (libpg-query)\n");
 
 const knownTables = new Set();
 const knownFunctions = new Set();

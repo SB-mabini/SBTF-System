@@ -1,7 +1,7 @@
 import { RecordDetail } from "@/components/records/record-detail";
 import { requireStaff } from "@/lib/auth-guard";
 
-export const metadata = { title: "Franchise record — SBTF Staff" };
+export const metadata = { title: "Franchise record — MTOP Staff" };
 
 export default async function StaffRecordDetailPage({
   params,

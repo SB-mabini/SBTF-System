@@ -7,7 +7,7 @@ import type {
   UserRole,
 } from "@/types/database";
 
-export const APP_NAME = "SBTF System";
+export const APP_NAME = "MTOP System";
 export const MUNICIPALITY = "Municipality of Mabini";
 export const PROVINCE = "Batangas";
 

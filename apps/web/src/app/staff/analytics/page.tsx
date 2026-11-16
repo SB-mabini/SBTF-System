@@ -14,7 +14,7 @@ import {
 import { formatDate, formatDays, formatNumber, formatPercent } from "@/lib/format";
 import { requireStaff } from "@/lib/auth-guard";
 
-export const metadata = { title: "Analytics — SBTF Staff" };
+export const metadata = { title: "Analytics — MTOP Staff" };
 
 export default async function StaffAnalyticsPage() {
   await requireStaff();

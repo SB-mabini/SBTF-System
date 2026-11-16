@@ -1,7 +1,7 @@
 import { FormRequestsPage } from "@/components/form-requests/form-requests-page";
 import { requireStaff } from "@/lib/auth-guard";
 
-export const metadata = { title: "Form Requests — SBTF Staff" };
+export const metadata = { title: "Form Requests — MTOP Staff" };
 
 export default async function StaffFormRequestsPage({
   searchParams,

@@ -1,6 +1,6 @@
 # Mobile Application — Phase 3
 
-The driver/operator application for the SBTF System. Flutter + Riverpod, talking to
+The driver/operator application for the MTOP System. Flutter + Riverpod, talking to
 the same Supabase project as the web console. There is no mobile-specific backend:
 the database, its RPCs, RLS policies and triggers are the entire contract.
 

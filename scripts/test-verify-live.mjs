@@ -43,7 +43,7 @@ async function check(label, fn) {
 
 const find = (checks, name) => checks.find((check) => check.name === name);
 
-console.log("SBTF verifier self-test (mock Supabase, no database)\n");
+console.log("MTOP verifier self-test (mock Supabase, no database)\n");
 
 const healthy = await runVerify({
   url: MOCK_URL,

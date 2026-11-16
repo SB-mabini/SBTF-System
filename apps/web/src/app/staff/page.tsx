@@ -20,7 +20,7 @@ import {
 import { formatDays, formatNumber, formatPercent } from "@/lib/format";
 import { requireStaff } from "@/lib/auth-guard";
 
-export const metadata = { title: "Staff dashboard — SBTF System" };
+export const metadata = { title: "Staff dashboard — MTOP System" };
 
 export default async function StaffDashboardPage() {
   await requireStaff();

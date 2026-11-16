@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 1.4
+-- MTOP System — Phase 1.4
 -- Triggers for the Phase 1 workflow tables and the application pipeline.
 --
 -- Same division of responsibility as Phase 0: triggers own the audit trail,

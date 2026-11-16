@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 3.2
+-- MTOP System — Phase 3.2
 -- Saved AI briefings.
 --
 -- A briefing costs one model call and four to five seconds, but until now it

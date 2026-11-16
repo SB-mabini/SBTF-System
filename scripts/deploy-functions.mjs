@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Deploy the SBTF Edge Functions to the linked Supabase project.
+ * Deploy the MTOP Edge Functions to the linked Supabase project.
  *
  * The CLI needs a Supabase access token. Create one at
  * https://supabase.com/dashboard/account/tokens and expose it as

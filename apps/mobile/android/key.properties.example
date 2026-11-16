@@ -1,4 +1,4 @@
-# Release signing for the SBTF mobile app — copy this to `key.properties`
+# Release signing for the MTOP mobile app — copy this to `key.properties`
 # (same folder) and fill in the values, then generate the keystore.
 #
 # `key.properties` and every `*.jks`/`*.keystore` are git-ignored; never commit

@@ -238,7 +238,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=<dedicated system account>
 SMTP_PASS=<Google app password>
-SMTP_FROM="SBTF Mabini <address>"
+SMTP_FROM="MTOP Mabini <address>"
 SITE_URL=https://<production-domain>
 ```
 

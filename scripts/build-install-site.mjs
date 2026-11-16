@@ -92,7 +92,7 @@ const svg = qr.createSvgTag({
   cellSize: 10,
   margin: 2,
   scalable: true,
-  title: "QR code that opens the SBTF installation page",
+  title: "QR code that opens the MTOP installation page",
   alt: `QR code for ${installUrl}`,
 });
 writeFileSync(path.join(output, "qr.svg"), `${svg}\n`);

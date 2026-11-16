@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 1.5
+-- MTOP System — Phase 1.5
 -- Row Level Security and privilege grants for the Phase 1 workflow tables.
 --
 -- Same design rules as Phase 0: clients get SELECT only; every write moves

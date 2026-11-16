@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.11
+-- MTOP System — Phase 0.11
 -- Supabase Storage: private buckets and access policies.
 --
 -- Both buckets are PRIVATE. Files are never exposed through a public URL:

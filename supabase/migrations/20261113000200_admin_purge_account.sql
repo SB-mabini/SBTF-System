@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Account purge (part 2 of 2)
+-- MTOP System — Account purge (part 2 of 2)
 --
 -- Administrator-only permanent deletion of an account and every row connected
 -- to it. This is the "delete account" capability requested for the admin

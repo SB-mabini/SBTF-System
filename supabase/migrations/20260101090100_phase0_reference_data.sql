@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.2 (reference data)
+-- MTOP System — Phase 0.2 (reference data)
 -- Roles, barangays of Mabini, and default system settings.
 --
 -- These are SYSTEM reference records, not demo data: they are created by the

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Request-form-first workflow (part 4)
+-- MTOP System — Request-form-first workflow (part 4)
 -- Form-request notification and audit triggers for the new review outcomes:
 -- rejection, resubmission and conversion. The existing insert / issue paths are
 -- preserved and only their driver-facing wording is updated.

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.14
+-- MTOP System — Phase 0.14
 -- Pending account status for administrator-created staff accounts.
 --
 -- A staff account created from the admin console must be APPROVED by an

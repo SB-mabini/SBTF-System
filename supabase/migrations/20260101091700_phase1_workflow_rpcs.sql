@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 1.3
+-- MTOP System — Phase 1.3
 -- Staff-driven workflow RPCs (docs/process.md).
 --
 -- Authority rule for Phase 1: all application and record handling is performed

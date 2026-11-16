@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — fix: verification code generation fails on the live project
+-- MTOP System — fix: verification code generation fails on the live project
 --
 -- fn_generate_verification_code() (migration 20260101090500) built its code
 -- from gen_random_bytes(12):

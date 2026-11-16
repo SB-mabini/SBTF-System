@@ -96,7 +96,7 @@ export async function ApplicationsPage({
       {result.rows.length === 0 && result.count === 0 && !search && status === "all" && type === "all" ? (
         <EmptyState
           title="No applications have been submitted yet"
-          description="Drivers and operators submit applications from the SBTF mobile app. They appear here immediately."
+          description="Drivers and operators submit applications from the MTOP mobile app. They appear here immediately."
         />
       ) : (
         <ApplicationTable

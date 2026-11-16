@@ -44,7 +44,7 @@ AppNotification _notification({
 FranchiseApplication _application() {
   return FranchiseApplication.fromMap({
     'id': 'app-1',
-    'application_number': 'SBTF-2026-0001',
+    'application_number': 'MTOP-2026-0001',
     'status': 'approved',
     'submitted_at': '2026-09-01T00:00:00Z',
   });
@@ -56,7 +56,7 @@ FranchiseRecord _record() {
     applicationId: 'app-1',
     operatorId: 'op-1',
     todaId: 'toda-1',
-    franchiseNumber: 'SBTF-2026-0001',
+    franchiseNumber: 'MTOP-2026-0001',
     verificationCode: 'ABCDEFGHJKLM',
     issuedAt: DateTime(2026, 1, 1),
     expiresAt: DateTime.now().add(const Duration(days: 400)),
@@ -75,7 +75,7 @@ Appointment _appointment() {
     status: 'scheduled',
     scheduledAt: DateTime.now().add(const Duration(days: 4)),
     venue: 'Municipal Hall',
-    applicationNumber: 'SBTF-2026-0001',
+    applicationNumber: 'MTOP-2026-0001',
   );
 }
 

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — fix: document verification/rejection timeline event
+-- MTOP System — fix: document verification/rejection timeline event
 --
 -- fn_trg_document_written() (migration 20260101090600) passed a CASE
 -- expression as the second argument of public.fn_add_application_event():

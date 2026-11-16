@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Account purge (part 1 of 2)
+-- MTOP System — Account purge (part 1 of 2)
 --
 -- Adds the activity action written by the administrator-only purge RPC.
 --

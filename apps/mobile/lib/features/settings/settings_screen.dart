@@ -84,7 +84,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context) => AlertDialog(
           title: const Text('Update available'),
           content: Text(
-            'SBTF ${latest.version} (build ${latest.build}) can be downloaded '
+            'MTOP ${latest.version} (build ${latest.build}) can be downloaded '
             'from the install page. Your account and documents stay as they are.',
           ),
           actions: [

@@ -1,7 +1,7 @@
 import { RecordsPage } from "@/components/records/records-page";
 import { requireAdministrator } from "@/lib/auth-guard";
 
-export const metadata = { title: "Franchise records — SBTF Administrator" };
+export const metadata = { title: "Franchise records — MTOP Administrator" };
 
 export default async function AdminRecordsPage({
   searchParams,

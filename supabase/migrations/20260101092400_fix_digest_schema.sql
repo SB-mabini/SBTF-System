@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — fix: digest() schema in rpc_verify_certificate
+-- MTOP System — fix: digest() schema in rpc_verify_certificate
 --
 -- rpc_verify_certificate() (migration 20260101090700) calls pgcrypto's
 -- digest() to hash failed verification attempt codes:

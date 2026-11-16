@@ -403,7 +403,7 @@ export async function main(argv = process.argv) {
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 
   if (!url.startsWith("http") || url.includes("your-project-ref") || key.length <= 20) {
-    console.error("SBTF live verification\n");
+    console.error("MTOP live verification\n");
     console.error(
       "  ✗ apps/web/.env.local is missing or still holds placeholder values.\n" +
         "    Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY first.",
@@ -412,7 +412,7 @@ export async function main(argv = process.argv) {
   }
 
   const projectRef = url.replace(/^https?:\/\//, "").split(".")[0];
-  console.log(`SBTF live verification — ${projectRef}\n`);
+  console.log(`MTOP live verification — ${projectRef}\n`);
 
   const { checks, failures, exitCode } = await runVerify({ url, key });
 

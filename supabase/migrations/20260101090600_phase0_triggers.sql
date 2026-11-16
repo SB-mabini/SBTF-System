@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 0.7
+-- MTOP System — Phase 0.7
 -- Auditing, notification and timeline triggers.
 --
 -- Division of responsibility (single source of truth per concern):

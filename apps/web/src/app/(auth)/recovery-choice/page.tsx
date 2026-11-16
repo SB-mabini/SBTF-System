@@ -5,7 +5,7 @@ import { signOutAction } from "@/lib/actions/auth";
 import { getSessionProfile } from "@/lib/data";
 import { homePathForRole } from "@/lib/permissions";
 
-export const metadata = { title: "Continue — SBTF System" };
+export const metadata = { title: "Continue — MTOP System" };
 
 /**
  * Step three of password recovery: the code created a session, so the visitor

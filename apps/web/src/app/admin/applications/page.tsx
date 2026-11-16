@@ -1,7 +1,7 @@
 import { ApplicationsPage } from "@/components/applications/applications-page";
 import { requireAdministrator } from "@/lib/auth-guard";
 
-export const metadata = { title: "Applications — SBTF Administrator" };
+export const metadata = { title: "Applications — MTOP Administrator" };
 
 export default async function AdminApplicationsPage({
   searchParams,

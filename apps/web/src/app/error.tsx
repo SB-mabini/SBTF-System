@@ -29,7 +29,7 @@ export default function ErrorBoundary({
   useEffect(() => {
     // The digest ties this screen to the server log entry; no personal data is
     // written to the browser console.
-    console.error("SBTF interface error", error.digest ?? error.message);
+    console.error("MTOP interface error", error.digest ?? error.message);
   }, [error]);
 
   const notConfigured = error.message.includes("Supabase is not configured");

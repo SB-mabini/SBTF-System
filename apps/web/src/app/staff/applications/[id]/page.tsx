@@ -1,7 +1,7 @@
 import { ApplicationDetail } from "@/components/applications/application-detail";
 import { requireStaff } from "@/lib/auth-guard";
 
-export const metadata = { title: "Application — SBTF Staff" };
+export const metadata = { title: "Application — MTOP Staff" };
 
 export default async function StaffApplicationDetailPage({
   params,

@@ -18,7 +18,7 @@ const String _scannedPayload = 'https://mabini.gov.ph/verify?code=ABCDEFGHJKLM';
 
 FranchiseRecord _record({
   required String id,
-  String franchiseNumber = 'SBTF-2026-0001',
+  String franchiseNumber = 'MTOP-2026-0001',
   String verificationCode = 'ABCDEFGHJKLM',
   DateTime? issuedAt,
   DateTime? expiresAt,
@@ -49,7 +49,7 @@ FranchiseRecord _record({
 CertificateVerification _validVerification() {
   return CertificateVerification(
     verificationStatus: 'valid',
-    franchiseNumber: 'SBTF-2026-0001',
+    franchiseNumber: 'MTOP-2026-0001',
     operatorDisplayName: 'J*** D*** C***',
     todaName: 'Mabini TODA',
     issuedAt: DateTime(2026, 1, 1),
@@ -159,18 +159,18 @@ void main() {
     testWidgets('lists each certificate with its state', (tester) async {
       final service = _FakeCertificateService(
         records: [
-          _record(id: 'r1', franchiseNumber: 'SBTF-2026-0001'),
+          _record(id: 'r1', franchiseNumber: 'MTOP-2026-0001'),
           _record(
             id: 'r2',
-            franchiseNumber: 'SBTF-2026-0002',
+            franchiseNumber: 'MTOP-2026-0002',
             expiresAt: DateTime.now().add(const Duration(days: 30)),
           ),
           _record(
             id: 'r3',
-            franchiseNumber: 'SBTF-2026-0003',
+            franchiseNumber: 'MTOP-2026-0003',
             expiresAt: DateTime.now().subtract(const Duration(days: 5)),
           ),
-          _record(id: 'r4', franchiseNumber: 'SBTF-2026-0004', archived: true),
+          _record(id: 'r4', franchiseNumber: 'MTOP-2026-0004', archived: true),
         ],
       );
 
@@ -179,8 +179,8 @@ void main() {
         _harness(home: const CertificateListScreen(), service: service),
       );
 
-      expect(find.text('SBTF-2026-0001'), findsOneWidget);
-      expect(find.text('SBTF-2026-0004'), findsOneWidget);
+      expect(find.text('MTOP-2026-0001'), findsOneWidget);
+      expect(find.text('MTOP-2026-0004'), findsOneWidget);
       expect(find.text('Active'), findsOneWidget);
       expect(find.text('Expiring soon'), findsOneWidget);
       expect(find.text('Expired'), findsOneWidget);
@@ -211,7 +211,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('SBTF-2026-0001'));
+      await tester.tap(find.text('MTOP-2026-0001'));
       await tester.pumpAndSettle();
 
       expect(find.text('Franchise certificate'), findsOneWidget);
@@ -231,13 +231,13 @@ void main() {
 
       expect(find.byType(QrImageView), findsOneWidget);
       expect(find.text('ABCDEFGHJKLM'), findsWidgets);
-      expect(find.text('SBTF-2026-0001'), findsWidgets);
+      expect(find.text('MTOP-2026-0001'), findsWidgets);
     });
 
     testWidgets('opens the certificate through a signed URL', (tester) async {
       final record = _record(
         id: 'r1',
-        certificateStoragePath: 'op-1/SBTF-2026-0001.pdf',
+        certificateStoragePath: 'op-1/MTOP-2026-0001.pdf',
       );
       final service = _FakeCertificateService(records: [record]);
       Uri? launched;
@@ -371,7 +371,7 @@ void main() {
       expect(service.verifiedValues, [_scannedPayload]);
       expect(find.text('Valid franchise'), findsOneWidget);
       expect(find.text('J*** D*** C***'), findsOneWidget);
-      expect(find.text('SBTF-2026-0001'), findsOneWidget);
+      expect(find.text('MTOP-2026-0001'), findsOneWidget);
     });
 
     testWidgets('a typed code is verified the same way', (tester) async {

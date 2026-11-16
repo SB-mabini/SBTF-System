@@ -1,5 +1,5 @@
 -- ===========================================================================
--- SBTF System — Phase 1.2
+-- MTOP System — Phase 1.2
 -- Workflow tables for the staff-driven franchising process: form requests,
 -- scheduled appointments/hearings, document release, plus the processing
 -- pipeline columns on franchise_applications.
