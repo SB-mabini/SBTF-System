@@ -592,9 +592,30 @@ Deno.serve(async (request: Request) => {
       // Ban the account in Supabase Auth as well, so existing refresh tokens
       // stop working immediately (the ~1 hour access token is still rejected by
       // RLS because current_profile_id() only resolves active profiles).
-      await adminClient.auth.admin.updateUserById(target.auth_user_id, {
-        ban_duration: action === "deactivate" ? "876000h" : "none",
-      });
+      // Reactivation must lift the ban, otherwise the profile reads `active`
+      // while sign-in still answers "User is banned".
+      const { error: banError } = await adminClient.auth.admin.updateUserById(
+        target.auth_user_id,
+        { ban_duration: action === "deactivate" ? "876000h" : "none" },
+      );
+
+      if (banError) {
+        console.error("admin-users: Auth ban update failed", {
+          profileId,
+          action,
+          message: banError.message,
+        });
+        return errorResponse(
+          "auth_ban_failed",
+          action === "deactivate"
+            ? "The profile was deactivated, but the sign-in ban could not be applied in Supabase Auth: " +
+                `${banError.message}. The session may still be able to sign in; retry, then check Auth → Users.`
+            : "The profile was activated, but the sign-in ban could not be lifted in Supabase Auth: " +
+                `${banError.message}. Sign-in will still answer "User is banned"; retry, then check Auth → Users.`,
+          502,
+          origin,
+        );
+      }
     }
 
     return json({ ok: true, profile: updated }, 200, origin);

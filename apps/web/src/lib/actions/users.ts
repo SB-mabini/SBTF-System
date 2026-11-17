@@ -37,36 +37,30 @@ export async function setAccountStatusAction(input: {
     return { ok: false, message: "A reason of at least 5 characters is required." };
   }
 
-  // Account deactivation also needs the Supabase Auth ban, which requires the
-  // service-role key — so it runs through the admin-users Edge Function.
-  if (input.status !== "active") {
-    return deactivateThroughEdgeFunction(input);
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("rpc_admin_set_account_status", {
-    p_profile_id: input.profileId,
-    p_status: "active",
-    p_reason: null,
-  });
-
-  revalidatePath("/admin/users");
-  revalidatePath(`/admin/users/${input.profileId}`);
-  return error ? { ok: false, message: error.message } : { ok: true, message: "Account activated." };
+  // Both directions run through the admin-users Edge Function because the
+  // Supabase Auth ban is service-role-only. Activating through the RPC alone
+  // cleared the profile status but left `banned_until` in place, so a
+  // reactivated account still answered "User is banned" at sign-in.
+  return changeStatusThroughEdgeFunction(input);
 }
 
-async function deactivateThroughEdgeFunction(input: {
+async function changeStatusThroughEdgeFunction(input: {
   profileId: string;
   status: AccountStatus;
   reason?: string;
 }): Promise<ActionState> {
+  const activating = input.status === "active";
   const supabase = await createClient();
   const { data, error } = await supabase.functions.invoke("admin-users", {
     body: {
-      action: "deactivate",
+      action: activating ? "activate" : "deactivate",
       profile_id: input.profileId,
-      status: input.status === "suspended" ? "suspended" : "inactive",
-      reason: input.reason,
+      ...(activating
+        ? {}
+        : {
+            status: input.status === "suspended" ? "suspended" : "inactive",
+            reason: input.reason,
+          }),
     },
   });
 
@@ -74,11 +68,16 @@ async function deactivateThroughEdgeFunction(input: {
   revalidatePath(`/admin/users/${input.profileId}`);
 
   if (error) {
-    return edgeFunctionFailure(error, "The account could not be deactivated");
+    return edgeFunctionFailure(
+      error,
+      activating ? "The account could not be activated" : "The account could not be deactivated",
+    );
   }
   if (data?.error) return { ok: false, message: String(data.message ?? data.error) };
 
-  return { ok: true, message: "Account deactivated. The session can no longer access any data." };
+  return activating
+    ? { ok: true, message: "Account activated. The sign-in ban has been lifted." }
+    : { ok: true, message: "Account deactivated. The session can no longer access any data." };
 }
 
 /**
