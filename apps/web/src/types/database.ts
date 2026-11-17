@@ -168,6 +168,25 @@ export interface Toda {
   updated_at: string;
 }
 
+/** One row of the anonymised membership masterlist (no personal data). */
+export interface TodaMember {
+  id: string;
+  toda_id: string;
+  member_ref: string;
+  display_name: string;
+  /** Set once the member claims the roster entry with a real account. */
+  profile_id: string | null;
+  year_joined: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TodaMembership {
+  toda: Toda;
+  members: TodaMember[];
+}
+
 export interface FranchiseApplication {
   id: string;
   application_number: string;

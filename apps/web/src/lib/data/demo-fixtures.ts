@@ -31,6 +31,8 @@ import type {
   SystemSetting,
   Toda,
   TodaAnalytics,
+  TodaMember,
+  TodaMembership,
   TrendPoint,
 } from "@/types/database";
 import { REQUIRED_DOCUMENTS } from "@/lib/constants";
@@ -220,6 +222,34 @@ export const demoProfiles: Profile[] = (() => {
 })();
 
 const driverProfiles = demoProfiles.filter((profile) => profile.role === "driver");
+
+/**
+ * Anonymised TODA roster for preview mode: one row per member counted in
+ * [demoTodas], mirroring the shape of the live `toda_members` table. A handful
+ * of rows are linked to demonstration driver accounts so the "linked account"
+ * column is not uniformly empty.
+ */
+export const demoTodaMembership: TodaMembership[] = demoTodas.map((toda, todaIndex) => {
+  const drivers = driverProfiles.filter((profile) => profile.toda_id === toda.id);
+  const members: TodaMember[] = Array.from(
+    { length: toda.members_count },
+    (_, index) => ({
+      id: uuid(0x4000 + todaIndex * 100 + index),
+      toda_id: toda.id,
+      member_ref: `${toda.code}-M${String(index + 1).padStart(3, "0")}`,
+      display_name: `${FIRST[(todaIndex * 7 + index) % FIRST.length]} ${
+        LAST[(todaIndex * 11 + index * 3) % LAST.length]
+      }`,
+      profile_id: drivers[index]?.id ?? null,
+      year_joined: 2008 + ((todaIndex + index) % 18),
+      is_active: index % 23 !== 0,
+      created_at: iso(300),
+      updated_at: iso(30),
+    }),
+  );
+
+  return { toda, members };
+});
 
 export const demoApplications: FranchiseApplicationDetail[] = (() => {
   const applications: FranchiseApplicationDetail[] = [];

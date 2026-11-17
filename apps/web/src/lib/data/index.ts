@@ -38,6 +38,8 @@ import type {
   SystemSetting,
   Toda,
   TodaAnalytics,
+  TodaMember,
+  TodaMembership,
   TrendPoint,
   UserRole,
 } from "@/types/database";
@@ -203,6 +205,31 @@ export async function listTodas(): Promise<Toda[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("todas").select("*").order("name");
   return (data ?? []) as unknown as Toda[];
+}
+
+/**
+ * Every TODA with its anonymised membership masterlist, for the multi-sheet
+ * membership workbook. Ordered by TODA name so sheet order is stable, and by
+ * display name inside each TODA.
+ */
+export async function listTodaMembership(): Promise<TodaMembership[]> {
+  if (isDemoMode()) return demo.demoTodaMembership;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todas")
+    .select("*, toda_members(*)")
+    .order("name");
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as Array<Toda & { toda_members: TodaMember[] }>).map(
+    ({ toda_members, ...toda }) => ({
+      toda: toda as Toda,
+      members: [...(toda_members ?? [])].sort((a, b) =>
+        a.display_name.localeCompare(b.display_name, "en"),
+      ),
+    }),
+  );
 }
 
 export async function listBarangays(): Promise<Barangay[]> {

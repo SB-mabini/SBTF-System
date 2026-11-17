@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { Parser } from "json2csv";
 
@@ -10,7 +11,9 @@ import {
   getSessionProfile,
   listActivityLogs,
   listApplications,
+  listBarangays,
   listFranchiseRecords,
+  listTodaMembership,
   listUsers,
 } from "@/lib/data";
 
@@ -28,12 +31,16 @@ type Row = Record<string, unknown>;
 
 const ADMIN_ONLY = new Set(["users"]);
 
-const DATASETS: Record<string, { label: string; adminOnly?: boolean }> = {
+const DATASETS: Record<
+  string,
+  { label: string; adminOnly?: boolean; format?: "xlsx" }
+> = {
   applications: { label: "franchise-applications" },
   records: { label: "franchise-records" },
   activity: { label: "activity-log" },
   users: { label: "user-directory", adminOnly: true },
   toda: { label: "toda-summary" },
+  "toda-membership": { label: "toda-membership", format: "xlsx" },
   compliance: { label: "document-compliance" },
   expiring: { label: "expiring-franchises" },
   processing: { label: "processing-performance" },
@@ -70,6 +77,20 @@ export async function GET(request: Request) {
       { error: "forbidden", message: "This export is restricted to administrators." },
       { status: 403 },
     );
+  }
+
+  if (specification.format === "xlsx") {
+    try {
+      return await todaMembershipWorkbook(specification.label);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: "export_failed",
+          message: error instanceof Error ? error.message : "The export could not be produced.",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   const from = url.searchParams.get("from") ?? undefined;
@@ -113,6 +134,127 @@ export async function GET(request: Request) {
     headers: {
       "content-type": "text/csv; charset=utf-8",
       "content-disposition": `attachment; filename="sbtf-${specification.label}-${stamp}.csv"`,
+      "cache-control": "no-store",
+    },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* TODA membership workbook                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Excel limits sheet names to 31 characters and forbids `[]:*?/\`. Names are
+ * also case-insensitively unique, so a numeric suffix resolves collisions.
+ */
+function safeSheetName(name: string, used: Set<string>): string {
+  const base =
+    name.replace(/[[\]:*?/\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 31) || "TODA";
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate.toLowerCase())) {
+    const marker = ` (${suffix++})`;
+    candidate = base.slice(0, 31 - marker.length) + marker;
+  }
+  used.add(candidate.toLowerCase());
+  return candidate;
+}
+
+function styleSheet(sheet: ExcelJS.Worksheet): void {
+  const header = sheet.getRow(1);
+  header.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF271564" } };
+  header.height = 20;
+  header.alignment = { vertical: "middle" };
+
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+  if (sheet.columnCount > 0) {
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: sheet.columnCount },
+    };
+  }
+}
+
+/**
+ * A workbook with one sheet per TODA plus a summary sheet listing every
+ * association. Parsed with the caller's session, so RLS applies exactly as it
+ * does on screen; only the anonymised roster is exported.
+ */
+async function todaMembershipWorkbook(label: string): Promise<NextResponse> {
+  const [groups, barangays] = await Promise.all([listTodaMembership(), listBarangays()]);
+
+  if (groups.length === 0) {
+    return NextResponse.json(
+      { error: "empty", message: "There are no TODAs to export." },
+      { status: 404 },
+    );
+  }
+
+  const barangayNames = new Map(barangays.map((barangay) => [barangay.code, barangay.name]));
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "MTOP System";
+  workbook.created = new Date();
+
+  const summary = workbook.addWorksheet("Summary");
+  summary.columns = [
+    { header: "TODA", key: "name", width: 32 },
+    { header: "Code", key: "code", width: 14 },
+    { header: "Barangay", key: "barangay", width: 24 },
+    { header: "Zone", key: "zone", width: 10 },
+    { header: "Active", key: "active", width: 9 },
+    { header: "Members", key: "members", width: 10 },
+    { header: "Active members", key: "activeMembers", width: 15 },
+    { header: "Linked accounts", key: "linked", width: 16 },
+  ];
+
+  for (const { toda, members } of groups) {
+    summary.addRow({
+      name: toda.name,
+      code: toda.code,
+      barangay: toda.barangay_code
+        ? (barangayNames.get(toda.barangay_code) ?? toda.barangay_code)
+        : "",
+      zone: toda.zone ?? "",
+      active: toda.is_active ? "Yes" : "No",
+      members: members.length,
+      activeMembers: members.filter((member) => member.is_active).length,
+      linked: members.filter((member) => member.profile_id).length,
+    });
+  }
+  styleSheet(summary);
+
+  // "Summary" is reserved above; TODA names cannot collide with it.
+  const usedNames = new Set<string>(["summary"]);
+  for (const { toda, members } of groups) {
+    const sheet = workbook.addWorksheet(safeSheetName(toda.name, usedNames));
+    sheet.columns = [
+      { header: "Member reference", key: "memberRef", width: 22 },
+      { header: "Display name", key: "displayName", width: 30 },
+      { header: "Year joined", key: "yearJoined", width: 12 },
+      { header: "Status", key: "status", width: 10 },
+      { header: "Linked account", key: "linked", width: 15 },
+    ];
+
+    for (const member of members) {
+      sheet.addRow({
+        memberRef: member.member_ref,
+        displayName: member.display_name,
+        yearJoined: member.year_joined ?? "",
+        status: member.is_active ? "Active" : "Inactive",
+        linked: member.profile_id ? "Yes" : "No",
+      });
+    }
+    styleSheet(sheet);
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  return new NextResponse(buffer, {
+    headers: {
+      "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content-disposition": `attachment; filename="sbtf-${label}-${stamp}.xlsx"`,
       "cache-control": "no-store",
     },
   });

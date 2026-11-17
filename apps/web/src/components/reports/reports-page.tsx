@@ -1,4 +1,12 @@
-import { BarChart3, FileDown, FileText, History, Stamp, Users } from "lucide-react";
+import {
+  BarChart3,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  History,
+  Stamp,
+  Users,
+} from "lucide-react";
 
 import { Badge, Card, CardHeader, SectionTitle } from "@/components/ui";
 import {
@@ -19,6 +27,8 @@ interface ReportDefinition {
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
   columns: string[];
+  /** CSV when omitted; membership exports use a multi-sheet Excel workbook. */
+  format?: "csv" | "xlsx";
 }
 
 const REPORTS: ReportDefinition[] = [
@@ -73,6 +83,15 @@ const REPORTS: ReportDefinition[] = [
     description: "Applications, active franchises and masterlist size per association.",
     icon: Users,
     columns: ["toda", "members", "applications", "approved", "active_franchises"],
+  },
+  {
+    dataset: "toda-membership",
+    title: "TODA membership masterlist",
+    description:
+      "Every association and its anonymised roster. The workbook has a summary sheet listing all TODAs, then one sheet per TODA with its members.",
+    icon: FileSpreadsheet,
+    format: "xlsx",
+    columns: ["member_ref", "display_name", "year_joined", "status", "linked_account"],
   },
   {
     dataset: "activity",
@@ -171,6 +190,10 @@ export async function ReportsPage({ session }: { session: SessionContext }) {
               the office&apos;s data-privacy rules and delete copies that are no longer needed.
             </li>
             <li>
+              The TODA membership masterlist is an Excel workbook rather than a CSV: a summary tab
+              lists every association, then each TODA has its own tab with its roster.
+            </li>
+            <li>
               The audit trail export is not editable by any role: entries can only be appended by the
               system.
             </li>
@@ -182,6 +205,7 @@ export async function ReportsPage({ session }: { session: SessionContext }) {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {available.map((report) => {
           const Icon = report.icon;
+          const workbook = report.format === "xlsx";
           const params = new URLSearchParams({ dataset: report.dataset });
           return (
             <Card key={report.dataset}>
@@ -197,8 +221,12 @@ export async function ReportsPage({ session }: { session: SessionContext }) {
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-[0.8125rem] font-medium text-white hover:bg-primary-600"
                 href={`/api/reports/export?${params.toString()}`}
               >
-                <FileDown className="h-4 w-4" />
-                Download CSV
+                {workbook ? (
+                  <FileSpreadsheet className="h-4 w-4" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                {workbook ? "Download Excel workbook" : "Download CSV"}
               </a>
             </Card>
           );
