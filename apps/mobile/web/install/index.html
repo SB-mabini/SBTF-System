@@ -400,6 +400,49 @@
   .note-card.warn { background: var(--warning-tint); border-color: #f0e2b8; }
   .note-card.warn h3 { color: var(--warning); }
 
+  .features {
+    margin-top: 32px;
+  }
+
+  .features > h2 {
+    margin-bottom: 16px;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .feature-card {
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .feature-card h3 {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: var(--ink-strong);
+  }
+
+  .feature-card p {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .feature-card.profile {
+    background: var(--primary-tint);
+    border-color: var(--primary-tint-strong);
+  }
+
+  .feature-card.profile h3 { color: var(--primary-dark); }
+
+  .feature-card.profile p { color: var(--ink); }
+
   footer {
     border-top: 1px solid var(--border);
     padding: 22px 20px 30px;
@@ -429,7 +472,7 @@
 
   @media print {
     body { background: #fff; }
-    .bar, .download .btn, .qr-link button, .note, footer { display: none; }
+    .bar, .download .btn, .qr-link button, .note, .features, footer { display: none; }
     .qr-card { box-shadow: none; border: 2px solid #14131e; }
     main { padding: 0; }
     .hero { grid-template-columns: 1fr 280px; }
@@ -520,6 +563,24 @@
     </aside>
   </section>
 
+  <section class="features">
+    <h2 data-i18n="features_title">What you can do in the app</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3 data-i18n="feature_apply_title">File or renew a franchise</h3>
+        <p data-i18n="feature_apply_body">Start a new franchise application or renew an expiring one, and upload the four requirements straight from your phone.</p>
+      </div>
+      <div class="feature-card">
+        <h3 data-i18n="feature_track_title">Follow the review</h3>
+        <p data-i18n="feature_track_body">See where your application is, read staff remarks, replace a rejected document, and open your certificate once it is approved.</p>
+      </div>
+      <div class="feature-card profile">
+        <h3 data-i18n="feature_profile_title">Your operator profile</h3>
+        <p data-i18n="feature_profile_body">Open your profile to see your TODA membership, application history and recorded fees. Keep your name, contact number, address and barangay up to date. Your TODA and account status are read-only — the Municipal Transport Office changes those.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="note">
     <div class="note-card safe">
       <h3 data-i18n="safe_title">Install only from this page</h3>
@@ -549,7 +610,7 @@
       en: {
         eyebrow: 'Android app',
         h1: 'Install the MTOP app on your phone',
-        lede: 'The official app for tricycle drivers and operators of Mabini, Batangas. File a franchise application, upload your requirements, follow the review, and keep your certificate — wherever you are.',
+        lede: 'The official app for tricycle drivers and operators of Mabini, Batangas. File a franchise application, upload your requirements, follow the review, keep your certificate, and manage your operator profile — wherever you are.',
         fact_android: 'Android 7.0 or newer',
         fact_free: 'Free',
         fact_data: 'Works on mobile data',
@@ -567,6 +628,13 @@
         step3_body: 'Android will ask permission to install from your browser. Open Settings, allow “Install unknown apps” for that browser, then tap the downloaded file.',
         step4_title: 'Open MTOP and sign in',
         step4_body: 'Create an account with your e-mail address, or sign in if you already registered. A 6-digit code sent to your e-mail confirms the account.',
+        features_title: 'What you can do in the app',
+        feature_apply_title: 'File or renew a franchise',
+        feature_apply_body: 'Start a new franchise application or renew an expiring one, and upload the four requirements straight from your phone.',
+        feature_track_title: 'Follow the review',
+        feature_track_body: 'See where your application is, read staff remarks, replace a rejected document, and open your certificate once it is approved.',
+        feature_profile_title: 'Your operator profile',
+        feature_profile_body: 'Open your profile to see your TODA membership, application history and recorded fees. Keep your name, contact number, address and barangay up to date. Your TODA and account status are read-only — the Municipal Transport Office changes those.',
         download_title: 'Download',
         download_primary: 'Download for Android',
         download_32: '32-bit Android (older phones)',
@@ -580,7 +648,7 @@
         update_title: 'Updating',
         update_body: 'Open this page again and download. Android installs the update over the old app and keeps your account — your data lives on the server.',
         ios_title: 'iPhone or iPad',
-        ios_body: 'There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account.',
+        ios_body: 'There is no iOS build yet. Open <a href="../">the web version</a> in Safari and sign in with the same account — your operator profile is there too.',
         footer: 'Municipality of Mabini, Batangas',
         footer_web: 'Open the web version',
         footer_poster: 'Print a poster',
@@ -589,7 +657,7 @@
       fil: {
         eyebrow: 'App na Android',
         h1: 'I-install ang MTOP app sa iyong telepono',
-        lede: 'Ang opisyal na app para sa mga tsuper at operator ng tricycle sa Mabini, Batangas. Maghain ng aplikasyon ng prangkisa, mag-upload ng mga kailangan, sundan ang pagsusuri, at itago ang iyong sertipiko — kahit saan ka man.',
+        lede: 'Ang opisyal na app para sa mga tsuper at operator ng tricycle sa Mabini, Batangas. Maghain ng aplikasyon ng prangkisa, mag-upload ng mga kailangan, sundan ang pagsusuri, itago ang iyong sertipiko, at pamahalaan ang iyong operator profile — kahit saan ka man.',
         fact_android: 'Android 7.0 pataas',
         fact_free: 'Libre',
         fact_data: 'Gumagana sa mobile data',
@@ -607,6 +675,13 @@
         step3_body: 'Hihingi ng pahintulot ang Android na mag-install mula sa iyong browser. Buksan ang Settings, payagan ang “Install unknown apps” para sa browser na iyon, pagkatapos ay pindutin ang na-download na file.',
         step4_title: 'Buksan ang MTOP at mag-sign in',
         step4_body: 'Gumawa ng account gamit ang iyong e-mail, o mag-sign in kung nakarehistro ka na. Ang 6-digit na code na ipapadala sa iyong e-mail ang magpapatunay ng account.',
+        features_title: 'Ano ang kaya mong gawin sa app',
+        feature_apply_title: 'Maghain o magpanibago ng prangkisa',
+        feature_apply_body: 'Magsimula ng bagong aplikasyon ng prangkisa o magpanibago ng malapit nang mag-expire, at i-upload ang apat na kailangan mula sa iyong telepono.',
+        feature_track_title: 'Sundan ang pagsusuri',
+        feature_track_body: 'Tingnan kung nasaan na ang aplikasyon mo, basahin ang mga puna ng staff, palitan ang tinanggihang dokumento, at buksan ang sertipiko kapag naaprubahan na.',
+        feature_profile_title: 'Ang iyong operator profile',
+        feature_profile_body: 'Buksan ang iyong profile para makita ang TODA membership, kasaysayan ng aplikasyon at mga naitalang bayad. Panatilihing tama ang iyong pangalan, contact number, address at barangay. Ang TODA at account status ay hindi mababago — ang Municipal Transport Office lang ang pwedeng magbago ng mga ito.',
         download_title: 'I-download',
         download_primary: 'I-download para sa Android',
         download_32: '32-bit na Android (lumang telepono)',
@@ -620,7 +695,7 @@
         update_title: 'Pag-update',
         update_body: 'Buksan muli ang pahinang ito at mag-download. I-iinstall ng Android ang update sa ibabaw ng lumang app at mananatili ang iyong account — nasa server ang iyong data.',
         ios_title: 'iPhone o iPad',
-        ios_body: 'Wala pang iOS build. Buksan ang <a href="../">web version</a> sa Safari at mag-sign in gamit ang parehong account.',
+        ios_body: 'Wala pang iOS build. Buksan ang <a href="../">web version</a> sa Safari at mag-sign in gamit ang parehong account — kasama ang iyong operator profile.',
         footer: 'Munisipalidad ng Mabini, Batangas',
         footer_web: 'Buksan ang web version',
         footer_poster: 'Mag-print ng poster',

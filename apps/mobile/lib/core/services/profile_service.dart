@@ -27,9 +27,10 @@ class ProfileService extends SupabaseService {
 
   /// Saves the operator-editable fields of the caller's own profile.
   ///
-  /// `toda_id`, `role` and `account_status` are not part of the payload even
-  /// though the database grants update on the first: the UI never offers them,
-  /// and keeping them out of this method makes that guarantee explicit.
+  /// `toda_id`, `role` and `account_status` are not part of the payload: the UI
+  /// never offers them, the migration `20261118000200` removes `toda_id` from the
+  /// client update grant, and keeping them out of this method makes the
+  /// guarantee explicit even if that grant ever changes.
   Future<void> updateMine({
     required String firstName,
     required String lastName,

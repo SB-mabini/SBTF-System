@@ -321,8 +321,10 @@ source — exactly what the code flow exists to avoid.
 
 The Flutter driver/operator app is published **outside** the Play Store. Drivers install it
 from `https://sbtf-application.vercel.app/install/` (English/Filipino, QR code, step-by-step
-instructions, downloadable QR for barangay notice boards, and a one-page A4 poster at
-`/install/poster.html`).
+instructions, a short overview of what the app does — franchising, the review tracker and
+the operator profile — downloadable QR for barangay notice boards, and a one-page A4 poster
+at `/install/poster.html`). The same operator profile screen ships in the Flutter web build,
+linked from the page as "Open the web version" for drivers without an Android phone.
 
 - **Hosting.** The page is static HTML from `apps/mobile/web/install/`, assembled by
   `npm run install:page` into `build/web/install/`. It lives in the **`sbtf-application`**

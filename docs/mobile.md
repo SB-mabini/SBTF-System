@@ -68,6 +68,19 @@ Two behaviour details the app relies on:
 | 8 — hardening & release | Hardening pass over the finished screens, with no new screen and no new dependency: one classified error surface for every slice (`lib/core/widgets/error_view.dart`), a stronger error taxonomy with a reason + actionable hint mirroring the web console (`lib/core/app_error.dart`), the session gate classifying and retrying its own failures (`lib/features/auth/auth_gate.dart`), and optional release signing for the Android build (`android/app/build.gradle.kts`, `android/key.properties.example`, §5) |
 | 9 — appointments | Appointment list and detail (`lib/features/appointments/appointment_list_screen.dart`, `appointment_detail_screen.dart`) over `AppointmentService`: the dashboard gains a "My appointments" row under "Track & updates" carrying the live count of visits still to attend; the list splits the schedule into **Upcoming** and **Past** (the same split the staff console uses), each row showing the kind of visit, the date and time, the venue and the application it belongs to; a row opens the detail, which shows the venue, the date, the status, the outcome and any note the office left, and a way into the owning application's tracker. Appointments are **read-only** — the staff book and close them out from the web console, so the app writes nothing. The slice-7 notification feed deep-links an `appointment_scheduled` / `appointment_updated` notice into this detail |
 
+### Operator profile
+
+Settings → **Operator profile** (`lib/features/profile/operator_profile_screen.dart`)
+over `ProfileService` gives a driver the same view the web console has: personal
+details, TODA membership, application history and the fees recorded against each
+franchise (official receipt, amount, issue and expiry dates). The descriptive
+fields — name, contact number, address and barangay — are editable. TODA,
+membership and account status are read-only, and `ProfileService.updateMine()`
+never sends `toda_id`; the migration `20261118000200_operator_profile_toda_readonly.sql`
+also removes `toda_id` from the client update grant. The same screen ships in the
+Flutter web build, so a driver without an Android phone reaches it through the
+install page's "Open the web version" link.
+
 ### Renewal prefill
 
 A renewal reuses the driver's own stored data instead of asking them to type
@@ -211,7 +224,7 @@ that wraps it (§2).
 
 | Data | Direction | Surface | Implementation |
 |---|---|---|---|
-| Own profile | read | `profiles` by `auth_user_id` (RLS: own row only) | `profileProvider` |
+| Own profile | read + update (descriptive fields) | `profiles` by `auth_user_id` (RLS: own row only; the update grant excludes `toda_id`) | `profileProvider` / `ProfileService.updateMine()` |
 | Auth session | read | `Supabase.auth.onAuthStateChange` | `authStateChangesProvider` |
 | TODA list, barangays | read | `todas`, `barangays` (reference, anon-readable) | `ReferenceService.listTodas()` / `listBarangays()` |
 | Application submission | write (3) | `rpc_driver_submit_application(jsonb)` | `ApplicationService.submit()` via the wizard (`application_form_screen.dart`) |
@@ -383,9 +396,10 @@ Without the file the app still builds and runs; it simply has no push.
 
 
 `https://sbtf-application.vercel.app/install/` is a plain HTML page (not part of
-the Flutter bundle) that shows a QR code, the install steps, and the APK
-download buttons. Print the QR code on a poster; scanning it opens the page on
-the driver's phone.
+the Flutter bundle) that shows a QR code, the install steps, an overview of what
+the app does (including the operator profile module), and the APK download
+buttons. Print the QR code on a poster; scanning it opens the page on the
+driver's phone.
 
 The page has an **English / Filipino** switch in the header (the choice is
 remembered in `localStorage`, and the phone's language is used on first visit).
