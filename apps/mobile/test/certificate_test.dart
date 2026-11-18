@@ -85,6 +85,14 @@ class _FakeCertificateService implements CertificateService {
   Future<List<FranchiseRecord>> listMine() async => records;
 
   @override
+  Future<FranchiseRecord?> getById(String id) async {
+    for (final record in records) {
+      if (record.id == id) return record;
+    }
+    return null;
+  }
+
+  @override
   Stream<List<FranchiseRecord>> watchMine() => Stream.value(records);
 
   @override
@@ -232,6 +240,35 @@ void main() {
       expect(find.byType(QrImageView), findsOneWidget);
       expect(find.text('ABCDEFGHJKLM'), findsWidgets);
       expect(find.text('MTOP-2026-0001'), findsWidgets);
+    });
+
+    testWidgets('hydrates the details of a row opened from the live stream',
+        (tester) async {
+      // The Realtime list cannot join relations, so the row it passes here has
+      // no operator, TODA or vehicle. The screen must re-read the record.
+      final streamed = FranchiseRecord(
+        id: 'r1',
+        applicationId: 'app-r1',
+        operatorId: 'op-1',
+        todaId: 'toda-1',
+        franchiseNumber: 'MTOP-2026-0001',
+        verificationCode: 'ABCDEFGHJKLM',
+        issuedAt: DateTime(2026, 1, 1),
+        expiresAt: DateTime.now().add(const Duration(days: 400)),
+      );
+
+      await _pumpTall(
+        tester,
+        _harness(
+          home: CertificateDetailScreen(record: streamed),
+          service: _FakeCertificateService(records: [_record(id: 'r1')]),
+        ),
+      );
+
+      expect(find.text('Juan Dela Cruz'), findsOneWidget);
+      expect(find.text('Mabini TODA'), findsOneWidget);
+      expect(find.text('ABC 1234'), findsOneWidget);
+      expect(find.text('Honda Wave (2020)'), findsOneWidget);
     });
 
     testWidgets('opens the certificate through a signed URL', (tester) async {

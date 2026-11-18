@@ -276,6 +276,15 @@ final myRecordsProvider = FutureProvider<List<FranchiseRecord>>(
   (ref) => ref.watch(certificateServiceProvider).listMine(),
 );
 
+/// One issued franchise with its TODA, application and operator embedded.
+///
+/// The certificate list streams rows straight from the table, and Realtime
+/// cannot carry joined relations, so the detail screen re-reads the tapped row
+/// through this provider before it renders the operator, plate and vehicle.
+final recordDetailProvider = FutureProvider.family<FranchiseRecord?, String>(
+  (ref, id) => ref.watch(certificateServiceProvider).getById(id),
+);
+
 /// The franchise to feature on the home screen (slice 6).
 final activeRecordProvider = FutureProvider<FranchiseRecord?>(
   (ref) => ref.watch(certificateServiceProvider).activeRecord(),

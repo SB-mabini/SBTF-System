@@ -26,6 +26,11 @@ class CertificateDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final baseUrlAsync = ref.watch(verificationBaseUrlProvider);
+    // The list opens this screen from a Realtime row, which carries no joined
+    // relations. Keep showing that row immediately, then swap in the hydrated
+    // record (operator, TODA, plate and vehicle) once it arrives.
+    final detailAsync = ref.watch(recordDetailProvider(record.id));
+    final current = detailAsync.valueOrNull ?? record;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Franchise certificate')),
@@ -33,21 +38,21 @@ class CertificateDetailScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.sm),
           children: [
-            _Header(record: record),
+            _Header(record: current),
             const SizedBox(height: AppSpacing.md),
             const _SectionTitle('Verification QR'),
             baseUrlAsync.when(
               loading: () => const _QrLoading(),
-              error: (_, __) => _QrCard(record: record, baseUrl: null),
-              data: (baseUrl) => _QrCard(record: record, baseUrl: baseUrl),
+              error: (_, __) => _QrCard(record: current, baseUrl: null),
+              data: (baseUrl) => _QrCard(record: current, baseUrl: baseUrl),
             ),
             const SizedBox(height: AppSpacing.md),
             const _SectionTitle('Details'),
-            _InfoCard(record: record),
+            _InfoCard(record: current),
             const SizedBox(height: AppSpacing.md),
             const _SectionTitle('Certificate file'),
             _CertificateActions(
-                record: record, baseUrl: baseUrlAsync.valueOrNull),
+                record: current, baseUrl: baseUrlAsync.valueOrNull),
           ],
         ),
       ),

@@ -88,13 +88,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             l10n.updateAvailableContent(latest.version, latest.build),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.settingsLater),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.settingsOpenInstallPage),
+            // One full-width primary action with a secondary below it. The
+            // theme gives every filled button a full-width minimum, so the
+            // default horizontal actions bar would overflow and leave "Later"
+            // floating above a stretched button.
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(l10n.settingsOpenInstallPage),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(l10n.settingsLater),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

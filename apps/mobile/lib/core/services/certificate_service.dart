@@ -13,6 +13,10 @@ class CertificateService extends SupabaseService {
   CertificateService(super.client);
 
   static const String _recordSelect = '*, toda:todas(id, name, code), '
+      // Two foreign keys point at profiles (operator_id and archived_by), so the
+      // operator embed has to name the constraint; otherwise PostgREST refuses
+      // the join as ambiguous and every operator name comes back empty.
+      'operator:profiles!franchise_records_operator_id_fkey(full_name), '
       'application:franchise_applications(plate_number, vehicle_make, vehicle_model, vehicle_year)';
 
   /// The caller's own franchise records, newest first.
