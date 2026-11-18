@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -95,7 +96,21 @@ export async function RecordDetail({
               <Field label="Verification code" value={record.verification_code} mono />
               <Field label="Issued" value={formatDate(record.issued_at)} />
               <Field label="Valid until" value={formatDate(record.expires_at)} />
-              <Field label="Operator" value={record.operator?.full_name ?? "—"} />
+              <Field
+                label="Operator"
+                value={
+                  record.operator ? (
+                    <Link
+                      className="text-primary hover:underline"
+                      href={`${basePath}/operators/${record.operator.id}`}
+                    >
+                      {record.operator.full_name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
               <Field label="Operator contact" value={record.operator?.contact_number ?? "—"} />
               <Field label="TODA" value={record.toda?.name ?? "—"} />
               <Field
@@ -221,7 +236,15 @@ export async function RecordDetail({
   );
 }
 
-function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function Field({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
   return (
     <div>
       <dt className="text-[0.6875rem] uppercase tracking-wide text-muted">{label}</dt>

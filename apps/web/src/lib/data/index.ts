@@ -914,6 +914,117 @@ export async function getUserProfile(id: string): Promise<Profile | null> {
   return (data ?? null) as Profile | null;
 }
 
+/**
+ * Everything the operator profile module shows in one read: the person, their
+ * TODA roster entry, every franchise application they filed and every franchise
+ * record issued to them (which carries the official receipt and fee).
+ *
+ * Readings are RLS-scoped, so a staff member sees the same rows the rest of the
+ * console shows them; a driver cannot reach this function at all because the
+ * pages that call it require a staff session.
+ */
+export interface OperatorProfileBundle {
+  profile: Profile;
+  membership: TodaMember | null;
+  applications: FranchiseApplicationDetail[];
+  records: FranchiseRecordDetail[];
+}
+
+export async function getOperatorProfile(
+  id: string,
+): Promise<OperatorProfileBundle | null> {
+  if (isDemoMode()) {
+    const profile = demo.demoProfiles.find((candidate) => candidate.id === id);
+    if (!profile) return null;
+
+    const toda = profile.toda_id
+      ? demo.demoTodas.find((candidate) => candidate.id === profile.toda_id)
+      : undefined;
+    const enriched: Profile = {
+      ...profile,
+      toda: toda
+        ? {
+            id: toda.id,
+            code: toda.code,
+            name: toda.name,
+            barangay: {
+              name:
+                demo.demoBarangays.find((barangay) => barangay.code === toda.barangay_code)
+                  ?.name ?? null,
+            },
+          }
+        : null,
+      barangay: profile.barangay_code
+        ? (demo.demoBarangays.find((barangay) => barangay.code === profile.barangay_code) ?? null)
+        : null,
+    };
+
+    const membership =
+      demo.demoTodaMembership
+        .flatMap((group) => group.members)
+        .find((member) => member.profile_id === id) ?? null;
+
+    return {
+      profile: enriched,
+      membership: membership
+        ? {
+            id: `${id}-membership`,
+            toda_id: profile.toda_id ?? "",
+            member_ref: membership.member_ref ?? "",
+            display_name: membership.full_name,
+            profile_id: id,
+            year_joined: membership.year_joined,
+            is_active: membership.is_active,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at,
+          }
+        : null,
+      applications: demo.demoApplications.filter(
+        (application) => application.applicant_id === id,
+      ),
+      records: demo.demoRecords.filter((record) => record.operator_id === id),
+    };
+  }
+
+  const supabase = await createClient();
+  const [profileResult, membershipResult, applicationsResult, recordsResult] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "*, toda:todas(id, code, name, barangay:barangays(name)), barangay:barangays(code, name)",
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase.from("toda_members").select("*").eq("profile_id", id).maybeSingle(),
+      supabase
+        .from("franchise_applications")
+        .select(APPLICATION_SELECT)
+        .eq("applicant_id", id)
+        .order("submitted_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("franchise_records")
+        .select(RECORD_SELECT)
+        .eq("operator_id", id)
+        .order("issued_at", { ascending: false })
+        .limit(100),
+    ]);
+
+  if (profileResult.error) throw profileResult.error;
+  if (!profileResult.data) return null;
+  if (membershipResult.error) throw membershipResult.error;
+  if (applicationsResult.error) throw applicationsResult.error;
+  if (recordsResult.error) throw recordsResult.error;
+
+  return {
+    profile: profileResult.data as unknown as Profile,
+    membership: (membershipResult.data ?? null) as unknown as TodaMember | null,
+    applications: (applicationsResult.data ?? []) as unknown as FranchiseApplicationDetail[],
+    records: (recordsResult.data ?? []) as unknown as FranchiseRecordDetail[],
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Activity log                                                                */
 /* -------------------------------------------------------------------------- */

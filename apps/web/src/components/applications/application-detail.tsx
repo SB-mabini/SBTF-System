@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Archive, Building2, Car, FileText, History, Stamp, User } from "lucide-react";
 
@@ -155,7 +156,21 @@ export async function ApplicationDetail({
           <Card>
             <CardHeader title="Applicant account" icon={User} />
             <dl className="space-y-2 text-[0.8125rem]">
-              <Row label="Name" value={application.applicant?.full_name ?? "—"} />
+              <Row
+                label="Name"
+                value={
+                  application.applicant ? (
+                    <Link
+                      className="text-primary hover:underline"
+                      href={`${basePath}/operators/${application.applicant.id}`}
+                    >
+                      {application.applicant.full_name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
               <Row label="E-mail" value={application.applicant?.email ?? "—"} />
               <Row label="Contact" value={application.applicant?.contact_number ?? "—"} />
               <Row
@@ -285,7 +300,7 @@ function Row({
   badge,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   mono?: boolean;
   badge?: "success" | "warning";
 }) {

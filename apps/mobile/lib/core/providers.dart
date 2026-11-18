@@ -24,6 +24,7 @@ import 'services/certificate_service.dart';
 import 'services/document_service.dart';
 import 'services/form_request_service.dart';
 import 'services/notification_service.dart';
+import 'services/profile_service.dart';
 import 'services/reference_service.dart';
 
 /// The shared Supabase client.
@@ -72,7 +73,7 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
 
   final row = await client
       .from('profiles')
-      .select()
+      .select('*, toda:todas(id, name, code), barangay:barangays(code, name)')
       .eq('auth_user_id', user.id)
       .maybeSingle();
 
@@ -182,6 +183,11 @@ final certificateServiceProvider = Provider<CertificateService>(
 /// Slice 7 — notifications.
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(ref.watch(supabaseClientProvider)),
+);
+
+/// Operator profile — reading and updating the caller's own details.
+final profileServiceProvider = Provider<ProfileService>(
+  (ref) => ProfileService(ref.watch(supabaseClientProvider)),
 );
 
 /// Slice 9 — in-person appointments booked by the municipal staff.

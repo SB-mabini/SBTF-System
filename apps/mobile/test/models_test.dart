@@ -140,6 +140,9 @@ void main() {
         'issued_at': '2026-01-01T00:00:00Z',
         'expires_at': '2027-01-01T00:00:00Z',
         'certificate_storage_path': 'p/o1/r1.pdf',
+        'official_receipt_number': 'OR-2026-0042',
+        'official_receipt_date': '2026-01-05T00:00:00Z',
+        'amount_paid': 350.5,
         'toda': {'name': 'San Juan TODA'},
         'operator': {'full_name': 'Juan Dela Cruz'},
         'application': {
@@ -156,6 +159,9 @@ void main() {
       expect(record.vehicleYear, 2020);
       expect(record.hasCertificate, isTrue);
       expect(record.vehicleDescription, 'Honda TMX (2020)');
+      expect(record.officialReceiptNumber, 'OR-2026-0042');
+      expect(record.officialReceiptDate, isNotNull);
+      expect(record.amountPaid, 350.5);
     });
 
     test('reports the coarse state', () {

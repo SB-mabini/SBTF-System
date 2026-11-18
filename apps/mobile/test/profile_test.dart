@@ -81,5 +81,31 @@ void main() {
       expect(profile.isDriver, isTrue);
       expect(profile.isActive, isTrue);
     });
+
+    test('parses the TODA, barangay and address embedded in the profile query', () {
+      final profile = Profile.fromMap({
+        'id': 'abc',
+        'role': 'driver',
+        'first_name': 'Juan',
+        'last_name': 'Dela Cruz',
+        'email': 'juan@example.com',
+        'contact_number': '09171234567',
+        'address_line': 'Purok 2',
+        'barangay_code': '137404001',
+        'toda_id': 'toda-1',
+        'created_at': '2025-06-01T08:00:00Z',
+        'account_status': 'active',
+        'toda': {'id': 'toda-1', 'name': 'TODA San Juan', 'code': 'TODA-001'},
+        'barangay': {'code': '137404001', 'name': 'San Juan'},
+      });
+
+      expect(profile.addressLine, 'Purok 2');
+      expect(profile.barangayCode, '137404001');
+      expect(profile.barangayName, 'San Juan');
+      expect(profile.todaId, 'toda-1');
+      expect(profile.todaName, 'TODA San Juan');
+      expect(profile.todaCode, 'TODA-001');
+      expect(profile.createdAt, DateTime.parse('2025-06-01T08:00:00Z'));
+    });
   });
 }

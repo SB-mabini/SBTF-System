@@ -11,6 +11,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  LinkButton,
   Pagination,
   SectionTitle,
   Spinner,
@@ -195,6 +196,16 @@ export default async function AdminUsersPage({
                   <CardHeader
                     title={profile.full_name}
                     description={`${profile.email} · ${profile.contact_number ?? "no contact number recorded"}`}
+                    action={
+                      isStaffTab ? undefined : (
+                        <LinkButton
+                          variant="outline"
+                          href={`/admin/operators/${profile.id}`}
+                        >
+                          View profile
+                        </LinkButton>
+                      )
+                    }
                   />
                   <dl className="grid gap-x-6 gap-y-2 text-[0.8125rem] sm:grid-cols-3">
                     {isStaffTab ? (

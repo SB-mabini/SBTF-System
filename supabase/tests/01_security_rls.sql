@@ -202,6 +202,13 @@ select lives_ok(
 );
 
 select throws_ok(
+  $$update public.profiles set toda_id = (select id from public.todas order by code desc limit 1) where id = (select driver1 from ids)$$,
+  '42501',
+  null,
+  'a driver cannot move themselves to another TODA'
+);
+
+select throws_ok(
   $$insert into public.franchise_records (application_id, operator_id, toda_id, franchise_number,
       verification_code, issued_at, expires_at)
     values ((select id from fx_app), (select driver1 from ids), (select toda from ids),

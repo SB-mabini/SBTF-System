@@ -14,6 +14,7 @@ import '../../core/update_service.dart';
 import '../../core/widgets/brand_mark.dart';
 import '../onboarding/full_agreement_screen.dart';
 import '../onboarding/onboarding_flow.dart';
+import '../profile/operator_profile_screen.dart';
 
 /// Settings: language, User Agreement status, and app information.
 ///
@@ -220,6 +221,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
+
+                _SectionLabel('My profile'),
+                const SizedBox(height: AppSpacing.xs),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.badge_outlined),
+                    title: const Text('Operator profile'),
+                    subtitle: const Text(
+                      'View your TODA, applications and fees. Edit your name, contact and address.',
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.inkMuted,
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OperatorProfileScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
 
                 _SectionLabel(l10n.settingsPreferences),
                 const SizedBox(height: AppSpacing.xs),

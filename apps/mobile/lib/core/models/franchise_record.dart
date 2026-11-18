@@ -16,6 +16,9 @@ class FranchiseRecord {
     required this.expiresAt,
     this.certificateStoragePath,
     this.certificateGeneratedAt,
+    this.officialReceiptNumber,
+    this.officialReceiptDate,
+    this.amountPaid,
     this.renewedByRecordId,
     this.archived = false,
     this.archivedAt,
@@ -42,6 +45,13 @@ class FranchiseRecord {
   final DateTime expiresAt;
   final String? certificateStoragePath;
   final DateTime? certificateGeneratedAt;
+
+  /// Fee details recorded by staff when the franchise was released
+  /// (`rpc_record_payment`). Null until a payment is recorded.
+  final String? officialReceiptNumber;
+  final DateTime? officialReceiptDate;
+  final double? amountPaid;
+
   final String? renewedByRecordId;
   final bool archived;
   final DateTime? archivedAt;
@@ -117,6 +127,9 @@ class FranchiseRecord {
       expiresAt: _asDate(map['expires_at']) ?? DateTime.now(),
       certificateStoragePath: map['certificate_storage_path']?.toString(),
       certificateGeneratedAt: _asDate(map['certificate_generated_at']),
+      officialReceiptNumber: map['official_receipt_number']?.toString(),
+      officialReceiptDate: _asDate(map['official_receipt_date']),
+      amountPaid: _asDouble(map['amount_paid']),
       renewedByRecordId: map['renewed_by_record_id']?.toString(),
       archived: map['archived'] == true,
       archivedAt: _asDate(map['archived_at']),
@@ -145,4 +158,10 @@ int? _asInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   return int.tryParse(value.toString());
+}
+
+double? _asDouble(Object? value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

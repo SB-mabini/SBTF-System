@@ -15,6 +15,13 @@ class Profile {
     this.middleName,
     this.computedFullName,
     this.contactNumber,
+    this.addressLine,
+    this.barangayCode,
+    this.todaId,
+    this.todaName,
+    this.todaCode,
+    this.barangayName,
+    this.createdAt,
     this.accountStatus = 'active',
   });
 
@@ -32,6 +39,19 @@ class Profile {
 
   final String email;
   final String? contactNumber;
+  final String? addressLine;
+  final String? barangayCode;
+
+  /// The TODA the operator belongs to. View-only in the app: the association
+  /// is fixed when the operator registers and is never edited from a profile
+  /// form.
+  final String? todaId;
+  final String? todaName;
+  final String? todaCode;
+
+  /// Joined barangay name, present when the query embeds `barangays`.
+  final String? barangayName;
+  final DateTime? createdAt;
   final String accountStatus;
 
   /// Display name. Uses the generated `full_name` column when available and
@@ -75,6 +95,9 @@ class Profile {
   static String _firstChar(String value) => value.isEmpty ? '' : value[0];
 
   factory Profile.fromMap(Map<String, dynamic> map) {
+    final toda = map['toda'] ?? map['todas'];
+    final barangay = map['barangay'] ?? map['barangays'];
+
     return Profile(
       id: (map['id'] ?? '').toString(),
       authUserId: map['auth_user_id']?.toString(),
@@ -85,6 +108,13 @@ class Profile {
       computedFullName: map['full_name']?.toString(),
       email: (map['email'] ?? '').toString(),
       contactNumber: map['contact_number']?.toString(),
+      addressLine: map['address_line']?.toString(),
+      barangayCode: map['barangay_code']?.toString(),
+      todaId: map['toda_id']?.toString(),
+      todaName: toda is Map ? toda['name']?.toString() : null,
+      todaCode: toda is Map ? toda['code']?.toString() : null,
+      barangayName: barangay is Map ? barangay['name']?.toString() : null,
+      createdAt: DateTime.tryParse((map['created_at'] ?? '').toString()),
       accountStatus: (map['account_status'] ?? 'active').toString(),
     );
   }
