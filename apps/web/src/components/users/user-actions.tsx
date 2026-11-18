@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Trash2, UserCheck, UserX } from "lucide-react";
 
@@ -20,9 +20,16 @@ const ASSIGNABLE_ROLES: UserRole[] = ["administrator", "staff"];
 export function UserActions({
   profile,
   currentProfileId,
+  headerAction,
 }: {
   profile: Profile;
   currentProfileId: string;
+  /**
+   * Optional link rendered on the role row, right-aligned. The users list uses
+   * it for "View profile" so the link shares one column with the account
+   * actions instead of floating over them.
+   */
+  headerAction?: ReactNode;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -86,9 +93,12 @@ export function UserActions({
     <div className="space-y-3">
       {message ? <Alert tone={message.ok ? "success" : "danger"}>{message.text}</Alert> : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="neutral">{roleLabel(profile.role)}</Badge>
-        {isSelf ? <Badge tone="info">This is your account</Badge> : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral">{roleLabel(profile.role)}</Badge>
+          {isSelf ? <Badge tone="info">This is your account</Badge> : null}
+        </div>
+        {headerAction}
       </div>
 
       <div className="flex flex-wrap gap-2">
