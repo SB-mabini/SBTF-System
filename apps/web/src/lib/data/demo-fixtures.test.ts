@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { demoApplications, demoBarangays, demoOverview, demoRecords, demoTodas } from "./demo-fixtures";
+import {
+  demoApplications,
+  demoBarangays,
+  demoOverview,
+  demoRecords,
+  demoTodaMembership,
+  demoTodas,
+} from "./demo-fixtures";
 
 const REPO_ROOT = join(process.cwd(), "..", "..");
 
@@ -72,6 +79,23 @@ describe("preview TODAs", () => {
     for (const toda of demoTodas) {
       expect(toda.barangay_code).not.toBeNull();
       expect(codes.has(toda.barangay_code!)).toBe(true);
+    }
+  });
+
+  it("gives every association named members for the membership export", () => {
+    expect(demoTodaMembership.map((group) => group.toda.id)).toEqual(
+      demoTodas.map((toda) => toda.id),
+    );
+
+    const total = demoTodaMembership.reduce((sum, group) => sum + group.members.length, 0);
+    expect(total).toBe(demoTodas.reduce((sum, toda) => sum + toda.members_count, 0));
+
+    for (const group of demoTodaMembership) {
+      expect(group.members.length).toBeGreaterThan(0);
+      expect(group.members.filter((member) => member.profile_id).length).toBeGreaterThan(0);
+      for (const member of group.members) {
+        expect(member.full_name.trim()).not.toBe("");
+      }
     }
   });
 });

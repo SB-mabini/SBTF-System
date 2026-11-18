@@ -182,9 +182,27 @@ export interface TodaMember {
   updated_at: string;
 }
 
+/**
+ * One line of the TODA membership export. Registered drivers are the source of
+ * names; roster rows that no account has claimed are appended without personal
+ * details. A person linked to an account merges both into one entry.
+ */
+export interface TodaMembershipEntry {
+  member_ref: string | null;
+  full_name: string;
+  contact_number: string | null;
+  address_line: string | null;
+  barangay_code: string | null;
+  year_joined: number | null;
+  is_active: boolean;
+  account_status: AccountStatus | null;
+  /** Null when the roster entry has not been claimed by a registered driver. */
+  profile_id: string | null;
+}
+
 export interface TodaMembership {
   toda: Toda;
-  members: TodaMember[];
+  members: TodaMembershipEntry[];
 }
 
 export interface FranchiseApplication {

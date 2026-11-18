@@ -88,10 +88,10 @@ const REPORTS: ReportDefinition[] = [
     dataset: "toda-membership",
     title: "TODA membership masterlist",
     description:
-      "Every association and its anonymised roster. The workbook has a summary sheet listing all TODAs, then one sheet per TODA with its members.",
+      "Every association and its members. The workbook has a summary sheet listing all TODAs, then one sheet per TODA with the names of its registered drivers and any unclaimed roster entries.",
     icon: FileSpreadsheet,
     format: "xlsx",
-    columns: ["member_ref", "display_name", "year_joined", "status", "linked_account"],
+    columns: ["member_name", "member_ref", "contact_number", "barangay", "year_joined", "status"],
   },
   {
     dataset: "activity",
@@ -191,7 +191,8 @@ export async function ReportsPage({ session }: { session: SessionContext }) {
             </li>
             <li>
               The TODA membership masterlist is an Excel workbook rather than a CSV: a summary tab
-              lists every association, then each TODA has its own tab with its roster.
+              lists every association, then each TODA has its own tab with its registered drivers and
+              any unclaimed roster entries.
             </li>
             <li>
               The audit trail export is not editable by any role: entries can only be appended by the

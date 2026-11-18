@@ -31,8 +31,8 @@ import type {
   SystemSetting,
   Toda,
   TodaAnalytics,
-  TodaMember,
   TodaMembership,
+  TodaMembershipEntry,
   TrendPoint,
 } from "@/types/database";
 import { REQUIRED_DOCUMENTS } from "@/lib/constants";
@@ -224,31 +224,46 @@ export const demoProfiles: Profile[] = (() => {
 const driverProfiles = demoProfiles.filter((profile) => profile.role === "driver");
 
 /**
- * Anonymised TODA roster for preview mode: one row per member counted in
- * [demoTodas], mirroring the shape of the live `toda_members` table. A handful
- * of rows are linked to demonstration driver accounts so the "linked account"
- * column is not uniformly empty.
+ * Membership rows for preview mode: registered drivers first (mirroring the
+ * live console, where names come from profiles), then the remaining roster
+ * entries that no account has claimed.
  */
 export const demoTodaMembership: TodaMembership[] = demoTodas.map((toda, todaIndex) => {
   const drivers = driverProfiles.filter((profile) => profile.toda_id === toda.id);
-  const members: TodaMember[] = Array.from(
-    { length: toda.members_count },
-    (_, index) => ({
-      id: uuid(0x4000 + todaIndex * 100 + index),
-      toda_id: toda.id,
-      member_ref: `${toda.code}-M${String(index + 1).padStart(3, "0")}`,
-      display_name: `${FIRST[(todaIndex * 7 + index) % FIRST.length]} ${
-        LAST[(todaIndex * 11 + index * 3) % LAST.length]
-      }`,
-      profile_id: drivers[index]?.id ?? null,
-      year_joined: 2008 + ((todaIndex + index) % 18),
-      is_active: index % 23 !== 0,
-      created_at: iso(300),
-      updated_at: iso(30),
-    }),
+
+  const registered: TodaMembershipEntry[] = drivers.map((profile, index) => ({
+    member_ref: `${toda.code}-M${String(index + 1).padStart(3, "0")}`,
+    full_name: profile.full_name,
+    contact_number: profile.contact_number,
+    address_line: profile.address_line,
+    barangay_code: profile.barangay_code,
+    year_joined: 2008 + ((todaIndex + index) % 18),
+    is_active: profile.account_status === "active",
+    account_status: profile.account_status,
+    profile_id: profile.id,
+  }));
+
+  const rosterOnly: TodaMembershipEntry[] = Array.from(
+    { length: Math.max(toda.members_count - drivers.length, 0) },
+    (_, index) => {
+      const position = drivers.length + index;
+      return {
+        member_ref: `${toda.code}-M${String(position + 1).padStart(3, "0")}`,
+        full_name: `${FIRST[(todaIndex * 7 + position) % FIRST.length]} ${
+          LAST[(todaIndex * 11 + position * 3) % LAST.length]
+        }`,
+        contact_number: null,
+        address_line: null,
+        barangay_code: null,
+        year_joined: 2008 + ((todaIndex + position) % 18),
+        is_active: position % 23 !== 0,
+        account_status: null,
+        profile_id: null,
+      };
+    },
   );
 
-  return { toda, members };
+  return { toda, members: [...registered, ...rosterOnly] };
 });
 
 export const demoApplications: FranchiseApplicationDetail[] = (() => {

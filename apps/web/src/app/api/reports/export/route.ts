@@ -204,11 +204,12 @@ async function todaMembershipWorkbook(label: string): Promise<NextResponse> {
     { header: "Zone", key: "zone", width: 10 },
     { header: "Active", key: "active", width: 9 },
     { header: "Members", key: "members", width: 10 },
-    { header: "Active members", key: "activeMembers", width: 15 },
-    { header: "Linked accounts", key: "linked", width: 16 },
+    { header: "Registered drivers", key: "registered", width: 17 },
+    { header: "Roster entries", key: "roster", width: 14 },
   ];
 
   for (const { toda, members } of groups) {
+    const registered = members.filter((member) => member.profile_id).length;
     summary.addRow({
       name: toda.name,
       code: toda.code,
@@ -218,8 +219,8 @@ async function todaMembershipWorkbook(label: string): Promise<NextResponse> {
       zone: toda.zone ?? "",
       active: toda.is_active ? "Yes" : "No",
       members: members.length,
-      activeMembers: members.filter((member) => member.is_active).length,
-      linked: members.filter((member) => member.profile_id).length,
+      registered,
+      roster: members.length - registered,
     });
   }
   styleSheet(summary);
@@ -229,20 +230,29 @@ async function todaMembershipWorkbook(label: string): Promise<NextResponse> {
   for (const { toda, members } of groups) {
     const sheet = workbook.addWorksheet(safeSheetName(toda.name, usedNames));
     sheet.columns = [
+      { header: "Member name", key: "name", width: 30 },
       { header: "Member reference", key: "memberRef", width: 22 },
-      { header: "Display name", key: "displayName", width: 30 },
+      { header: "Contact number", key: "contact", width: 18 },
+      { header: "Address", key: "address", width: 32 },
+      { header: "Barangay", key: "barangay", width: 24 },
       { header: "Year joined", key: "yearJoined", width: 12 },
       { header: "Status", key: "status", width: 10 },
-      { header: "Linked account", key: "linked", width: 15 },
+      { header: "Registered account", key: "registered", width: 18 },
     ];
 
     for (const member of members) {
       sheet.addRow({
-        memberRef: member.member_ref,
-        displayName: member.display_name,
+        name: member.full_name,
+        memberRef: member.member_ref ?? "",
+        contact: member.contact_number ?? "",
+        address: member.address_line ?? "",
+        barangay:
+          member.barangay_code
+            ? (barangayNames.get(member.barangay_code) ?? member.barangay_code)
+            : "",
         yearJoined: member.year_joined ?? "",
         status: member.is_active ? "Active" : "Inactive",
-        linked: member.profile_id ? "Yes" : "No",
+        registered: member.profile_id ? "Yes" : "No",
       });
     }
     styleSheet(sheet);

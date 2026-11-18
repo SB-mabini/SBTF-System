@@ -40,6 +40,7 @@ import type {
   TodaAnalytics,
   TodaMember,
   TodaMembership,
+  TodaMembershipEntry,
   TrendPoint,
   UserRole,
 } from "@/types/database";
@@ -208,28 +209,89 @@ export async function listTodas(): Promise<Toda[]> {
 }
 
 /**
- * Every TODA with its anonymised membership masterlist, for the multi-sheet
- * membership workbook. Ordered by TODA name so sheet order is stable, and by
- * display name inside each TODA.
+ * Every TODA with its members, for the multi-sheet membership workbook.
+ *
+ * Names come from registered driver profiles grouped by `toda_id`; the
+ * anonymised `toda_members` roster only supplies rows that no account has
+ * claimed, plus the member reference and year joined for linked drivers. This
+ * keeps the export useful when the roster has not been populated.
  */
 export async function listTodaMembership(): Promise<TodaMembership[]> {
   if (isDemoMode()) return demo.demoTodaMembership;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("todas")
-    .select("*, toda_members(*)")
-    .order("name");
-  if (error) throw error;
+  const [todaResult, profileResult, rosterResult] = await Promise.all([
+    supabase.from("todas").select("*").order("name"),
+    supabase
+      .from("profiles")
+      .select(
+        "id, full_name, toda_id, contact_number, address_line, barangay_code, account_status, created_at",
+      )
+      .eq("role", "driver"),
+    supabase.from("toda_members").select("*"),
+  ]);
 
-  return ((data ?? []) as unknown as Array<Toda & { toda_members: TodaMember[] }>).map(
-    ({ toda_members, ...toda }) => ({
-      toda: toda as Toda,
-      members: [...(toda_members ?? [])].sort((a, b) =>
-        a.display_name.localeCompare(b.display_name, "en"),
-      ),
-    }),
+  if (todaResult.error) throw todaResult.error;
+  if (profileResult.error) throw profileResult.error;
+
+  type DriverProfile = Pick<
+    Profile,
+    | "id"
+    | "full_name"
+    | "toda_id"
+    | "contact_number"
+    | "address_line"
+    | "barangay_code"
+    | "account_status"
+    | "created_at"
+  >;
+
+  const profiles = (profileResult.data ?? []) as unknown as DriverProfile[];
+  const roster = (rosterResult.data ?? []) as unknown as TodaMember[];
+
+  const rosterByProfile = new Map(
+    roster.filter((member) => member.profile_id).map((member) => [member.profile_id!, member]),
   );
+
+  return ((todaResult.data ?? []) as unknown as Toda[]).map((toda) => {
+    const registered: TodaMembershipEntry[] = profiles
+      .filter((profile) => profile.toda_id === toda.id)
+      .map((profile) => {
+        const linked = rosterByProfile.get(profile.id);
+        return {
+          member_ref: linked?.member_ref ?? null,
+          full_name: profile.full_name,
+          contact_number: profile.contact_number,
+          address_line: profile.address_line,
+          barangay_code: profile.barangay_code,
+          year_joined: linked?.year_joined ?? null,
+          is_active: profile.account_status === "active",
+          account_status: profile.account_status,
+          profile_id: profile.id,
+        };
+      });
+
+    const unclaimed: TodaMembershipEntry[] = roster
+      .filter((member) => member.toda_id === toda.id && !member.profile_id)
+      .map((member) => ({
+        member_ref: member.member_ref,
+        full_name: member.display_name,
+        contact_number: null,
+        address_line: null,
+        barangay_code: null,
+        year_joined: member.year_joined,
+        is_active: member.is_active,
+        account_status: null,
+        profile_id: null,
+      }));
+
+    return {
+      toda,
+      members: [...registered, ...unclaimed].sort((a, b) =>
+        a.full_name.localeCompare(b.full_name, "en"),
+      ),
+    };
+  });
 }
 
 export async function listBarangays(): Promise<Barangay[]> {
