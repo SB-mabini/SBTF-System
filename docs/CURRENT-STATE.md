@@ -333,11 +333,12 @@ linked from the page as "Open the web version" for drivers without an Android ph
 - **Binaries.** Split APKs are attached to GitHub Releases, never committed. The committed
   `apps/mobile/web/install/release.json` records their URLs, sizes and SHA-256 values;
   the Vercel build downloads them into `/install/download/` and verifies the hashes.
-- **Published build.** `0.1.0` build **5** (`app-v0.1.0-5`), dated 15 November 2026:
-  arm64 30,364,614 bytes, armeabi-v7a 26,316,342 bytes. It carries the auth-copy fixes and
-  the renewal prefill below. Drivers on build 4 (and 3) see the update card the next time
-  they open the app; the APKs are signed with the same release key, so the update installs
-  over the old copy.
+- **Published build.** `0.1.0` build **10** (`app-v0.1.0-10`), dated 18 November 2026:
+  arm64 30,503,206 bytes, armeabi-v7a 26,848,154 bytes. It carries the operator
+  profile module, so drivers can open Settings → Operator profile to review their
+  TODA, applications and fees and edit their descriptive details. Drivers on older
+  builds see the update card the next time they open the app; the APKs are signed
+  with the same release key, so the update installs over the old copy.
 - **Update checks.** `lib/core/update_service.dart` reads the installed version with
   `package_info_plus`, fetches `/install/release.json` when the home screen opens, and shows
   a dismissible update card when the published `build` is higher. Android reports split-APK
