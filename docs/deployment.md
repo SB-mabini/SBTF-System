@@ -443,6 +443,8 @@ Deploying the function requires the table to exist: apply
 | `NEXT_PUBLIC_SITE_URL` | production URL | Used for certificate QR links; auth redirects now follow the request origin instead, so a missing value no longer breaks the reset flow |
 | `NEXT_PUBLIC_VERIFICATION_BASE_URL` | optional public URL | Certificate QR address when certificates are generated from a different host (for example, locally). A `localhost` value in the `certificate_verification_base_url` setting is ignored in favour of this, `NEXT_PUBLIC_SITE_URL`, or the request origin. |
 | `NEXT_PUBLIC_DEMO_MODE` | unset | Must be absent or `false` in production |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v2 site key | Public half of the sign-in "I'm not a robot" checkbox; pairs with the secret below |
+| `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA v2 secret key | Server-only; never expose it to the browser |
 
 ### 4.2 Conditions for sign-in to work on Vercel
 
@@ -454,18 +456,23 @@ Checklist, in the order things actually break:
 2. `NEXT_PUBLIC_DEMO_MODE` is not `"true"`. The check is strict: only the exact
    string `true` enables preview mode, but a stale `true` from a preview deployment
    silently serves sample data with every write disabled.
-3. `NEXT_PUBLIC_SITE_URL` matches the real hostname. Since `apps/web/src/lib/env.ts`
+3. **Both reCAPTCHA keys are set.** `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` renders the
+   "I'm not a robot" checkbox and `RECAPTCHA_SECRET_KEY` verifies its token in the
+   server action. A production build fails closed when either is missing: sign-in
+   reports that the CAPTCHA is not configured instead of silently dropping the
+   protection. The site key is inlined at build time, so redeploy after changing it.
+4. `NEXT_PUBLIC_SITE_URL` matches the real hostname. Since `apps/web/src/lib/env.ts`
    falls back to `http://localhost:3000`, an unset value in a production build used to
    send `/auth/confirm` and the document route to the developer machine after a successful
    token check — the visitor saw a dead link while the session cookie sat unused on the
    Vercel host. Both routes now derive the origin from the incoming request, so the
    redirect stays on the host that served the link; still set the variable, because the
    QR-code path reads it.
-4. The Edge Functions are deployed (§3) — `admin-users` for account creation and
+5. The Edge Functions are deployed (§3) — `admin-users` for account creation and
    in-console resets, and `password-recovery` (Verify JWT **off**) for the "Forgot your
    password?" screen. A missing `password-recovery` surfaces as "the recovery service
    did not answer (HTTP 404)".
-5. Migrations are applied (§2.2). An unmigrated database now produces a
+6. Migrations are applied (§2.2). An unmigrated database now produces a
    `/setup-required` page explaining exactly this, instead of a sign-in loop.
 
 If sign-in misbehaves, run `npm run db:check` (§8) before touching code: it stops at

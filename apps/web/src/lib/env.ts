@@ -23,6 +23,16 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 
 /**
+ * Google reCAPTCHA v2 site key for the staff/administrator sign-in form.
+ *
+ * The matching secret key (`RECAPTCHA_SECRET_KEY`) is deliberately not read
+ * here: this module is imported by client components, and only `NEXT_PUBLIC_*`
+ * values are safe to bundle for the browser. Server-side verification lives in
+ * `lib/auth/recaptcha.ts`.
+ */
+export const RECAPTCHA_SITE_KEY = (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "").trim();
+
+/**
  * The public address encoded in every certificate QR code.
  *
  * It is deliberately separate from NEXT_PUBLIC_SITE_URL: a certificate printed

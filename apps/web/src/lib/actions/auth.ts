@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
+import { captchaMode, verifyCaptchaToken } from "@/lib/auth/recaptcha";
 import {
   clearLoginFailures,
   getLoginLockStatus,
@@ -207,6 +208,7 @@ export async function signInAction(
   email: string,
   password: string,
   nextPath?: string | null,
+  captchaToken?: string | null,
 ): Promise<SignInState> {
   if (isDemoMode()) {
     return {
@@ -223,11 +225,41 @@ export async function signInAction(
     return { ok: false, message: "Enter your password." };
   }
 
-  const key = loginAttemptKey(normalized, await clientIp());
+  const ip = await clientIp();
+  const key = loginAttemptKey(normalized, ip);
 
   const lock = getLoginLockStatus(key);
   if (lock.locked) {
     return lockedResult(lock.retryAfterSeconds);
+  }
+
+  const captcha = captchaMode();
+  if (captcha === "misconfigured") {
+    return {
+      ok: false,
+      message:
+        "Sign-in is unavailable because the CAPTCHA configuration is incomplete. Set both NEXT_PUBLIC_RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY.",
+    };
+  }
+  if (captcha === "disabled" && process.env.NODE_ENV === "production") {
+    return {
+      ok: false,
+      message:
+        "Sign-in is unavailable because no CAPTCHA is configured on this deployment. Set NEXT_PUBLIC_RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY.",
+    };
+  }
+  if (captcha === "configured") {
+    if (!captchaToken?.trim()) {
+      return { ok: false, message: "Complete the security check before signing in." };
+    }
+
+    const verification = await verifyCaptchaToken(captchaToken, ip);
+    if (!verification.ok) {
+      return {
+        ok: false,
+        message: "The security check could not be verified. Complete it again and retry.",
+      };
+    }
   }
 
   const supabase = await createClient();

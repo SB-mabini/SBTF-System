@@ -6,8 +6,9 @@ import Link from "next/link";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 
 import { Alert, Button, Field } from "@/components/ui";
+import { ReCaptcha } from "@/components/auth/recaptcha";
 import { signInAction } from "@/lib/actions/auth";
-import { isDemoMode } from "@/lib/env";
+import { isDemoMode, RECAPTCHA_SITE_KEY } from "@/lib/env";
 
 function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -28,12 +29,15 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   // Preview mode never replaces the form: a hidden sign-in reads as "not
   // implemented". The real form is rendered underneath the banner, disabled, so
   // it is visibly the same screen a connected deployment serves.
   const demo = isDemoMode();
   const locked = remainingSeconds > 0;
+  const captchaEnabled = RECAPTCHA_SITE_KEY.length > 0;
 
   // The lock is enforced by the server action. This timer only renders the
   // countdown and re-enables the form once the server will accept an attempt.
@@ -59,12 +63,25 @@ export function LoginForm() {
     event.preventDefault();
     if (locked) return;
 
+    if (captchaEnabled && !captchaToken) {
+      setError("Complete the security check before signing in.");
+      return;
+    }
+
     setError(null);
     setNotice(null);
     setLoading(true);
 
     try {
-      const result = await signInAction(email, password, nextPath);
+      const result = await signInAction(email, password, nextPath, captchaToken);
+
+      // Every token is single use, whether the password was right or wrong.
+      // Replace the widget before showing the result so the next attempt has a
+      // fresh token.
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((current) => current + 1);
+      }
 
       if (result.locked) {
         applyLock(result.retryAfterSeconds ?? 0);
@@ -149,7 +166,21 @@ export function LoginForm() {
         </div>
       </Field>
 
-      <Button type="submit" loading={loading} disabled={demo || locked} className="w-full">
+      {captchaEnabled && !demo ? (
+        <ReCaptcha
+          siteKey={RECAPTCHA_SITE_KEY}
+          resetKey={captchaResetKey}
+          onVerify={setCaptchaToken}
+          onExpire={() => setCaptchaToken(null)}
+        />
+      ) : null}
+
+      <Button
+        type="submit"
+        loading={loading}
+        disabled={demo || locked || (captchaEnabled && !captchaToken)}
+        className="w-full"
+      >
         <LogIn className="h-4 w-4" />
         Sign in
       </Button>
