@@ -729,6 +729,10 @@ as $$
 declare
   v_actor uuid := public.current_profile_id();
   v_app   public.application_appointments;
+  v_local timestamptz;
+  v_day   integer;
+  v_hour  integer;
+  v_min   integer;
 begin
   if not public.is_staff() then
     raise exception 'Staff access required' using errcode = '42501';
@@ -744,6 +748,24 @@ begin
 
   if not exists (select 1 from public.franchise_applications a where a.id = p_application_id) then
     raise exception 'Application not found' using errcode = 'P0002';
+  end if;
+
+  -- Office hours: Monday to Friday, 9:00 AM to 3:00 PM (Asia/Manila).
+  v_local := p_scheduled_at at time zone 'Asia/Manila';
+  v_day   := extract(dow from v_local);   -- 0 = Sunday, 1 = Monday, …, 6 = Saturday
+  v_hour  := extract(hour from v_local);
+  v_min   := extract(minute from v_local);
+
+  if p_scheduled_at < now() then
+    raise exception 'Cannot schedule an appointment on a day that has already passed' using errcode = 'P0001';
+  end if;
+
+  if v_day = 0 or v_day = 6 then
+    raise exception 'Appointments can only be scheduled Monday to Friday' using errcode = 'P0001';
+  end if;
+
+  if v_hour < 9 or v_hour > 15 or (v_hour = 15 and v_min > 0) then
+    raise exception 'Office hours are 9:00 AM to 3:00 PM only' using errcode = 'P0001';
   end if;
 
   insert into public.application_appointments (
@@ -773,7 +795,11 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_app public.application_appointments;
+  v_app    public.application_appointments;
+  v_local  timestamptz;
+  v_day    integer;
+  v_hour   integer;
+  v_min    integer;
 begin
   if not public.is_staff() then
     raise exception 'Staff access required' using errcode = '42501';
@@ -781,6 +807,26 @@ begin
 
   if p_status is null then
     raise exception 'An appointment status is required' using errcode = 'P0001';
+  end if;
+
+  -- When rescheduling, validate the new date/time against office rules.
+  if p_scheduled_at is not null then
+    v_local := p_scheduled_at at time zone 'Asia/Manila';
+    v_day   := extract(dow from v_local);
+    v_hour  := extract(hour from v_local);
+    v_min   := extract(minute from v_local);
+
+    if p_scheduled_at < now() then
+      raise exception 'Cannot reschedule an appointment to a day that has already passed' using errcode = 'P0001';
+    end if;
+
+    if v_day = 0 or v_day = 6 then
+      raise exception 'Appointments can only be rescheduled Monday to Friday' using errcode = 'P0001';
+    end if;
+
+    if v_hour < 9 or v_hour > 15 or (v_hour = 15 and v_min > 0) then
+      raise exception 'Office hours are 9:00 AM to 3:00 PM only' using errcode = 'P0001';
+    end if;
   end if;
 
   update public.application_appointments

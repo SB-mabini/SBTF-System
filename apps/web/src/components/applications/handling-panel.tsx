@@ -89,12 +89,16 @@ export function HandlingPanel({
   const [scheduleAt, setScheduleAt] = useState("");
   const [scheduleVenue, setScheduleVenue] = useState("");
   const [scheduleNotes, setScheduleNotes] = useState("");
+  const [scheduleError, setScheduleError] = useState("");
+
+  const minScheduleAt = toDateTimeLocalValue(new Date().toISOString());
   const [appointmentEdit, setAppointmentEdit] = useState<ApplicationAppointment | null>(null);
   const [appointmentStatus, setAppointmentStatus] = useState<AppointmentStatus>("completed");
   const [appointmentOutcome, setAppointmentOutcome] = useState("");
   const [appointmentAt, setAppointmentAt] = useState("");
   const [appointmentVenue, setAppointmentVenue] = useState("");
   const [appointmentNotes, setAppointmentNotes] = useState("");
+  const [appointmentError, setAppointmentError] = useState("");
 
   const locked = readOnly || isDemoMode();
   const stage = application.stage;
@@ -123,6 +127,37 @@ export function HandlingPanel({
         startTransition(() => router.refresh());
       }
     });
+  }
+
+  /**
+   * Validates a proposed appointment date/time against office rules:
+   * not in the past, Monday–Friday only, and within 9:00 AM–3:00 PM.
+   */
+  function validateSchedule(at: string): string | null {
+    if (!at) return "A date and time is required.";
+
+    const selected = new Date(at);
+    if (Number.isNaN(selected.getTime())) return "Invalid date and time.";
+
+    const now = new Date();
+    if (selected.getTime() < now.getTime()) {
+      return "Cannot schedule an appointment on a day that has already passed.";
+    }
+
+    const day = selected.getDay(); // 0 = Sunday, 1 = Monday, …, 6 = Saturday
+    if (day === 0 || day === 6) {
+      return "Appointments can only be scheduled Monday to Friday.";
+    }
+
+    const hour = selected.getHours();
+    if (hour < 9 || hour > 15) {
+      return "Office hours are 9:00 AM to 3:00 PM only.";
+    }
+    if (hour === 15 && selected.getMinutes() > 0) {
+      return "Office hours are 9:00 AM to 3:00 PM only.";
+    }
+
+    return null;
   }
 
   const stageIndex = APPLICATION_STAGE_ORDER.indexOf(stage);
@@ -673,8 +708,18 @@ export function HandlingPanel({
             </Button>
             <Button
               loading={busy}
-              disabled={!scheduleAt || scheduleVenue.trim().length === 0}
-              onClick={() =>
+              disabled={
+                !scheduleAt ||
+                scheduleVenue.trim().length === 0 ||
+                validateSchedule(scheduleAt) !== null
+              }
+              onClick={() => {
+                const error = validateSchedule(scheduleAt);
+                if (error) {
+                  setScheduleError(error);
+                  return;
+                }
+                setScheduleError("");
                 run(
                   scheduleAppointmentAction({
                     applicationId: application.id,
@@ -684,8 +729,8 @@ export function HandlingPanel({
                     notes: scheduleNotes,
                   }),
                   () => setScheduleOpen(false),
-                )
-              }
+                );
+              }}
             >
               Schedule
             </Button>
@@ -712,10 +757,14 @@ export function HandlingPanel({
               id="appointment-at"
               type="datetime-local"
               className="sbtf-input"
+              min={minScheduleAt}
               value={scheduleAt}
               onChange={(event) => setScheduleAt(event.target.value)}
             />
           </Field>
+          {scheduleError ? (
+            <p className="text-[0.75rem] text-danger">{scheduleError}</p>
+          ) : null}
           <Field label="Venue (required)" htmlFor="appointment-venue">
             <input
               id="appointment-venue"
@@ -749,6 +798,14 @@ export function HandlingPanel({
               loading={busy}
               onClick={() => {
                 if (!appointmentEdit) return;
+                if (appointmentStatus === "rescheduled") {
+                  const error = validateSchedule(appointmentAt);
+                  if (error) {
+                    setAppointmentError(error);
+                    return;
+                  }
+                  setAppointmentError("");
+                }
                 run(
                   updateAppointmentAction({
                     appointmentId: appointmentEdit.id,
@@ -792,10 +849,14 @@ export function HandlingPanel({
                   id="appointment-reschedule-at"
                   type="datetime-local"
                   className="sbtf-input"
+                  min={minScheduleAt}
                   value={appointmentAt}
                   onChange={(event) => setAppointmentAt(event.target.value)}
                 />
               </Field>
+              {appointmentStatus === "rescheduled" && appointmentError ? (
+                <p className="text-[0.75rem] text-danger">{appointmentError}</p>
+              ) : null}
               <Field label="Venue" htmlFor="appointment-reschedule-venue">
                 <input
                   id="appointment-reschedule-venue"
