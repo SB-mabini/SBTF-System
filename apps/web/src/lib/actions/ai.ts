@@ -58,7 +58,20 @@ export async function generateAiBriefingAction(
     };
   }
 
-  const groqApiKey = (process.env.GROQ_API_KEY ?? "").trim();
+  let groqApiKey = (
+    process.env.GROQ_API_KEY ??
+    process.env.GROQ_KEY ??
+    process.env.NEXT_PUBLIC_GROQ_API_KEY ??
+    ""
+  ).trim();
+
+  // Strip prefix if user pasted "GROQ_API_KEY=gsk_..." into the value field
+  if (groqApiKey.startsWith("GROQ_API_KEY=")) {
+    groqApiKey = groqApiKey.slice("GROQ_API_KEY=".length).trim();
+  }
+  // Strip surrounding quotes if pasted with quotes
+  groqApiKey = groqApiKey.replace(/^["']|["']$/g, "").trim();
+
   if (!groqApiKey) {
     return {
       ok: false,
@@ -169,6 +182,13 @@ Provide the advisory briefing as specified.`;
   if (!groqResponse.ok) {
     const errorText = await groqResponse.text();
     console.error("Groq API error", groqResponse.status, errorText);
+    if (groqResponse.status === 401) {
+      return {
+        ok: false,
+        message:
+          "Groq API error 401: Invalid API Key. Please verify GROQ_API_KEY in your Vercel Project Settings (ensure it begins with gsk_ and has no quotes or extra characters).",
+      };
+    }
     return {
       ok: false,
       message: `Groq AI returned an error (HTTP ${groqResponse.status}): ${errorText.slice(0, 200)}`,
@@ -218,14 +238,14 @@ Provide the advisory briefing as specified.`;
     key_findings: Array.isArray(advisory.key_findings) ? advisory.key_findings.slice(0, 12) : [],
     recommendations: Array.isArray(advisory.recommendations)
       ? advisory.recommendations.slice(0, 8).map((item) => ({
-          title: String(item?.title ?? "Recommendation"),
-          detail: String(item?.detail ?? ""),
-          reason: String(item?.reason ?? ""),
-          data_basis: String(item?.data_basis ?? ""),
-          priority: (["high", "medium", "low"].includes(item?.priority as string)
-            ? item?.priority
-            : "medium") as "high" | "medium" | "low",
-        }))
+        title: String(item?.title ?? "Recommendation"),
+        detail: String(item?.detail ?? ""),
+        reason: String(item?.reason ?? ""),
+        data_basis: String(item?.data_basis ?? ""),
+        priority: (["high", "medium", "low"].includes(item?.priority as string)
+          ? item?.priority
+          : "medium") as "high" | "medium" | "low",
+      }))
       : [],
     limitations: Array.isArray(advisory.limitations) ? advisory.limitations.slice(0, 8) : [],
     data_basis: summarizeContext(context as Record<string, unknown>),
