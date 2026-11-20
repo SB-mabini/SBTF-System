@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Brain, CalendarRange, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 
 import { AdvisoryBanner, Alert, Badge, Button, Card, CardHeader, Spinner } from "@/components/ui";
+import { generateAiBriefingAction } from "@/lib/actions/ai";
 import { isDemoMode } from "@/lib/env";
 import { formatDateTime, humanizeKey } from "@/lib/format";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -84,26 +85,46 @@ export function AiAdvisoryPanel({
       return;
     }
 
-    const supabase = getBrowserClient();
-    const { data, error: invokeError } = await supabase.functions.invoke<AiAdvisory>(
-      "ai-decision-support",
-      { body: { months } },
-    );
+    let edgeSuccess = false;
+    try {
+      const supabase = getBrowserClient();
+      const { data, error: invokeError } = await supabase.functions.invoke<AiAdvisory>(
+        "ai-decision-support",
+        { body: { months } },
+      );
+
+      if (!invokeError && data) {
+        setAdvisory(data);
+        edgeSuccess = true;
+      } else if (invokeError) {
+        const isNotDeployed =
+          (invokeError as { name?: string } | null)?.name === "FunctionsFetchError";
+        if (!isNotDeployed) {
+          const detail = await describeInvokeError(invokeError);
+          setError(
+            `The advisory could not be generated (${detail}). The franchising office can still process applications normally — this feature is optional.`,
+          );
+          setBusy(false);
+          return;
+        }
+      }
+    } catch {
+      // FunctionsFetchError: edge function is unreachable or not deployed
+    }
+
+    if (!edgeSuccess) {
+      // Fallback to Next.js server-side action
+      const result = await generateAiBriefingAction(months);
+      if (result.ok) {
+        setAdvisory(result.advisory);
+      } else {
+        setError(
+          `The advisory could not be generated (${result.message}). The franchising office can still process applications normally — this feature is optional.`,
+        );
+      }
+    }
 
     setBusy(false);
-
-    if (invokeError) {
-      const detail = await describeInvokeError(invokeError);
-      setError(
-        `The advisory could not be generated (${detail}). The franchising office can still process applications normally — this feature is optional.`,
-      );
-      return;
-    }
-    if (!data) {
-      setError("The AI service returned an empty response.");
-      return;
-    }
-    setAdvisory(data);
   }
 
   return (

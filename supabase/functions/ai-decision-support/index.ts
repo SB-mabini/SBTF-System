@@ -32,6 +32,7 @@ const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 // tokens: a briefing costs 1 600–2 400 tokens in total and 1 600 truncated it
 // mid-object. Keep this comfortably above the observed maximum.
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const FALLBACK_MODEL = "llama-3.3-70b-versatile";
 const MAX_COMPLETION_TOKENS = 4000;
 
 // A generated briefing is kept for the caller for one day; generating a new one
@@ -197,6 +198,7 @@ ${contextJson}
 Provide the advisory briefing as specified.`;
 
   const startedAt = Date.now();
+  let activeModel = model;
   let groqResponse: Response;
   try {
     groqResponse = await fetch(GROQ_ENDPOINT, {
@@ -206,7 +208,7 @@ Provide the advisory briefing as specified.`;
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: activeModel,
         temperature: 0.2,
         max_tokens: MAX_COMPLETION_TOKENS,
         response_format: { type: "json_object" },
@@ -216,6 +218,31 @@ Provide the advisory briefing as specified.`;
         ],
       }),
     });
+
+    if (!groqResponse.ok && activeModel !== FALLBACK_MODEL) {
+      console.warn(`Groq request with ${activeModel} failed (${groqResponse.status}), attempting fallback to ${FALLBACK_MODEL}`);
+      const fallbackResponse = await fetch(GROQ_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: FALLBACK_MODEL,
+          temperature: 0.2,
+          max_tokens: MAX_COMPLETION_TOKENS,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+      if (fallbackResponse.ok) {
+        groqResponse = fallbackResponse;
+        activeModel = FALLBACK_MODEL;
+      }
+    }
   } catch (error) {
     await adminClient.from("ai_request_logs").insert({
       requester_id: profile.id,
@@ -283,7 +310,7 @@ Provide the advisory briefing as specified.`;
   await adminClient.from("ai_request_logs").insert({
     requester_id: profile.id,
     requested_by_role: profile.role,
-    model,
+    model: activeModel,
     // Only hashes are stored: no prompt text, no personal data.
     prompt_hash: await sha256Hex(userPrompt),
     context_hash: await sha256Hex(contextJson),
@@ -303,7 +330,7 @@ Provide the advisory briefing as specified.`;
       "This output is generated from aggregated statistics and is provided for decision support only. It cannot approve, reject or modify any application, franchise record or account.",
     generated_at: generatedAt.toISOString(),
     expires_at: expiresAt.toISOString(),
-    model,
+    model: activeModel,
     period_months: months,
     data_as_of: context?.generated_at ?? null,
     descriptive_summary: advisory.descriptive_summary ?? "",

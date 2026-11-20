@@ -71,11 +71,19 @@ console.log("");
 
 // Secrets must be set before the function is deployed so the first invocation
 // already builds links against the right origin.
+const groqApiKey = process.env.GROQ_API_KEY ?? readLocalGroqKey();
+const secretsToSet = [
+  `SITE_URL=${siteUrl}`,
+  `ALLOWED_WEB_ORIGINS=${allowedOrigins}`,
+];
+if (groqApiKey) {
+  secretsToSet.push(`GROQ_API_KEY=${groqApiKey}`);
+}
+
 run([
   "secrets",
   "set",
-  `SITE_URL=${siteUrl}`,
-  `ALLOWED_WEB_ORIGINS=${allowedOrigins}`,
+  ...secretsToSet,
   "--project-ref",
   projectRef,
 ]);
@@ -132,6 +140,17 @@ function readLocalSiteUrl() {
 
   for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
     const match = line.match(/^\s*NEXT_PUBLIC_SITE_URL\s*=\s*(.+?)\s*$/);
+    if (match) return match[1].replace(/^["']|["']$/g, "");
+  }
+  return undefined;
+}
+
+function readLocalGroqKey() {
+  const envFile = path.join(root, "apps", "web", ".env.local");
+  if (!existsSync(envFile)) return undefined;
+
+  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^\s*GROQ_API_KEY\s*=\s*(.+?)\s*$/);
     if (match) return match[1].replace(/^["']|["']$/g, "");
   }
   return undefined;
