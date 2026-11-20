@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { Filter, X } from "lucide-react";
 
 import { Button } from "@/components/ui";
@@ -44,7 +44,12 @@ export function FilterBar({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
 
-  const [search, setSearch] = useState(searchParams.get(searchKey) ?? "");
+  const currentQuery = searchParams.get(searchKey) ?? "";
+  const [search, setSearch] = useState(currentQuery);
+
+  useEffect(() => {
+    setSearch(currentQuery);
+  }, [currentQuery]);
 
   const activeCount = useMemo(
     () =>
@@ -196,7 +201,13 @@ export function FilterBar({
             {activeCount} filter{activeCount === 1 ? "" : "s"}
           </span>
           {activeCount > 0 ? (
-            <Button variant="ghost" onClick={() => update(Object.fromEntries(Array.from(searchParams.keys()).map((key) => [key, null])))}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearch("");
+                update(Object.fromEntries(Array.from(searchParams.keys()).map((key) => [key, null])));
+              }}
+            >
               <X className="h-3.5 w-3.5" />
               Clear
             </Button>
@@ -209,50 +220,59 @@ export function FilterBar({
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
           <span className="text-[0.75rem] text-muted">Quick filters:</span>
           {quickFilters ? (
-            quickFilters.map((qf) => (
-              <button
-                key={`${qf.key}-${qf.value}`}
-                type="button"
-                onClick={() => update({ [qf.key]: qf.value })}
-                className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
-                  searchParams.get(qf.key) === qf.value
-                    ? "border-primary-200 bg-primary-50 text-primary-700"
-                    : "border-line text-muted hover:bg-page"
-                }`}
-              >
-                {qf.label}
-              </button>
-            ))
+            quickFilters.map((qf) => {
+              const isActive = searchParams.get(qf.key) === qf.value;
+              return (
+                <button
+                  key={`${qf.key}-${qf.value}`}
+                  type="button"
+                  onClick={() => update({ [qf.key]: isActive ? "all" : qf.value })}
+                  className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] transition-colors ${
+                    isActive
+                      ? "border-primary-200 bg-primary-50 font-medium text-primary-700"
+                      : "border-line text-muted hover:bg-page"
+                  }`}
+                >
+                  {qf.label}
+                </button>
+              );
+            })
           ) : (
             <>
-              {statusOptions.slice(1).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => update({ status: option.value })}
-                  className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
-                    searchParams.get("status") === option.value
-                      ? "border-primary-200 bg-primary-50 text-primary-700"
-                      : "border-line text-muted hover:bg-page"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-              {typeOptions.slice(1).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => update({ type: option.value })}
-                  className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] ${
-                    searchParams.get("type") === option.value
-                      ? "border-primary-200 bg-primary-50 text-primary-700"
-                      : "border-line text-muted hover:bg-page"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+              {statusOptions.slice(1).map((option) => {
+                const isActive = searchParams.get("status") === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => update({ status: isActive ? "all" : option.value })}
+                    className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] transition-colors ${
+                      isActive
+                        ? "border-primary-200 bg-primary-50 font-medium text-primary-700"
+                        : "border-line text-muted hover:bg-page"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              {typeOptions.slice(1).map((option) => {
+                const isActive = searchParams.get("type") === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => update({ type: isActive ? "all" : option.value })}
+                    className={`rounded-full border px-2.5 py-0.5 text-[0.75rem] transition-colors ${
+                      isActive
+                        ? "border-primary-200 bg-primary-50 font-medium text-primary-700"
+                        : "border-line text-muted hover:bg-page"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </>
           )}
         </div>

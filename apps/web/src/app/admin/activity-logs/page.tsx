@@ -62,6 +62,7 @@ export default async function AdminActivityLogsPage({
       <Suspense fallback={<Spinner label="Loading filters…" />}>
         <FilterBar
           showDateRange
+          showQuickFilters={false}
           definitions={[
             {
               name: "action",

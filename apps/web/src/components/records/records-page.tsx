@@ -19,6 +19,13 @@ const STATE_OPTIONS = [
   { value: "archived", label: "Archived" },
 ];
 
+const RECORD_QUICK_FILTERS = [
+  { key: "state", value: "active", label: "Active" },
+  { key: "state", value: "expiring", label: "Expiring soon" },
+  { key: "state", value: "expired", label: "Expired" },
+  { key: "state", value: "archived", label: "Archived" },
+];
+
 export async function RecordsPage({
   basePath,
   searchParams,
@@ -38,11 +45,15 @@ export async function RecordsPage({
     listTodas(),
   ]);
 
+  const hasActiveFilters = Boolean(
+    search || (state && state !== "all") || (todaId && todaId !== "all") || from || to,
+  );
+
   function pageHref(nextPage: number) {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
     if (state !== "all") params.set("state", state);
-    if (todaId) params.set("toda", todaId);
+    if (todaId && todaId !== "all") params.set("toda", todaId);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     params.set("page", String(nextPage));
@@ -61,11 +72,13 @@ export async function RecordsPage({
           todos={todas}
           showToda
           showDateRange
+          searchPlaceholder="Franchise number, plate, operator, TODA…"
           definitions={[{ name: "state", label: "Record state", type: "select", options: STATE_OPTIONS }]}
+          quickFilters={RECORD_QUICK_FILTERS}
         />
       </Suspense>
 
-      {result.count === 0 && !search ? (
+      {result.count === 0 && !hasActiveFilters ? (
         <EmptyState
           title="No franchise records yet"
           description="A record is created automatically when an application is approved, with the franchise number and the validity dates."

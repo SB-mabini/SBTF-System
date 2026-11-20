@@ -730,12 +730,18 @@ export async function listFranchiseRecords(
       if (filters.from && record.issued_at < filters.from) return false;
       if (filters.to && record.issued_at > `${filters.to}T23:59:59.999Z`) return false;
       if (filters.search) {
-        const term = filters.search.toLowerCase();
+        const term = filters.search.toLowerCase().trim();
         const haystack = [
           record.franchise_number,
+          record.verification_code,
           record.operator?.full_name ?? "",
+          record.operator?.email ?? "",
           record.toda?.name ?? "",
+          record.toda?.code ?? "",
           record.application?.plate_number ?? "",
+          record.application?.application_number ?? "",
+          record.application?.operator_first_name ?? "",
+          record.application?.operator_last_name ?? "",
         ]
           .join(" ")
           .toLowerCase();
@@ -762,10 +768,48 @@ export async function listFranchiseRecords(
   }
   if (filters.state === "expired") query = query.eq("archived", false).lt("expires_at", now);
   if (filters.search) {
-    const term = filters.search.replace(/[%,]/g, " ").trim();
-    query = query.or(
-      [`franchise_number.ilike.%${term}%`, `verification_code.ilike.%${term}%`].join(","),
-    );
+    const term = filters.search.replace(/[%,()]/g, " ").trim();
+    if (term) {
+      const [operators, applications, todas] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id")
+          .or(`full_name.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%`)
+          .limit(100),
+        supabase
+          .from("franchise_applications")
+          .select("id")
+          .or(
+            `plate_number.ilike.%${term}%,application_number.ilike.%${term}%,operator_first_name.ilike.%${term}%,operator_last_name.ilike.%${term}%`,
+          )
+          .limit(100),
+        supabase
+          .from("todas")
+          .select("id")
+          .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+          .limit(50),
+      ]);
+
+      const operatorIds = operators.data?.map((o) => o.id) ?? [];
+      const applicationIds = applications.data?.map((a) => a.id) ?? [];
+      const todaIds = todas.data?.map((t) => t.id) ?? [];
+
+      const orConditions = [
+        `franchise_number.ilike.%${term}%`,
+        `verification_code.ilike.%${term}%`,
+      ];
+      if (operatorIds.length > 0) {
+        orConditions.push(`operator_id.in.(${operatorIds.join(",")})`);
+      }
+      if (applicationIds.length > 0) {
+        orConditions.push(`application_id.in.(${applicationIds.join(",")})`);
+      }
+      if (todaIds.length > 0) {
+        orConditions.push(`toda_id.in.(${todaIds.join(",")})`);
+      }
+
+      query = query.or(orConditions.join(","));
+    }
   }
 
   const { data, count } = await query
