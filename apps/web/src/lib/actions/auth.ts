@@ -85,9 +85,7 @@ export async function requestPasswordRecoveryAction(email: string): Promise<Acti
  * only for the digits; GoTrue matches them against the account named in the
  * httpOnly cookie. The code is single-use and expires after ten minutes.
  */
-export async function verifyRecoveryCodeAction(
-  code: string,
-): Promise<RecoveryCodeState | undefined> {
+export async function verifyRecoveryCodeAction(code: string): Promise<RecoveryCodeState> {
   if (isDemoMode()) {
     return {
       ok: false,
@@ -135,8 +133,10 @@ export async function verifyRecoveryCodeAction(
   await supabase.rpc("rpc_log_activity", { p_action: "login" });
 
   // The session exists now; the choice screen decides what happens next.
-  // Redirecting from the action keeps the browser and the new cookies in step.
-  redirect("/recovery-choice");
+  // The destination is returned instead of calling redirect(): Next.js rejects
+  // the action promise with an internal redirect signal, which the form's
+  // try/catch would swallow and render as a connection error.
+  return { ok: true, message: "Code verified.", destination: "/recovery-choice" };
 }
 
 /** Sends a fresh code to the address already waiting on the verification screen. */
@@ -211,9 +211,7 @@ export async function signInAction(
   password: string,
   nextPath?: string | null,
   captchaToken?: string | null,
-  // `undefined` is the success shape seen by the browser: the action redirects
-  // and Next.js resolves the call with no value while navigation is in flight.
-): Promise<SignInState | undefined> {
+): Promise<SignInState> {
   if (isDemoMode()) {
     return {
       ok: false,
@@ -320,15 +318,18 @@ export async function signInAction(
   clearLoginFailures(key);
   await supabase.rpc("rpc_log_activity", { p_action: "login" });
 
-  // Redirect from the action rather than returning a destination. The session
-  // cookies are written by this same response, so the browser cannot navigate
-  // to the console before it has accepted them. A client-side router.push() does
-  // not have that guarantee: on a slow or proxied deployment the navigation can
-  // race the cookie write and the middleware sends the visitor back to /login,
-  // leaving the success notice on screen but no session.
-  redirect(
-    safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
-  );
+  // Return the destination instead of calling redirect() here. Next.js rejects
+  // a redirected Server Action with an internal redirect error; the form's
+  // try/catch sees that as a failed request and shows the "check your
+  // connection" message even though the cookie was written. The form performs
+  // a full navigation once this resolves, so the middleware cannot act before
+  // the session cookies have been stored.
+  return {
+    ok: true,
+    message: "Signed in. Loading your dashboard…",
+    destination:
+      safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
+  };
 }
 
 /** Client IP used to scope the lockout. Trusts the standard proxy headers. */

@@ -39,13 +39,15 @@ export function VerifyOtpForm() {
 
     try {
       const result = await verifyRecoveryCodeAction(code);
-      // On success the action redirects to /recovery-choice, so there is no
-      // success branch to render here.
-      if (result?.ok === false) {
-        setError(result.message);
-        setExpired(Boolean(result.expired));
-        setCode("");
+      // On success the action returns the choice screen; navigate with a full
+      // page load so the new session cookies are already stored.
+      if (result.ok) {
+        window.location.assign(result.destination ?? "/recovery-choice");
+        return;
       }
+      setError(result.message);
+      setExpired(Boolean(result.expired));
+      setCode("");
     } catch {
       setError("The code could not be checked. Check your connection and try again.");
     } finally {

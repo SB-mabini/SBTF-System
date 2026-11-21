@@ -80,11 +80,14 @@ export function LoginForm() {
         setCaptchaResetKey((current) => current + 1);
       }
 
-      // A successful sign-in never returns a value: the action redirects to the
-      // console, and Next.js resolves the call with `undefined` while the
-      // navigation is in flight. Treat that as success; reading properties off
-      // it is what used to show "check your connection" after a valid login.
-      if (!result || result.ok) return;
+      // The action returns a destination on success. Navigate with a full page
+      // load so the freshly written session cookies are guaranteed to be sent
+      // with the next request; a soft router.push() can race the cookie write
+      // and the middleware then bounces the visitor back to /login.
+      if (result.ok) {
+        window.location.assign(result.destination ?? "/");
+        return;
+      }
 
       if (result.locked) {
         applyLock(result.retryAfterSeconds ?? 0);
