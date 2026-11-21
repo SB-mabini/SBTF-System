@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Archive, Building2, Car, FileText, History, Stamp, User } from "lucide-react";
+import { Archive, Building2, Car, History, Stamp, User } from "lucide-react";
 
 import { ApplicationFormActions } from "@/components/applications/application-form-actions";
 import { ApplicationSummaryCard, ReviewPanel } from "@/components/applications/review-panel";
@@ -148,9 +148,66 @@ export async function ApplicationDetail({
           >
             <ReviewPanel application={application} documents={documents} readOnly={readOnly} />
           </HandlingPanel>
+
+          {record ? (
+            <>
+              <Card>
+                <CardHeader
+                  title="Franchise record"
+                  description="Issued franchise details and validity period."
+                  icon={Building2}
+                  action={
+                    <Link
+                      className="inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:underline"
+                      href={`${basePath}/franchises/${record.id}`}
+                    >
+                      Open franchise record →
+                    </Link>
+                  }
+                />
+                <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                  <Field label="Franchise number" value={record.franchise_number} mono />
+                  <Field label="Verification code" value={record.verification_code} mono />
+                  <Field label="Issued" value={formatDate(record.issued_at)} />
+                  <Field label="Valid until" value={formatDate(record.expires_at)} />
+                  <Field
+                    label="Certificate status"
+                    value={record.certificate_storage_path ? "Generated" : "Not generated"}
+                  />
+                  <Field label="Archived" value={record.archived ? "Yes" : "No"} />
+                </dl>
+              </Card>
+
+              <CertificateActions
+                record={record}
+                certificateUrl={certificateUrl}
+                settings={settings}
+                readOnly={readOnly}
+              />
+
+              <Card>
+                <CardHeader
+                  title="Archive"
+                  description="Operational status only — the documentary record is preserved."
+                  icon={Archive}
+                />
+                <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader title="Franchise record" icon={Building2} />
+              <p className="text-[0.8125rem] text-muted">
+                No franchise has been issued for this application
+                {application.status === "rejected"
+                  ? " because it was rejected."
+                  : ". Approval creates the record automatically."}
+              </p>
+            </Card>
+          )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <ApplicationSummaryCard application={application} />
 
           <Card>
@@ -188,81 +245,9 @@ export async function ApplicationDetail({
           </Card>
 
           <Card>
-            <CardHeader title="Documents" description="Files open through short-lived signed links." icon={FileText} />
-            <ul className="space-y-2 text-[0.8125rem]">
-              {documents.map((document) => (
-                <li key={document.id} className="flex items-center justify-between gap-3">
-                  <span className="text-muted">{documentLabel(document.document_type)}</span>
-                  <Badge
-                    tone={
-                      document.verification_status === "verified"
-                        ? "success"
-                        : document.verification_status === "rejected"
-                          ? "rejected"
-                          : "pending"
-                    }
-                  >
-                    {document.verification_status}
-                  </Badge>
-                </li>
-              ))}
-              {documents.length === 0 ? <li className="text-muted">No documents uploaded.</li> : null}
-            </ul>
-          </Card>
-
-          <Card>
             <CardHeader title="Status timeline" icon={History} />
             <StatusTimeline events={application.timeline ?? []} />
           </Card>
-
-          <Card>
-            <CardHeader title="Franchise record" icon={Building2} />
-            {record ? (
-              <div className="space-y-2 text-[0.8125rem]">
-                <Row label="Franchise number" value={record.franchise_number} mono />
-                <Row label="Verification code" value={record.verification_code} mono />
-                <Row label="Issued" value={formatDate(record.issued_at)} />
-                <Row label="Valid until" value={formatDate(record.expires_at)} />
-                <Row
-                  label="Certificate"
-                  value={record.certificate_storage_path ? "Generated" : "Not generated"}
-                />
-                <Row label="Archived" value={record.archived ? "Yes" : "No"} />
-                <Link
-                  className="inline-flex items-center gap-1 pt-1 font-medium text-primary hover:underline"
-                  href={`${basePath}/franchises/${record.id}`}
-                >
-                  Open franchise record
-                </Link>
-              </div>
-            ) : (
-              <p className="text-[0.8125rem] text-muted">
-                No franchise has been issued for this application
-                {application.status === "rejected"
-                  ? " because it was rejected."
-                  : ". Approval creates the record automatically."}
-              </p>
-            )}
-          </Card>
-
-          {record ? (
-            <>
-            <CertificateActions
-              record={record}
-              certificateUrl={certificateUrl}
-              settings={settings}
-              readOnly={readOnly}
-            />
-            <Card>
-              <CardHeader
-                title="Archive"
-                description="Operational status only — the documentary record is preserved."
-                icon={Archive}
-              />
-              <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
-            </Card>
-            </>
-          ) : null}
         </div>
       </div>
     </div>
