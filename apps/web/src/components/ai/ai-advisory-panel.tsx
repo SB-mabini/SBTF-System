@@ -7,7 +7,6 @@ import { AdvisoryBanner, Alert, Badge, Button, Card, CardHeader, Spinner } from 
 import { generateAiBriefingAction } from "@/lib/actions/ai";
 import { isDemoMode } from "@/lib/env";
 import { formatDateTime, humanizeKey } from "@/lib/format";
-import { getBrowserClient } from "@/lib/supabase/client";
 import type { AiAdvisory } from "@/types/database";
 
 const PRIORITY_TONE = {
@@ -17,42 +16,13 @@ const PRIORITY_TONE = {
 } as const;
 
 /**
- * `functions.invoke()` collapses every non-2xx response into the same generic
- * message. The Edge Function returns `{ error, message }`, so surface that
- * detail (e.g. "not configured", "daily limit reached") when it is readable.
- */
-async function describeInvokeError(error: unknown): Promise<string> {
-  const fallback = error instanceof Error ? error.message : String(error);
-
-  // FunctionsFetchError means the request never reached the function at all.
-  // In practice that is an undeployed function: the gateway answers 404 without
-  // Access-Control-Allow-Methods, so the browser's CORS preflight fails and
-  // fetch() rejects before supabase-js can read the error body.
-  if ((error as { name?: string } | null)?.name === "FunctionsFetchError") {
-    return "the ai-decision-support function could not be reached — it may not be deployed for this project yet";
-  }
-
-  const context = (error as { context?: Response } | null)?.context;
-  if (!context || typeof context.clone !== "function") return fallback;
-
-  try {
-    const body = (await context.clone().json()) as { message?: unknown; error?: unknown };
-    if (typeof body?.message === "string" && body.message) return body.message;
-    if (typeof body?.error === "string" && body.error) return body.error;
-  } catch {
-    // Non-JSON body: keep the generic message.
-  }
-
-  return fallback;
-}
-
-/**
  * AI decision-support panel.
  *
- * The browser never sees the Groq API key: the request goes to the
- * `ai-decision-support` Supabase Edge Function with the caller's own access
- * token, and the function talks to Groq server-side using aggregated,
- * anonymised statistics only.
+ * The browser never talks to Groq and never sees the API key. Generation runs
+ * through a server action, which calls the `ai-decision-support` Supabase Edge
+ * Function server-to-server with the caller's session. That keeps the API key
+ * server-side and avoids browser CORS restrictions, so the feature works on
+ * every domain the same deployment is served from.
  */
 export function AiAdvisoryPanel({
   sampleAdvisory,
@@ -85,35 +55,10 @@ export function AiAdvisoryPanel({
       return;
     }
 
-    let edgeSuccess = false;
     try {
-      const supabase = getBrowserClient();
-      const { data, error: invokeError } = await supabase.functions.invoke<AiAdvisory>(
-        "ai-decision-support",
-        { body: { months } },
-      );
-
-      if (!invokeError && data) {
-        setAdvisory(data);
-        edgeSuccess = true;
-      } else if (invokeError) {
-        const isNotDeployed =
-          (invokeError as { name?: string } | null)?.name === "FunctionsFetchError";
-        if (!isNotDeployed) {
-          const detail = await describeInvokeError(invokeError);
-          setError(
-            `The advisory could not be generated (${detail}). The franchising office can still process applications normally — this feature is optional.`,
-          );
-          setBusy(false);
-          return;
-        }
-      }
-    } catch {
-      // FunctionsFetchError: edge function is unreachable or not deployed
-    }
-
-    if (!edgeSuccess) {
-      // Fallback to Next.js server-side action
+      // The action calls the Edge Function server-to-server (no CORS) and
+      // falls back to a deployment-local Groq key only when the function is
+      // not available.
       const result = await generateAiBriefingAction(months);
       if (result.ok) {
         setAdvisory(result.advisory);
@@ -122,6 +67,10 @@ export function AiAdvisoryPanel({
           `The advisory could not be generated (${result.message}). The franchising office can still process applications normally — this feature is optional.`,
         );
       }
+    } catch {
+      setError(
+        "The advisory could not be generated (the AI service could not be reached). The franchising office can still process applications normally — this feature is optional.",
+      );
     }
 
     setBusy(false);

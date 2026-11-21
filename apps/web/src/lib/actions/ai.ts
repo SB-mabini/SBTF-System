@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/data";
 import { isDemoMode } from "@/lib/env";
 import type { AiAdvisory } from "@/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
@@ -48,6 +49,81 @@ function summarizeContext(context: Record<string, unknown> | null): Record<strin
   };
 }
 
+type EdgeAttempt =
+  | { kind: "ok"; advisory: AiAdvisory }
+  | { kind: "unavailable" }
+  | { kind: "error"; message: string };
+
+interface InvokeErrorInfo {
+  status?: number;
+  code?: string;
+  message?: string;
+}
+
+/** Reads the `{ error, message }` body the Edge Function returns on failure. */
+async function readInvokeError(error: unknown): Promise<InvokeErrorInfo> {
+  const context = (error as { context?: Response } | null)?.context;
+  const status = context && typeof context.status === "number" ? context.status : undefined;
+
+  if (!context || typeof context.clone !== "function") return { status };
+
+  try {
+    const body = (await context.clone().json()) as { error?: unknown; message?: unknown };
+    return {
+      status,
+      code: typeof body?.error === "string" ? body.error : undefined,
+      message: typeof body?.message === "string" ? body.message : undefined,
+    };
+  } catch {
+    return { status };
+  }
+}
+
+/**
+ * Calls the `ai-decision-support` Edge Function from the server.
+ *
+ * Running this here, instead of in the browser, removes CORS from the picture:
+ * the request is made server-to-server and the caller's session cookie is
+ * forwarded as the bearer token. It also means the project's Supabase secret
+ * GROQ_API_KEY is used, which stays valid no matter which domain or hosting
+ * environment serves the web build.
+ *
+ * "unavailable" means the function is not deployed for this project (or the
+ * project secret is missing), so the caller may use its own key instead.
+ */
+async function requestEdgeBriefing(
+  supabase: SupabaseClient,
+  months: number,
+): Promise<EdgeAttempt> {
+  try {
+    const { data, error } = await supabase.functions.invoke<AiAdvisory>(
+      "ai-decision-support",
+      { body: { months } },
+    );
+
+    if (!error && data) return { kind: "ok", advisory: data };
+
+    const info = await readInvokeError(error);
+    const name = (error as { name?: string } | null)?.name;
+
+    if (!error || name === "FunctionsFetchError" || info.status === 404) {
+      return { kind: "unavailable" };
+    }
+    if (info.status === 503 && info.code === "ai_not_configured") {
+      return { kind: "unavailable" };
+    }
+
+    return {
+      kind: "error",
+      message:
+        info.message ??
+        (error instanceof Error ? error.message : "The AI service returned an error."),
+    };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
 export async function generateAiBriefingAction(
   months: number,
 ): Promise<{ ok: true; advisory: AiAdvisory } | { ok: false; message: string }> {
@@ -55,28 +131,6 @@ export async function generateAiBriefingAction(
     return {
       ok: false,
       message: "Preview mode: AI briefing generation is simulated with sample data.",
-    };
-  }
-
-  let groqApiKey = (
-    process.env.GROQ_API_KEY ??
-    process.env.GROQ_KEY ??
-    process.env.NEXT_PUBLIC_GROQ_API_KEY ??
-    ""
-  ).trim();
-
-  // Strip prefix if user pasted "GROQ_API_KEY=gsk_..." into the value field
-  if (groqApiKey.startsWith("GROQ_API_KEY=")) {
-    groqApiKey = groqApiKey.slice("GROQ_API_KEY=".length).trim();
-  }
-  // Strip surrounding quotes if pasted with quotes
-  groqApiKey = groqApiKey.replace(/^["']|["']$/g, "").trim();
-
-  if (!groqApiKey) {
-    return {
-      ok: false,
-      message:
-        "GROQ_API_KEY is not configured. Please add GROQ_API_KEY=gsk_... to apps/web/.env.local (or set it in your environment).",
     };
   }
 
@@ -97,6 +151,7 @@ export async function generateAiBriefingAction(
   }
 
   const supabase = await createClient();
+  const boundedMonths = Math.min(Math.max(Number(months ?? 12), 3), 24);
 
   // Settings check
   const { data: settings } = await supabase
@@ -114,7 +169,36 @@ export async function generateAiBriefingAction(
     };
   }
 
-  const boundedMonths = Math.min(Math.max(Number(months ?? 12), 3), 24);
+  // Prefer the deployed Edge Function. It holds the project's Groq secret and
+  // is reached server-to-server, so the web origin (and its CORS allow-list)
+  // never enters the picture.
+  const edge = await requestEdgeBriefing(supabase, boundedMonths);
+  if (edge.kind === "ok") return { ok: true, advisory: edge.advisory };
+  if (edge.kind === "error") return { ok: false, message: edge.message };
+
+  // Fallback for deployments where the Edge Function is not available: use the
+  // web deployment's own key.
+  let groqApiKey = (
+    process.env.GROQ_API_KEY ??
+    process.env.GROQ_KEY ??
+    process.env.NEXT_PUBLIC_GROQ_API_KEY ??
+    ""
+  ).trim();
+
+  // Strip prefix if user pasted "GROQ_API_KEY=gsk_..." into the value field
+  if (groqApiKey.startsWith("GROQ_API_KEY=")) {
+    groqApiKey = groqApiKey.slice("GROQ_API_KEY=".length).trim();
+  }
+  // Strip surrounding quotes if pasted with quotes
+  groqApiKey = groqApiKey.replace(/^["']|["']$/g, "").trim();
+
+  if (!groqApiKey) {
+    return {
+      ok: false,
+      message:
+        "The AI service is not configured for this deployment. Deploy the ai-decision-support Edge Function (recommended), or set GROQ_API_KEY=gsk_... in the web environment.",
+    };
+  }
 
   const { data: context, error: contextError } = await supabase.rpc(
     "rpc_analytics_ai_context",
@@ -186,7 +270,7 @@ Provide the advisory briefing as specified.`;
       return {
         ok: false,
         message:
-          "Groq API error 401: Invalid API Key. Please verify GROQ_API_KEY in your Vercel Project Settings (ensure it begins with gsk_ and has no quotes or extra characters).",
+          "Groq rejected the API key configured for this deployment (HTTP 401). Deploy the ai-decision-support Edge Function so the project secret is used, or replace GROQ_API_KEY with a valid key that begins with gsk_ and has no quotes or extra characters.",
       };
     }
     return {

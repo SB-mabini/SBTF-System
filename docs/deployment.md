@@ -350,10 +350,13 @@ from **aggregated, anonymised** statistics. The system uses **Groq**, not xAI Gr
 Edge Function calls `https://api.groq.com/openai/v1/chat/completions` with the model named
 in `system_settings.ai_model` (default `openai/gpt-oss-120b`).
 
-Flow: browser → `ai-decision-support` (caller's JWT) → `rpc_analytics_ai_context(months)`
-→ Groq → structured JSON rendered by the panel. The API key never leaves the Edge
-Function, and only counts/rates/TODA names/error excerpts are sent — no applicant names,
-contacts, plate or engine numbers.
+Flow: browser → Next.js server action → `ai-decision-support` (caller's JWT) →
+`rpc_analytics_ai_context(months)` → Groq → structured JSON rendered by the panel.
+The call is made server-to-server, so browser CORS rules never apply and the feature
+works on every domain that serves the same web deployment. The web action only falls
+back to a deployment-local `GROQ_API_KEY` when the Edge Function is unavailable. The
+API key never leaves the server, and only counts/rates/TODA names/error excerpts are
+sent — no applicant names, contacts, plate or engine numbers.
 
 ### Deploy
 

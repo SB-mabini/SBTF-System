@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, LogIn } from "lucide-react";
@@ -17,7 +17,6 @@ function formatCountdown(totalSeconds: number): string {
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next");
 
@@ -25,7 +24,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -69,7 +67,6 @@ export function LoginForm() {
     }
 
     setError(null);
-    setNotice(null);
     setLoading(true);
 
     try {
@@ -89,15 +86,10 @@ export function LoginForm() {
         return;
       }
 
+      // A successful sign-in never returns: the action redirects to the console.
+      // Everything below is therefore an error result.
       if (!result.ok) {
         setError(result.message);
-        return;
-      }
-
-      setNotice(result.message);
-      if (result.destination) {
-        router.push(result.destination);
-        router.refresh();
       }
     } catch {
       setError("Sign-in could not be completed. Check your connection and try again.");
@@ -123,7 +115,6 @@ export function LoginForm() {
       ) : null}
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
-      {notice ? <Alert tone="success">{notice}</Alert> : null}
 
       <Field label="Official e-mail address" htmlFor="email">
         <input

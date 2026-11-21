@@ -316,12 +316,15 @@ export async function signInAction(
   clearLoginFailures(key);
   await supabase.rpc("rpc_log_activity", { p_action: "login" });
 
-  return {
-    ok: true,
-    message: "Signed in. Loading your dashboard…",
-    destination:
-      safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
-  };
+  // Redirect from the action rather than returning a destination. The session
+  // cookies are written by this same response, so the browser cannot navigate
+  // to the console before it has accepted them. A client-side router.push() does
+  // not have that guarantee: on a slow or proxied deployment the navigation can
+  // race the cookie write and the middleware sends the visitor back to /login,
+  // leaving the success notice on screen but no session.
+  redirect(
+    safeNextPath(nextPath) ?? (access.role === "administrator" ? "/admin" : "/staff"),
+  );
 }
 
 /** Client IP used to scope the lockout. Trusts the standard proxy headers. */
