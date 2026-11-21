@@ -80,17 +80,20 @@ export function LoginForm() {
         setCaptchaResetKey((current) => current + 1);
       }
 
+      // A successful sign-in never returns a value: the action redirects to the
+      // console, and Next.js resolves the call with `undefined` while the
+      // navigation is in flight. Treat that as success; reading properties off
+      // it is what used to show "check your connection" after a valid login.
+      if (!result || result.ok) return;
+
       if (result.locked) {
         applyLock(result.retryAfterSeconds ?? 0);
         setPassword("");
         return;
       }
 
-      // A successful sign-in never returns: the action redirects to the console.
       // Everything below is therefore an error result.
-      if (!result.ok) {
-        setError(result.message);
-      }
+      setError(result.message);
     } catch {
       setError("Sign-in could not be completed. Check your connection and try again.");
     } finally {

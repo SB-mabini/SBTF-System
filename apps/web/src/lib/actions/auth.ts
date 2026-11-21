@@ -85,7 +85,9 @@ export async function requestPasswordRecoveryAction(email: string): Promise<Acti
  * only for the digits; GoTrue matches them against the account named in the
  * httpOnly cookie. The code is single-use and expires after ten minutes.
  */
-export async function verifyRecoveryCodeAction(code: string): Promise<RecoveryCodeState> {
+export async function verifyRecoveryCodeAction(
+  code: string,
+): Promise<RecoveryCodeState | undefined> {
   if (isDemoMode()) {
     return {
       ok: false,
@@ -209,7 +211,9 @@ export async function signInAction(
   password: string,
   nextPath?: string | null,
   captchaToken?: string | null,
-): Promise<SignInState> {
+  // `undefined` is the success shape seen by the browser: the action redirects
+  // and Next.js resolves the call with no value while navigation is in flight.
+): Promise<SignInState | undefined> {
   if (isDemoMode()) {
     return {
       ok: false,
