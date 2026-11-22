@@ -129,6 +129,7 @@ void _invalidateDriverData(Ref ref) {
 
   ref.invalidate(myFormRequestsProvider);
   ref.invalidate(openFormRequestProvider);
+  ref.invalidate(openFormRequestsProvider);
   ref.invalidate(latestRejectedFormRequestProvider);
   ref.invalidate(myFormRequestsStreamProvider);
 
@@ -245,9 +246,15 @@ final myFormRequestsProvider = FutureProvider<List<FormRequest>>(
   (ref) => ref.watch(formRequestServiceProvider).listMine(),
 );
 
-/// The request occupying the driver's open slot, if any.
+/// The newest request still open for the driver, if any.
 final openFormRequestProvider = FutureProvider<FormRequest?>(
   (ref) => ref.watch(formRequestServiceProvider).openRequest(),
+);
+
+/// Every request the driver still has in flight, newest first. An operator
+/// may hold several franchises, so each request represents one tricycle.
+final openFormRequestsProvider = FutureProvider<List<FormRequest>>(
+  (ref) => ref.watch(formRequestServiceProvider).openRequests(),
 );
 
 /// The newest rejected request the driver can edit and resubmit.

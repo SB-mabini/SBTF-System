@@ -261,6 +261,7 @@ void main() {
       expect(payload.containsKey('operator_email'), isFalse);
       expect(payload.containsKey('mtop_number'), isFalse);
       expect(payload.containsKey('renewal_of_record_id'), isFalse);
+      expect(payload.containsKey('form_request_id'), isFalse);
     });
 
     test('includes renewal_of_record_id only for a renewal', () {
@@ -269,6 +270,30 @@ void main() {
 
       expect(renewal['renewal_of_record_id'], 'record-1');
       expect(_valid().toPayload().containsKey('renewal_of_record_id'), isFalse);
+    });
+
+    test('names the approved request when an operator has several tricycles',
+        () {
+      final submission = ApplicationSubmission(
+        applicationType: ApplicationType.newFranchise,
+        todaId: 'toda-1',
+        appliedRoute: 'Mainaga - Poblacion',
+        operatorFirstName: 'Juan',
+        operatorLastName: 'Dela Cruz',
+        operatorContactNumber: '09171234567',
+        operatorAddressLine: 'Purok 1',
+        vehicleMake: 'Honda',
+        vehicleModel: 'TMX',
+        vehicleYear: 2020,
+        vehicleColor: 'Blue',
+        plateNumber: 'ABC 123',
+        engineNumber: 'ENG12345',
+        chassisNumber: 'CHS12345',
+        formRequestId: 'request-2',
+        documents: _allDocuments(),
+      );
+
+      expect(submission.toPayload()['form_request_id'], 'request-2');
     });
   });
 

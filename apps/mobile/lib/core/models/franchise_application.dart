@@ -74,6 +74,7 @@ class ApplicationSubmission {
     this.mtopNumber,
     this.bodyNumber,
     this.renewalOfRecordId,
+    this.formRequestId,
     this.remarks,
     this.orCrFromRequest = false,
     this.operatorCitizenship = 'Filipino',
@@ -106,6 +107,11 @@ class ApplicationSubmission {
 
   /// Set only for a renewal: the franchise record being renewed.
   final String? renewalOfRecordId;
+
+  /// The approved request this application consumes. An operator may hold
+  /// several approved requests (one per tricycle), so the server needs to know
+  /// which vehicle this submission belongs to.
+  final String? formRequestId;
 
   final String? remarks;
 
@@ -172,6 +178,7 @@ class ApplicationSubmission {
     putIfPresent('operator_email', operatorEmail);
     putIfPresent('mtop_number', mtopNumber);
     putIfPresent('body_number', bodyNumber);
+    putIfPresent('form_request_id', formRequestId);
     putIfPresent('remarks', remarks);
     if (isRenewal && renewalOfRecordId != null) {
       payload['renewal_of_record_id'] = renewalOfRecordId;

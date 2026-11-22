@@ -117,7 +117,9 @@ class FormRequest {
   bool get isConverted => status == FormRequestStatus.converted;
   bool get isCancelled => status == FormRequestStatus.cancelled;
 
-  /// Still occupying the driver's one open request slot.
+  /// Still awaiting staff action or waiting to be used by an application.
+  ///
+  /// An operator may have several open requests at once, one per tricycle.
   bool get isOpen => isRequested || isIssued;
 
   bool get isRenewal => applicationType == ApplicationType.renewal;

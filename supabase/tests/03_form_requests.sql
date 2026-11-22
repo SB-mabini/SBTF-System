@@ -9,7 +9,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(34);
+select plan(46);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -154,9 +154,10 @@ select is(
 
 select throws_ok(
   $$select public.rpc_driver_request_form(
-      pg_temp.request_payload((select driver from ids), (select toda from ids), 'FR1B'))$$,
+      pg_temp.request_payload((select driver from ids), (select toda from ids), 'FR1B')
+        || jsonb_build_object('plate_number', 'PLT FR1'))$$,
   'P0001', null,
-  'a driver may only have one open request'
+  'a second request for the same tricycle is refused'
 );
 
 -- Another driver cannot claim a vehicle that is already on an open request.
@@ -350,6 +351,101 @@ select throws_ok(
         || jsonb_build_object('plate_number', 'PLT FR1C'))$$,
   'P0001', null,
   'a request cannot reuse a vehicle on a pending application'
+);
+
+-- ---------------------------------------------------------------------------
+-- 3b. One operator, several tricycles
+-- ---------------------------------------------------------------------------
+select pg_temp.login((select driver_auth from fx));
+
+select lives_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver from ids), (select toda from ids), 'UNIT2'))$$,
+  'an operator can open a second request for a different tricycle'
+);
+
+select lives_ok(
+  $$select public.rpc_driver_request_form(
+      pg_temp.request_payload((select driver from ids), (select toda from ids), 'UNIT3'))$$,
+  'an operator can open a third request for a different tricycle'
+);
+
+select is(
+  (select count(*)::int from public.form_requests
+    where requested_by = (select driver from ids) and status in ('requested', 'issued')),
+  2,
+  'two different tricycles can have open requests at the same time'
+);
+
+select pg_temp.login((select staff_auth from fx));
+
+select lives_ok(
+  $$select public.rpc_staff_issue_form_request(
+      (select id from public.form_requests
+        where requested_by = (select driver from ids) and plate_number = 'PLT UNIT2'))$$,
+  'staff can approve the first additional tricycle'
+);
+
+select lives_ok(
+  $$select public.rpc_staff_issue_form_request(
+      (select id from public.form_requests
+        where requested_by = (select driver from ids) and plate_number = 'PLT UNIT3'))$$,
+  'staff can approve the second additional tricycle'
+);
+
+select pg_temp.login((select driver_auth from fx));
+
+select throws_ok(
+  $$select public.rpc_driver_submit_application(
+      pg_temp.app_payload((select toda from ids), (select driver from ids), 'UNIT3'))$$,
+  'P0001', null,
+  'with several approved requests the client must name the tricycle'
+);
+
+select lives_ok(
+  $$select public.rpc_driver_submit_application(
+      pg_temp.app_payload((select toda from ids), (select driver from ids), 'UNIT2')
+        || jsonb_build_object('form_request_id',
+             (select id from public.form_requests
+               where requested_by = (select driver from ids) and plate_number = 'PLT UNIT2')::text))$$,
+  'the operator submits the application for the chosen tricycle'
+);
+
+select is(
+  (select a.plate_number from public.franchise_applications a
+    where a.applicant_id = (select driver from ids) order by a.submitted_at desc limit 1),
+  'PLT UNIT2',
+  'the application uses the vehicle from the named request'
+);
+
+select is(
+  (select status::text from public.form_requests
+    where requested_by = (select driver from ids) and plate_number = 'PLT UNIT2'),
+  'converted',
+  'the named request is consumed'
+);
+
+select is(
+  (select status::text from public.form_requests
+    where requested_by = (select driver from ids) and plate_number = 'PLT UNIT3'),
+  'issued',
+  'the other approved tricycle is untouched'
+);
+
+select lives_ok(
+  $$select public.rpc_driver_submit_application(
+      pg_temp.app_payload((select toda from ids), (select driver from ids), 'UNIT3')
+        || jsonb_build_object('form_request_id',
+             (select id from public.form_requests
+               where requested_by = (select driver from ids) and plate_number = 'PLT UNIT3')::text))$$,
+  'naming the other approved request submits the other tricycle'
+);
+
+select is(
+  (select a.plate_number from public.franchise_applications a
+    where a.applicant_id = (select driver from ids) order by a.submitted_at desc limit 1),
+  'PLT UNIT3',
+  'the second application uses the second tricycle'
 );
 
 -- ---------------------------------------------------------------------------

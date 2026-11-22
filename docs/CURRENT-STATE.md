@@ -372,6 +372,12 @@ linked from the page as "Open the web version" for drivers without an Android ph
   step in the same words. Tests: `test/auth_messages_test.dart` and
   `test/session_guard_test.dart`; the 320 dp / 200% text checks live in
   `test/small_screen_test.dart`. Shipped in build 4.
+- **Multiple tricycles per operator.** One account may hold several franchises, one per
+  tricycle. Open form requests and pending new applications are now limited per vehicle
+  instead of per account, and an application names the approved `form_request_id` so the
+  right tricycle's vehicle and OR/CR are consumed. Migration
+  `20261122000100_multiple_units_per_operator.sql`; the home screen exposes **Apply for
+  another tricycle**, and a driver with several requests in flight picks which one to open.
 - **Renewal prefill (build 5).** A renewal no longer starts from a blank form. Both the
   request form and the application wizard show a **Franchise to renew** picker, select the
   franchise automatically when the driver has exactly one renewable record, and fill the

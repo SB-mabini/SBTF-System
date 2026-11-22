@@ -360,6 +360,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
 
       if (!mounted) return;
       ref.invalidate(openFormRequestProvider);
+      ref.invalidate(openFormRequestsProvider);
       ref.invalidate(myFormRequestsProvider);
       ref.invalidate(latestRejectedFormRequestProvider);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -414,6 +415,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
       await ref.read(formRequestServiceProvider).cancel(existing.id);
       if (!mounted) return;
       ref.invalidate(openFormRequestProvider);
+      ref.invalidate(openFormRequestsProvider);
       ref.invalidate(myFormRequestsProvider);
       Navigator.of(context).pop();
     } on AppFailure catch (failure) {
@@ -446,6 +448,7 @@ class _RequestFormScreenState extends ConsumerState<RequestFormScreen> {
         onCancel: _cancelRequest,
         onRefresh: () {
           ref.invalidate(openFormRequestProvider);
+          ref.invalidate(openFormRequestsProvider);
           ref.invalidate(myFormRequestsProvider);
         },
       );

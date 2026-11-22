@@ -112,6 +112,7 @@ class NotificationOpener {
     if (request == null || !navigator.mounted) return;
 
     ref.invalidate(openFormRequestProvider);
+    ref.invalidate(openFormRequestsProvider);
     ref.invalidate(latestRejectedFormRequestProvider);
     await navigator.push(
       MaterialPageRoute<void>(

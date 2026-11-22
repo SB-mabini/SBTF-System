@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/branding.dart';
 import '../../core/models/app_notification.dart';
+import '../../core/models/form_request.dart';
 import '../../core/models/franchise_application.dart';
 import '../../core/models/profile.dart';
 import '../../core/providers.dart';
@@ -138,32 +139,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Opens the request-form-first flow.
   ///
   /// An approved (issued) request unlocks the application wizard, prefilled
-  /// from the request. A pending request opens the waiting view. A rejected
-  /// request opens the form pre-filled for the same-row resubmission. With no
-  /// request at all, the driver starts a new request form.
+  /// from that request. With several tricycles in flight the driver picks
+  /// which one to open. A rejected request opens the form pre-filled for the
+  /// same-row resubmission. With none, the driver starts a new request form.
+  ///
+  /// [forceNew] skips all of that and starts a fresh request, which is how an
+  /// operator adds another tricycle while an existing request is still open.
   Future<void> _openApplication(
     BuildContext context,
-    String? applicationType,
-  ) async {
+    String? applicationType, {
+    bool forceNew = false,
+  }) async {
     try {
-      final open = await ref.read(openFormRequestProvider.future);
-      if (!context.mounted) return;
-
-      if (open != null && open.isIssued) {
+      if (forceNew) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => ApplicationFormScreen(formRequest: open),
+            builder: (_) => RequestFormScreen(initialType: applicationType),
           ),
         );
         return;
       }
 
-      if (open != null) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => RequestFormScreen(existing: open),
+      final open = await ref.read(openFormRequestsProvider.future);
+      if (!context.mounted) return;
+
+      if (open.length == 1) {
+        await _openFormRequest(context, open.single);
+        return;
+      }
+
+      if (open.length > 1) {
+        final chosen = await showModalBottomSheet<FormRequest>(
+          context: context,
+          showDragHandle: true,
+          builder: (sheetContext) => SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text(
+                    'Choose a tricycle',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.inkStrong,
+                    ),
+                  ),
+                ),
+                for (final request in open)
+                  ListTile(
+                    leading: const Icon(Icons.local_taxi_outlined),
+                    title: Text(
+                      request.plateNumber?.trim().isNotEmpty == true
+                          ? request.plateNumber!
+                          : request.formNumber,
+                    ),
+                    subtitle: Text(
+                      '${request.vehicleLabel.isEmpty ? request.formNumber : request.vehicleLabel}'
+                      ' · ${request.isIssued ? 'Approved — continue application' : 'Waiting for staff approval'}',
+                    ),
+                    onTap: () => Navigator.of(sheetContext).pop(request),
+                  ),
+              ],
+            ),
           ),
         );
+        if (chosen == null || !context.mounted) return;
+        await _openFormRequest(context, chosen);
         return;
       }
 
@@ -187,6 +230,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _openFormRequest(
+    BuildContext context,
+    FormRequest request,
+  ) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => request.isIssued
+            ? ApplicationFormScreen(formRequest: request)
+            : RequestFormScreen(existing: request),
+      ),
+    );
   }
 
   void _openStatus(BuildContext context) {
@@ -371,6 +427,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 unread: unread,
                 upcoming: upcoming,
                 onOpenApplication: (type) => _openApplication(context, type),
+                onApplyAnother: () => _openApplication(
+                  context,
+                  ApplicationType.newFranchise,
+                  forceNew: true,
+                ),
                 onOpenAppointments: () => _openAppointments(context),
                 onOpenDocuments: () => _openDocuments(context),
                 onOpenCertificates: () => _openCertificates(context),
@@ -440,6 +501,7 @@ class _HomeTab extends ConsumerWidget {
     required this.unread,
     required this.upcoming,
     required this.onOpenApplication,
+    required this.onApplyAnother,
     required this.onOpenAppointments,
     required this.onOpenDocuments,
     required this.onOpenCertificates,
@@ -450,6 +512,7 @@ class _HomeTab extends ConsumerWidget {
   final int unread;
   final int upcoming;
   final void Function(String) onOpenApplication;
+  final VoidCallback onApplyAnother;
   final VoidCallback onOpenAppointments;
   final VoidCallback onOpenDocuments;
   final VoidCallback onOpenCertificates;
@@ -490,6 +553,7 @@ class _HomeTab extends ConsumerWidget {
           application: latest,
           onOpenDetails: (application) => _openDetails(context, application),
           onOpenApplication: onOpenApplication,
+          onApplyAnother: onApplyAnother,
         ),
       ],
     );
@@ -607,11 +671,13 @@ class _LatestApplicationCard extends StatelessWidget {
     required this.application,
     required this.onOpenDetails,
     required this.onOpenApplication,
+    required this.onApplyAnother,
   });
 
   final FranchiseApplication? application;
   final void Function(FranchiseApplication) onOpenDetails;
   final void Function(String) onOpenApplication;
+  final VoidCallback onApplyAnother;
 
   @override
   Widget build(BuildContext context) {
@@ -628,13 +694,24 @@ class _LatestApplicationCard extends StatelessWidget {
         // Details table
         _ApplicationDetailsCard(application: app),
         const SizedBox(height: AppSpacing.xs),
-        // Single action: open this application's details directly.
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () => onOpenDetails(app),
             icon: const Icon(Icons.open_in_new, size: 16),
             label: const Text('View application'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // An operator may hold several franchises, one per tricycle. This
+        // starts a fresh request even while another application/request is
+        // still in flight.
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onApplyAnother,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Apply for another tricycle'),
           ),
         ),
       ],

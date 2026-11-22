@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sbtf_mobile/core/models/form_request.dart';
 import 'package:sbtf_mobile/core/models/toda.dart';
 import 'package:sbtf_mobile/core/models/profile.dart';
 import 'package:sbtf_mobile/core/providers.dart';
@@ -31,7 +32,8 @@ Widget _harness(int unread) => ProviderScope(
             .overrideWith((ref) => Stream.value(unread)),
         todaListProvider.overrideWith((ref) => const <Toda>[]),
         barangayListProvider.overrideWith((ref) => const <Barangay>[]),
-        openFormRequestProvider.overrideWith((ref) => Future.value(null)),
+        openFormRequestsProvider
+            .overrideWith((ref) => Future.value(const <FormRequest>[])),
         latestRejectedFormRequestProvider
             .overrideWith((ref) => Future.value(null)),
       ],

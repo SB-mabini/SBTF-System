@@ -416,6 +416,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       mtopNumber: _emptyToNull(_mtop.text),
       bodyNumber: _emptyToNull(_body.text),
       renewalOfRecordId: _isRenewal ? _recordId : null,
+      formRequestId: widget.formRequest?.id,
       remarks: _emptyToNull(_remarks.text),
       orCrFromRequest: _orCrFromRequest,
       operatorCitizenship: _citizenship.text.trim().isEmpty
@@ -461,6 +462,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       ref.invalidate(myApplicationsProvider);
       ref.invalidate(activeApplicationProvider);
       ref.invalidate(openFormRequestProvider);
+      ref.invalidate(openFormRequestsProvider);
       ref.invalidate(myFormRequestsProvider);
       ref.invalidate(latestRejectedFormRequestProvider);
       Navigator.of(context).pushReplacement(

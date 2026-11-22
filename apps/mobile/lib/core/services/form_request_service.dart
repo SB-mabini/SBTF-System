@@ -62,19 +62,32 @@ class FormRequestService extends SupabaseService {
     });
   }
 
-  /// The request occupying the driver's open slot (`requested` or `issued`),
-  /// if any.
-  Future<FormRequest?> openRequest() {
+  /// Every request the driver still has in flight (`requested` or `issued`),
+  /// newest first.
+  ///
+  /// An operator may hold several franchises, one per tricycle, so there can
+  /// be more than one open request — each one is for a different vehicle.
+  Future<List<FormRequest>> openRequests() {
     return guard(() async {
       final rows = await client
           .from('form_requests')
           .select(_select)
           .inFilter('status', ['requested', 'issued'])
-          .order('created_at', ascending: false)
-          .limit(1);
-      if (rows.isEmpty) return null;
-      return FormRequest.fromMap(Map<String, dynamic>.from(rows.first as Map));
+          .order('created_at', ascending: false);
+      return rows
+          .map((row) =>
+              FormRequest.fromMap(Map<String, dynamic>.from(row as Map)))
+          .toList();
     });
+  }
+
+  /// The newest open request, if any.
+  ///
+  /// Prefer [openRequests] when the driver may have more than one tricycle
+  /// in flight; a single row cannot represent all of them.
+  Future<FormRequest?> openRequest() async {
+    final requests = await openRequests();
+    return requests.isEmpty ? null : requests.first;
   }
 
   /// The newest rejected request, which the driver can edit and resubmit.
