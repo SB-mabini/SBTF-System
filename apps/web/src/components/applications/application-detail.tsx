@@ -1,13 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Archive, Building2, Car, History, Stamp, User } from "lucide-react";
+import { Building2, Car, History, Stamp, User } from "lucide-react";
 
 import { ApplicationFormActions } from "@/components/applications/application-form-actions";
 import { ApplicationSummaryCard, ReviewPanel } from "@/components/applications/review-panel";
 import { HandlingPanel } from "@/components/applications/handling-panel";
 import { StatusTimeline } from "@/components/applications/status-timeline";
-import { ArchiveActions } from "@/components/records/archive-actions";
 import { CertificateActions } from "@/components/records/certificate-actions";
 import { Alert, Badge, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
 import {
@@ -49,9 +48,9 @@ export async function ApplicationDetail({
   const signatureUrl = await getStorageSignedUrl(application.applicant_signature_storage_path);
 
   // The embedded `record` on the application is only a summary. Re-fetch the
-  // full franchise record so the certificate and archive controls — the same
-  // components the Franchise Records page uses — can be handled without
-  // leaving this application.
+  // full franchise record so the certificate controls — the same components the
+  // Franchise Records page uses — can be handled without leaving this
+  // application.
   // A rejected application has no franchise. Even if a legacy record exists
   // from the old "record application" flow, none of its issuance controls are
   // offered here: rejection is terminal and cannot produce a franchise.
@@ -184,15 +183,6 @@ export async function ApplicationDetail({
                 settings={settings}
                 readOnly={readOnly}
               />
-
-              <Card>
-                <CardHeader
-                  title="Archive"
-                  description="Operational status only — the documentary record is preserved."
-                  icon={Archive}
-                />
-                <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
-              </Card>
             </>
           ) : (
             <Card>

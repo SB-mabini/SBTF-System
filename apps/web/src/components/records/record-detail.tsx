@@ -2,10 +2,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { Archive, CalendarCheck, FileText, Link2, ShieldCheck, Stamp } from "lucide-react";
+import { CalendarCheck, FileText, Link2, ShieldCheck, Stamp } from "lucide-react";
 
 import { CertificateActions } from "@/components/records/certificate-actions";
-import { ArchiveActions } from "@/components/records/archive-actions";
 import { RecordPayment } from "@/components/records/record-payment";
 import { VerificationQr } from "@/components/records/verification-qr";
 import { Alert, Card, CardHeader, LinkButton, SectionTitle } from "@/components/ui";
@@ -83,7 +82,7 @@ export async function RecordDetail({
       {isDemoMode() ? (
         <Alert tone="warning" title="Preview mode">
           Certificate generation runs entirely in the browser, so it works here too — but nothing is
-          uploaded to Storage and the archive actions are disabled.
+          uploaded to Storage.
         </Alert>
       ) : null}
 
@@ -149,11 +148,6 @@ export async function RecordDetail({
           />
 
           <RecordPayment record={record} readOnly={readOnly} />
-
-          <Card>
-            <CardHeader title="Archive" description="Operational status only — the documentary record is preserved." icon={Archive} />
-            <ArchiveActions recordId={record.id} archived={record.archived} readOnly={readOnly} />
-          </Card>
         </div>
 
         <div className="space-y-4">

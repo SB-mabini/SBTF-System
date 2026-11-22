@@ -44,7 +44,6 @@ export const CAPABILITIES = {
     "applications.record_decision",
     "applications.release",
     "records.view_all",
-    "records.archive",
     "records.generate_certificate",
     "records.release",
     "form_requests.manage",

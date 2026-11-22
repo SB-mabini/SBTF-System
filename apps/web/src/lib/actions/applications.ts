@@ -389,30 +389,6 @@ export async function rejectApplicationAction(
     : { ok: true, message: "Application rejected. The reason has been recorded and sent to the applicant." };
 }
 
-export async function archiveRecordAction(input: {
-  recordId: string;
-  reason: string;
-  archived: boolean;
-}): Promise<ActionState> {
-  if (isDemoMode()) return DEMO_WRITE_BLOCKED;
-
-  if (input.archived && input.reason.trim().length < 5) {
-    return { ok: false, message: "An archive reason of at least 5 characters is required." };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("rpc_staff_archive_franchise_record", {
-    p_record_id: input.recordId,
-    p_reason: input.reason.trim(),
-    p_archived: input.archived,
-  });
-
-  refreshApplicationViews(undefined, input.recordId);
-  return error
-    ? { ok: false, message: error.message }
-    : { ok: true, message: input.archived ? "Franchise record archived." : "Franchise record restored." };
-}
-
 export async function attachCertificateAction(input: {
   recordId: string;
   storagePath: string;
