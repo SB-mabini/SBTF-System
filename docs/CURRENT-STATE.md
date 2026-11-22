@@ -376,7 +376,9 @@ linked from the page as "Open the web version" for drivers without an Android ph
   tricycle. Open form requests and pending new applications are now limited per vehicle
   instead of per account, and an application names the approved `form_request_id` so the
   right tricycle's vehicle and OR/CR are consumed. Migration
-  `20261122000100_multiple_units_per_operator.sql`; the home screen exposes **Apply for
+  `20261122000100_multiple_units_per_operator.sql` (plus
+  `20261122000200_drop_legacy_request_eligibility_trigger.sql`, which removes a legacy
+  per-account trigger found on older databases); the home screen exposes **Apply for
   another tricycle**, and a driver with several requests in flight picks which one to open.
 - **Renewal prefill (build 5).** A renewal no longer starts from a blank form. Both the
   request form and the application wizard show a **Franchise to renew** picker, select the
